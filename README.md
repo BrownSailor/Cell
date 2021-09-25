@@ -73,7 +73,7 @@ min3 :: a: int, b: int, c: int :: int {
 }
 ```
 
-Arrays are fixed size and created using the square brackets `[]` after the type name
+Arrays are fixed size and created using the square brackets `[]` after the variable name
 ```
 arr[4]: int;
 
