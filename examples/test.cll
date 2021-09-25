@@ -1,0 +1,4 @@
+main :: argv: int, argc: []str :: int {
+
+    ret 0;
+}
