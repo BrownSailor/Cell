@@ -2,6 +2,35 @@
 
 An experiment to create a compiled programming language just for fun
 
+```
+main :: argv: int, argc: []str :: int {
+
+    num: int = 5;
+    print: "hello world!";
+
+    // if-else statements
+    ? num > 5 {
+        print: 'num is greater than 5';
+    } | num < 5 {
+        print: 'num is less than 5';
+    } | {
+        print: 'num is equal to 5';
+    }
+
+    // for and while loops
+    @ i: int = argc.sz() - 1, i >= 0, i-- {
+        print: argc[i];
+    }
+
+    @ num > 0 {
+        print: num;
+        num--;
+    }
+
+    ret num;
+}
+```
+
 ### Features
 
 Data types: 
