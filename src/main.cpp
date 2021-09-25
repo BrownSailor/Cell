@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    compile_file(argv[1]);
+    compileFile(argv[1]);
 
     return 0;
 }

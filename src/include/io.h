@@ -3,6 +3,6 @@
 
 #include <string>
 
-std::string read_file(std::string filename);
+std::string readFile(std::string filename);
 
 #endif

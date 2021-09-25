@@ -3,18 +3,21 @@
 
 void compile(std::string src)
 {
-    Lexer *lexer = init_lexer(src);
-    Token *token = lexer_next_token(lexer);
+    Lexer *lexer = initLexer(src);
+    Token *token = lexerNextToken(lexer);
 
     while (token->type != TOKEN_EOF)
     {
-        std::cout << "TOKEN: [" << token->data << "]\t[" << token_to_string(token->type) << "]\n";
-        token = lexer_next_token(lexer);
+        std::cout << tokenToString(token) << "\n";
+        token = lexerNextToken(lexer);
     }
+
+    delete token;
+    delete lexer;
 }
 
 void compile_file(std::string filename)
 {
-    std::string src = read_file(filename);
+    std::string src = readFile(filename);
     compile(src);
 }

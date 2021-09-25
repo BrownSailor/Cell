@@ -3,7 +3,7 @@
 #include <fstream>
 #include <sstream>
 
-std::string read_file(std::string filename)
+std::string readFile(std::string filename)
 {
     std::ifstream file(filename);
 

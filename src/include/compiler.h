@@ -7,6 +7,6 @@
 
 void compile(std::string src);
 
-void compile_file(std::string filename);
+void compileFile(std::string filename);
 
 #endif

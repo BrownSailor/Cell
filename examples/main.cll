@@ -4,8 +4,8 @@ use package;
 
 main :: argv: int, argc: []str :: int {
 
-    num: int = 5;   // or num = 5; (auto assign types)
-    print: 'hello world!';
+    num: int = 5;
+    print: "hello world!";
 
     // if-else statements
     ? num > 5 {

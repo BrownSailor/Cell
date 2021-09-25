@@ -25,8 +25,10 @@ struct Token
     unsigned int type;
 };
 
-Token *init_token(std::string data, unsigned int type);
+Token *initToken(std::string data, unsigned int type);
 
-std::string token_to_string(int type);
+std::string tokenTypeToString(int type);
+
+std::string tokenToString(Token *token);
 
 #endif

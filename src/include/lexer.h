@@ -10,22 +10,22 @@ struct Lexer
     unsigned int currIdx;
 };
 
-Lexer *init_lexer(std::string src);
+Lexer *initLexer(std::string src);
 
-void lexer_advance(Lexer *lexer);
+void lexerAdvance(Lexer *lexer);
 
-char lexer_peek(Lexer *lexer);
+char lexerPeek(Lexer *lexer);
 
-void lexer_skip_whitespace(Lexer *lexer);
+void lexerSkipWhitespace(Lexer *lexer);
 
-Token *lexer_next_token(Lexer *lexer);
+Token *lexerNextToken(Lexer *lexer);
 
-Token *lexer_advance_with(Lexer *lexer, Token *token);
+Token *lexerAdvanceWith(Lexer *lexer, Token *token);
 
-Token *lexer_advance_current(Lexer *lexer, int type);
+Token *lexerAdvanceCurrent(Lexer *lexer, int type);
 
-Token *lexer_parse_id(Lexer *lexer);
+Token *lexerParseId(Lexer *lexer);
 
-Token *lexer_parse_number(Lexer *lexer);
+Token *lexerParseNumber(Lexer *lexer);
 
 #endif
