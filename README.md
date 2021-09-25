@@ -73,9 +73,9 @@ min3 :: a: int, b: int, c: int :: int {
 }
 ```
 
-Arrays are fixed size and created using the square brackets `[]` after the variable name
+Arrays are fixed size and created using the square brackets `[]` before the type name
 ```
-arr[4]: int;
+arr: [4]int;
 
 @ i: int = 0, i < 4, i++ {
   arr[i] = i * 2;
@@ -85,5 +85,5 @@ arr[4]: int;
 
 Initializing at declaration is done using square brackets with the elements inside
 ```
-arr[3]: int = [1, 2, 3];
+arr: [3]int = [1, 2, 3];
 ```
