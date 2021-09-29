@@ -3,6 +3,7 @@
 
 #include <string>
 
-std::string readFile(std::string filename);
+std::string readFile(std::string fileName);
+void writeFile(std::string fileName, std::string code);
 
 #endif

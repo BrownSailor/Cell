@@ -1,7 +1,7 @@
-exec = a.out
+exec = cell
 sources = $(wildcard src/*.cpp)
 objects = $(sources:.cpp=.o)
-flags = -g -std=c++17 -Wall -fsanitize=address -fno-omit-frame-pointer
+flags = -g -std=c++17 -Wall -Wextra -fsanitize=address -fno-omit-frame-pointer
 
 $(exec): $(objects)
 	g++ $(objects) $(flags) -o $(exec)
@@ -11,6 +11,8 @@ $(exec): $(objects)
 
 clean:
 	-rm *.out
+	-rm *.asm
 	-rm *.o
-	-rm *.a
+	-rm *.txt
 	-rm src/*.o
+	-rm cell

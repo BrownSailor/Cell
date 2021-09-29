@@ -1,4 +1,4 @@
-main :: argv: int, argc: []str :: int {
+main(argc: int, argv: []str): int {
 
-    ret 0;
+    ret(argc);
 }

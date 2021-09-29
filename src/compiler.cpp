@@ -1,23 +1,36 @@
 #include "include/compiler.h"
 #include <iostream>
 
-void compile(std::string src)
+/* compile
+ *    Purpose: compile a program given input file
+ * Parameters: input file name
+ *    Returns: None;
+ */
+void compile(std::string fileName)
 {
+    std::string src = readFile(fileName);
+
     Lexer *lexer = initLexer(src);
-    Token *token = lexerNextToken(lexer);
+    Parser *parser = initParser(lexer);
+    Tree *root = parserParse(parser);
 
-    while (token->type != TOKEN_EOF)
-    {
-        std::cout << tokenToString(token) << "\n";
-        token = lexerNextToken(lexer);
-    }
+    std::string s = asmInit(root);
 
-    delete token;
+    std::string filePath = fileName.substr(0, fileName.find('.'));
+    filePath = filePath.find('/') != std::string::npos ? filePath.substr(filePath.find('/') + 1) : filePath;
+    writeFile(filePath + ".asm", s);
+
+    std::string run = "nasm -fmacho64 -o " + filePath + ".o " + filePath + ".asm " + "&& ld " + filePath + ".o -o " + filePath + ".out -macosx_version_min 11.0 -L \
+    /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem";
+    system(run.c_str());
+
+    std::string toFile = "echo \"" + s + "\" > " + filePath + ".txt";
+    system(toFile.c_str());
+
+    std::string removeUnwantedFiles = "rm " + filePath + ".asm " + filePath + ".o";
+    system(removeUnwantedFiles.c_str());
+
     delete lexer;
-}
-
-void compile_file(std::string filename)
-{
-    std::string src = readFile(filename);
-    compile(src);
+    delete root;
+    delete parser;
 }

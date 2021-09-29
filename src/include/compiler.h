@@ -2,11 +2,10 @@
 #define COMPILER_H
 
 #include <string>
-#include "lexer.h"
+#include "parser.h"
+#include "assembly.h"
 #include "io.h"
 
-void compile(std::string src);
-
-void compileFile(std::string filename);
+void compile(std::string fileName);
 
 #endif
