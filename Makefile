@@ -10,9 +10,9 @@ $(exec): $(objects)
 	g++ -c $(flags) $< -o $@
 
 clean:
-	-rm *.out
-	-rm *.asm
-	-rm *.o
-	-rm *.txt
 	-rm src/*.o
 	-rm cell
+	-rm *.asm
+	-rm *.o 
+	-rm *.out
+	-rm *.txt

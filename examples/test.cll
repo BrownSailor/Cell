@@ -1,4 +1,5 @@
-main(argc: int, argv: []str): int {
-
-    ret(argc);
+main(argc: int, argv: []str): int 
+{
+    print("working");
+    ret(argv[0]);
 }

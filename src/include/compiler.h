@@ -3,8 +3,8 @@
 
 #include <string>
 #include "parser.h"
-#include "assembly.h"
 #include "io.h"
+#include "assembly.h"
 
 void compile(std::string fileName);
 

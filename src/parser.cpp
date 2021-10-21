@@ -25,9 +25,9 @@ Token *parserEat(Parser *parser, unsigned int type)
 {
     if (parser->token->type != type)
     {
-        std::cout << "[Parser]: Unexpected token `" << tokenToString(parser->token)
+        std::cerr << "[Parser]: Unexpected token `" << tokenToString(parser->token)
                   << "`, expected: `" << tokenTypeToString(type) << "`\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     parser->token = lexerNextToken(parser->lexer);
@@ -38,25 +38,24 @@ Token *parserEat(Parser *parser, unsigned int type)
 /* parserParse
  *    Purpose: start parsing statements
  * Parameters: parser
- *    Returns: tree node
+ *    Returns: tree
  */
 Tree *parserParse(Parser *parser)
 {
-
     return parserParseCompound(parser);
 }
 
 /* parserParseId
  *    Purpose: parse an identifier
  * Parameters: parser
- *    Returns: tree node
+ *    Returns: tree
  */
 Tree *parserParseId(Parser *parser)
 {
     std::string data = parser->token->data;
     parserEat(parser, TOKEN_ID);
 
-    Tree *tree = initTree(TREE_VARIABLE);
+    Tree *tree = initTree(TREE_VAR);
     tree->name = data;
 
     if (parser->token->type == TOKEN_EQUALS)
@@ -106,10 +105,18 @@ Tree *parserParseId(Parser *parser)
             tree->type = TREE_CALL;
         }
 
-        else if (tree->data->type == TREE_FUNC_DEF)
+        else if (tree->data->type == TREE_FUNC_DEC)
         {
-            tree->type = TREE_FUNC_DEF;
+            tree->type = TREE_FUNC_DEC;
         }
+    }
+
+    else if (parser->token->type == TOKEN_LBRACKET)
+    {
+        parserEat(parser, TOKEN_LBRACKET);
+        tree->data = parserParseInt(parser);
+        tree->type = TREE_ACCESS;
+        parserEat(parser, TOKEN_RBRACKET);
     }
 
     else if (parser->token->type == TOKEN_INT)
@@ -123,7 +130,7 @@ Tree *parserParseId(Parser *parser)
 /* parserParseInt
  *    Purpose: parse an integer
  * Parameters: parser
- *    Returns: tree node
+ *    Returns: tree
  */
 Tree *parserParseInt(Parser *parser)
 {
@@ -132,6 +139,23 @@ Tree *parserParseInt(Parser *parser)
 
     Tree *tree = initTree(TREE_INT);
     tree->intValue = value;
+    tree->byteSize = 4;
+
+    return tree;
+}
+
+/* parserParseStr
+ *    Purpose: parse a string
+ * Parameters: parser
+ *    Returns: tree
+ */
+Tree *parserParseStr(Parser *parser)
+{
+    parserEat(parser, TOKEN_QUOTE);
+    Tree *tree = initTree(TREE_STRING);
+    tree->data = parserParseExpr(parser);
+    tree->byteSize = 16;
+    parserEat(parser, TOKEN_QUOTE);
 
     return tree;
 }
@@ -139,7 +163,7 @@ Tree *parserParseInt(Parser *parser)
 /* parserParseExpr
  *    Purpose: parse an expression
  * Parameters: parser
- *    Returns: tree node
+ *    Returns: tree
  */
 Tree *parserParseExpr(Parser *parser)
 {
@@ -150,6 +174,9 @@ Tree *parserParseExpr(Parser *parser)
 
     case TOKEN_INT:
         return parserParseInt(parser);
+
+    case TOKEN_QUOTE:
+        return parserParseStr(parser);
 
     case TOKEN_LPAREN:
         return parserParseList(parser);
@@ -168,7 +195,7 @@ Tree *parserParseExpr(Parser *parser)
 /* parserParseList
  *    Purpose: parse a list of parameters of some sort
  * Parameters: parser
- *    Returns: tree node
+ *    Returns: tree
  */
 Tree *parserParseList(Parser *parser)
 {
@@ -193,7 +220,7 @@ Tree *parserParseList(Parser *parser)
     else if (parser->token->type == TOKEN_COLON)
     {
         parserEat(parser, TOKEN_COLON);
-        list->type = TREE_FUNC_DEF;
+        list->type = TREE_FUNC_DEC;
 
         if (parser->token->type == TOKEN_LBRACKET)
         {
@@ -221,7 +248,7 @@ Tree *parserParseList(Parser *parser)
 /* parserParseCompound
  *    Purpose: parse a block or segment of code
  * Parameters: parser
- *    Returns: tree node
+ *    Returns: tree
  */
 Tree *parserParseCompound(Parser *parser)
 {

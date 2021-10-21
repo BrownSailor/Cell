@@ -1,113 +1,156 @@
 #include "include/assembly.h"
-#include <iostream>
-#include <sstream>
 
-std::string asmCompound(Tree *tree)
+std::string registers[] = {"rdi", "rsi", "rdx", "rcx", "r8d", "r9d"};
+
+static Tree *varLookUp(std::vector<Tree *> &list, std::string name)
+{
+    for (size_t i = 0; i < list.size(); i++)
+    {
+        Tree *tree = list[i];
+        if (tree->type == TREE_VAR && tree->name == name)
+        {
+            return tree;
+        }
+    }
+
+    return nullptr;
+}
+
+std::string asmCompound(Tree *tree, std::vector<Tree *> &list)
 {
     std::string assembly;
-    for (int i = 0; i < tree->children.size(); i++)
+    for (size_t i = 0; i < tree->children.size(); i++)
     {
         Tree *child = tree->children[i];
-        assembly += asmMain(child);
+        assembly += asmMain(child, list);
     }
 
     return assembly;
 }
 
-std::string asmFuncDef(Tree *tree)
+std::string asmFuncDef(Tree *tree, std::vector<Tree *> &list)
 {
     std::string assembly;
-    if (tree->data->type == TREE_FUNC_DEF)
+
+    if (tree->data->type == TREE_FUNC_DEC)
     {
-        std::ostringstream out;
-        out << "\t;; -- " << tree->name << " --\n"
-            << tree->name << ":\n";
+        assembly = "\t;; -- " + tree->name + " --\n";
+        assembly += "\tglobal _" + tree->name + "\n";
+        assembly += "\tsection .text\n";
 
-        assembly += out.str();
+        assembly += "_" + tree->name + ":\n";
+        assembly += "\tpush rbp\n"
+                    "\tmov rbp, rsp\n";
 
-        Tree *data = tree->data;
-        std::string dataData = asmMain(data->data);
+        for (int i = 0; i < tree->data->children.size(); i++)
+        {
+            std::cout << tree->data->children[i]->name << "\n";
+            std::cout << tree->data->children[i]->byteSize << "\n";
+
+            Tree *argument = initTree(TREE_VAR);
+            argument->name = tree->data->children[i]->name;
+            argument->byteSize = tree->data->children[i]->byteSize;
+
+            list.push_back(argument);
+
+            if (i < 6)
+            {
+                assembly += "\tmov [rbp - " + std::to_string(argument->byteSize) + "], " + registers[i] + "\n";
+            }
+        }
+
+        std::string dataData = asmMain(tree->data->data, list);
         assembly += dataData;
     }
 
     return assembly;
 }
 
-std::string asmAssign(Tree *tree)
+std::string asmAssign(Tree *tree, std::vector<Tree *> &list)
 {
 }
 
-std::string asmVariable(Tree *tree)
+std::string asmVariable(Tree *tree, std::vector<Tree *> &list, int id)
 {
-    return "rdi";
+    Tree *variable = varLookUp(list, tree->name);
+
+    if (variable == nullptr)
+    {
+        std::cerr << "[ASM]: `" << tree->name << "` is not defined.\n";
+        exit(EXIT_FAILURE);
+    }
+
+    std::string assembly = "\tmov rax, [rbp - " + std::to_string(variable->byteSize) + "]\n";
+
+    return assembly;
 }
 
-std::string asmInt(Tree *tree)
+std::string asmInt(Tree *tree, std::vector<Tree *> &list)
 {
+    std::string assembly = "\tmov rax, " + std::to_string(tree->intValue) + "\n";
+
+    return assembly;
 }
 
-std::string asmCall(Tree *tree)
+std::string asmCall(Tree *tree, std::vector<Tree *> &list)
 {
     std::string assembly;
     if (tree->name == "ret")
     {
         Tree *firstArg = tree->data->children.size() ? tree->data->children[0] : nullptr;
-        std::cout << firstArg->type << "\n";
 
-        std::string embedAsm = asmMain(firstArg);
-        std::ostringstream out;
-        out << "\t;; -- return " << (firstArg->intValue ? firstArg->intValue : 0) << " --\n"
-            << "\tmov rdi, " << embedAsm << "\n"
-            << "\tret\n";
-
-        assembly += out.str();
+        std::string embedAsm = asmMain(firstArg, list);
+        assembly = "\n\t;; -- return --\n" + embedAsm + "\tpop rbp\n\tret\n";
     }
 
     return assembly;
 }
 
-std::string asmMain(Tree *tree)
+std::string asmAccess(Tree *tree, std::vector<Tree *> &list)
+{
+    Tree *left = varLookUp(list, tree->name);
+    std::string assembly = asmMain(left, list);
+    assembly += "\tadd rax, " + std::to_string(tree->data->intValue * 8) + "\n";
+    assembly += "\tmov rax, [rax]\n";
+
+    return assembly;
+}
+
+std::string asmMain(Tree *tree, std::vector<Tree *> &list)
 {
     switch (tree->type)
     {
     case TREE_COMPOUND:
-        return asmCompound(tree);
+        return asmCompound(tree, list);
 
-    case TREE_FUNC_DEF:
-        return asmFuncDef(tree);
+    case TREE_FUNC_DEC:
+        return asmFuncDef(tree, list);
 
     case TREE_ASSIGN:
-        return asmAssign(tree);
+        return asmAssign(tree, list);
 
-    case TREE_VARIABLE:
-        return asmVariable(tree);
+    case TREE_VAR:
+        return asmVariable(tree, list, 0);
 
     case TREE_INT:
-        return asmInt(tree);
+        return asmInt(tree, list);
 
     case TREE_CALL:
-        return asmCall(tree);
+        return asmCall(tree, list);
+
+    case TREE_ACCESS:
+        return asmAccess(tree, list);
 
     default:
-        std::cout << "[ASM]: No method of generating assembly for Tree of type `" << tree->type << "`\n";
-        exit(1);
+        std::cerr << "[ASM]: No method of generating assembly for Tree of type `" << tree->type << "`\n";
+        exit(EXIT_FAILURE);
     }
 
     return "";
 }
 
-std::string asmInit(Tree *tree)
+std::string asmInit(Tree *tree, std::vector<Tree *> &list)
 {
-    std::ostringstream out;
-    out << "\n\tglobal _main" << tree->name << "\n"
-        << "\tsection .text\n"
-        << "_main:\n"
-        << "\tcall main\n"
-        << "\tmov rax, rdi\n"
-        << "\tmov rax, 0x2000001\n"
-        << "\tsyscall\n";
 
-    std::string value = asmMain(tree) + out.str();
-
-    return value;
+    return asmMain(tree, list);
 }

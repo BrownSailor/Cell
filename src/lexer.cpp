@@ -223,8 +223,8 @@ Token *lexerNextToken(Lexer *lexer)
             break;
 
         default:
-            std::cout << "[Lexer]: Unexpected character `" << lexer->currChar << "`\n";
-            exit(1);
+            std::cerr << "[Lexer]: Unexpected character `" << lexer->currChar << "`\n";
+            exit(EXIT_FAILURE);
         }
     }
 

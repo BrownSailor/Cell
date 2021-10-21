@@ -22,7 +22,6 @@ Token *initToken(std::string data, unsigned int type)
  */
 std::string tokenTypeToString(unsigned int type)
 {
-    std::string typeName;
     switch (type)
     {
     case TOKEN_ID:

@@ -3,13 +3,14 @@
 An experiment to create a compiled programming language just for fun
 
 ```
-main(argv: int, argc: []str): int {
-
+main(argc: int, argv: []str): int
+{
     num: int = 5;
     print: "hello world!";
 
     // if-else statements
-    ? num > 5 {
+    ? num > 5
+    {
         print: 'num is greater than 5';
     } | num < 5 {
         print: 'num is less than 5';
@@ -18,11 +19,13 @@ main(argv: int, argc: []str): int {
     }
 
     // for and while loops
-    @ i: int = argc.sz() - 1, i >= 0, i-- {
-        print: argc[i];
+    @ i: int = argv.sz() - 1, i >= 0, i--
+    {
+        print: argv[i];
     }
 
-    @ num > 0 {
+    @ num > 0
+    {
         print: num;
         num--;
     }
@@ -71,11 +74,14 @@ If-Else statements are written with `?` and `|`
 ```
 num: int = 5;
 
-? num > 5 {
+? num > 5
+{
   print("Num is greater than 5");
-} | num < 5 {
+} | num < 5
+{
   print("Num is less than 5");
-} | {
+} |
+{
   print("Num is equal to 5");
 }
 ```
@@ -83,12 +89,14 @@ num: int = 5;
 For loops and while loops are written with the `@` symbol
 
 ```
-@ c: char = 'a', c <= 'z', c++ {
+@ c: char = 'a', c <= 'z', c++
+{
   print(c);
 }
 
 i: int = 15;
-@ i >= 0 {
+@ i >= 0
+{
   print(i);
   i--;
 }
@@ -97,11 +105,13 @@ i: int = 15;
 Function declaration
 
 ```
-min3(a: int, b: int, c: int): int {
-
-  ? a < b && a < c {
+min3(a: int, b: int, c: int): int
+{
+  ? a < b && a < c
+  {
     ret a;
-  } | b < a && b < c {
+  } | b < a && b < c
+  {
     ret b;
   }
 
@@ -114,7 +124,8 @@ Arrays are fixed size and created using the square brackets `[]` before the type
 ```
 arr: [4]int;
 
-@ i: int = 0, i < 4, i++ {
+@ i: int = 0, i < 4, i++
+{
   arr[i] = i * 2;
 }
 ```
