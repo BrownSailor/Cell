@@ -4,10 +4,8 @@
  */
 
 #include <iostream>
-#include <cassert>
-#include <stack>
-#include <cstring>
 #include <fstream>
+#include <stack>
 #include <vector>
 
 // Operations
@@ -15,173 +13,167 @@ enum
 {
     OP_PUSH,  // push value to stack
     OP_PLUS,  // add top two values on stack
-    OP_MINUS, // subtrace top two values on stack
+    OP_MINUS, // subtract top two values on stack
     OP_DUMP,  // print top value on stack to console
     LEN_OPS   // number of valid operations
 };
 
-void push(int ret[2], int num)
+struct Code
 {
-    ret[0] = OP_PUSH;
-    ret[1] = num;
+    int op_type;
+    int value;
+};
+
+Code push(int x)
+{
+    return { OP_PUSH, x };
 }
 
-void plus(int ret[2])
+Code plus()
 {
-    ret[0] = OP_PLUS;
-    ret[1] = 0;
+    return { OP_PLUS, };
 }
 
-void minus(int ret[2])
+Code minus()
 {
-    ret[0] = OP_MINUS;
-    ret[1] = 0;
+    return { OP_MINUS, };
 }
 
-void dump(int ret[2])
+Code dump()
 {
-    ret[0] = OP_DUMP;
-    ret[1] = 0;
+    return { OP_DUMP, };
 }
 
-void simulate_program(int program[][2], int size)
+void simulate_program(std::vector<Code> program)
 {
-    std::stack<int> st;
-    for (int i = 0; i < size; i++)
+    std::stack<int> stack;
+
+    for (auto code : program)
     {
-        if (program[i][0] == OP_PUSH)
+        if (code.op_type == OP_PUSH)
         {
-            int a = program[i][1];
-            st.push(a);
+            stack.push(code.value);
         }
 
-        else if (program[i][0] == OP_PLUS)
+        else if (code.op_type == OP_PLUS)
         {
-            int a = st.top();
-            st.pop();
+            int a = stack.top();
+            stack.pop();
 
-            int b = st.top();
-            st.pop();
+            int b = stack.top();
+            stack.pop();
 
-            st.push(a + b);
+            stack.push(a + b);
         }
 
-        else if (program[i][0] == OP_MINUS)
+        else if (code.op_type == OP_MINUS)
         {
-            int a = st.top();
-            st.pop();
+            int a = stack.top();
+            stack.pop();
 
-            int b = st.top();
-            st.pop();
+            int b = stack.top();
+            stack.pop();
 
-            st.push(b - a);
+            stack.push(-a + b);
         }
 
-        else if (program[i][0] == OP_DUMP)
+        else if (code.op_type == OP_DUMP)
         {
-            int a = st.top();
-            st.pop();
+            std::cout << stack.top() << "\n";
+            stack.pop();
+        }
 
-            std::cout << a << "\n";
+        else
+        {
+            std::cerr << "Unreachable\n";
         }
     }
 }
 
-void compile_program(int program[][2], int size)
+void compile_program(std::vector<Code> program, std::string out_file_path)
 {
     std::ofstream out;
-    out.open("output.asm");
-
-    // Assembly code for printing a number to the console, aka dumping
-    // Written in C and translated to assembly using GodBolt
+    out.open(out_file_path);
 
     out << "dump:\n";
-    out << "    mov     r9, -3689348814741910323\n";
     out << "    sub     rsp, 40\n";
     out << "    mov     BYTE [rsp+31], 10\n";
-    out << "    lea     rcx, [rsp+30]\n";
+    out << "    lea     rdx, [rsp+30]\n\n";
+
     out << ".L2:\n";
-    out << "    mov     rax, rdi\n";
+    out << "    movsx   rax, edi\n";
+    out << "    mov     ecx, edi\n";
     out << "    lea     r8, [rsp+32]\n";
-    out << "    mul     r9\n";
-    out << "    mov     rax, rdi\n";
-    out << "    sub     r8, rcx\n";
-    out << "    shr     rdx, 3\n";
-    out << "    lea     rsi, [rdx+rdx*4]\n";
-    out << "    add     rsi, rsi\n";
-    out << "    sub     rax, rsi\n";
-    out << "    add     eax, 48\n";
-    out << "    mov     BYTE [rcx], al\n";
-    out << "    mov     rax, rdi\n";
-    out << "    mov     rdi, rdx\n";
-    out << "    mov     rdx, rcx\n";
-    out << "    sub     rcx, 1\n";
-    out << "    cmp     rax, 9\n";
-    out << "    ja      .L2\n";
-    out << "    lea     rax, [rsp+32]\n";
-    out << "    mov     edi, 1\n";
-    out << "    sub     rdx, rax\n";
-    out << "    lea     rsi, [rsp+32+rdx]\n";
+    out << "    imul    rax, rax, 1717986919\n";
+    out << "    sar     ecx, 31\n";
+    out << "    sub     r8, rdx\n";
+    out << "    sar     rax, 34\n";
+    out << "    sub     eax, ecx\n";
+    out << "    lea     ecx, [rax+rax*4]\n";
+    out << "    add     ecx, ecx\n";
+    out << "    sub     edi, ecx\n";
+    out << "    add     edi, 48\n";
+    out << "    mov     BYTE [rdx], dil\n";
+    out << "    mov     edi, eax\n";
+    out << "    mov     rax, rdx\n";
+    out << "    sub     rdx, 1\n";
+    out << "    test    edi, edi\n";
+    out << "    jne     .L2\n";
+    out << "    lea     rsi, [rsp+32]\n";
     out << "    mov     rdx, r8\n";
-    out << "    mov     rax, 0x02000004\n";
+    out << "    mov     edi, 1\n";
+    out << "    sub     rax, rsi\n";
+    out << "    lea     rsi, [rsp+32+rax]\n";
+    out << "    mov     rax, 0x2000004\n";
     out << "    syscall\n";
     out << "    add     rsp, 40\n";
-    out << "    ret\n";
+    out << "    ret\n\n";
 
-    out << "\n        global      _main\n";
-    out << "        section     .text\n";
+    out << "global _main\n";
+    out << "section .text\n";
     out << "_main:\n";
 
-    for (int i = 0; i < size; i++)
+    for (auto code : program)
     {
-        // Push a value to the top of the stack
-        if (program[i][0] == OP_PUSH)
+        if (code.op_type == OP_PUSH)
         {
-            out << "\n        ;; push " << program[i][1] << "\n";
-            out << "        push \t\t" << program[i][1] << "\n";
+            out << "\n    ;; push " << code.value << "\n";
+            out << "    push " << code.value << "\n";
         }
 
-        // Add top two values on the stack
-        else if (program[i][0] == OP_PLUS)
+        else if (code.op_type == OP_PLUS)
         {
-            out << "\n        ;; plus\n";
-            out << "        pop \t\trax\n";
-            out << "        pop \t\trbx\n";
-            out << "        add \t\trax, rbx\n";
-            out << "        push \t\trax\n";
+            out << "\n    ;; plus\n";
+            out << "    pop rax\n";
+            out << "    pop rbx\n";
+            out << "    add rax, rbx\n";
+            out << "    push rax\n";
         }
 
-        // Subtract top two values on the stack
-        // TODO: handle negatives
-        else if (program[i][0] == OP_MINUS)
+        else if (code.op_type == OP_MINUS)
         {
-            out << "\n        ;; minus\n";
-            out << "        pop \t\trax\n";
-            out << "        pop \t\trbx\n";
-            out << "        sub rbx, rax\n";
-            out << "        push rbx\n";
+            out << "\n    ;; minus\n";
+            out << "    pop rbx\n";
+            out << "    pop rax\n";
+            out << "    sub rax, rbx\n";
+            out << "    push rax\n";
         }
 
-        // Dump value in stack to the rdi register and print
-        else if (program[i][0] == OP_DUMP)
+        else if (code.op_type == OP_DUMP)
         {
-            out << "\n        ;; dump\n";
-            out << "        pop \t\trdi\n";
-            out << "        call \t\tdump\n";
+            out << "\n    ;; dump\n";
+            out << "    pop rdi\n";
+            out << "    call dump\n";
         }
     }
-
-    // Exit the program without any issues
-    out << ("        mov         rax, 0x02000001\n");
-    out << ("        mov         rdi, 0\n");
-    out << ("        syscall\n");
-
-    out.close();
+    out << "    mov rax, 0x2000001\n";
+    out << "    mov rdi, 0\n";
+    out << "    syscall\n";
 }
 
 void usage()
 {
-    std::cout << "Usage: cell <SUBCOMMAND> [ARGS]\n";
+    std::cout << "Usage: cell <SUBCOMMAND> [FILENAME]\n";
     std::cout << "SUBCOMMANDS:\n";
     std::cout << "    sim <file>       Simulate the program\n";
     std::cout << "    com <file>       Compile the program\n";
@@ -193,34 +185,39 @@ int main(int argc, char *argv[])
     if (argc < 2)
     {
         usage();
-        std::cerr << "ERROR: no subcommands found\n";
-        exit(1);
+        std::cerr << "ERROR: no subcommand provided\n";
+        exit(EXIT_FAILURE);
     }
 
-    int program[4][2];
+    std::vector<Code> program = {
+        push(2),
+        push(3),
+        plus(),
+        dump(),
+        push(500),
+        push(80),
+        minus(),
+        dump(),
 
-    push(program[0], 13);
-    push(program[1], 56);
-    minus(program[2]);
-    dump(program[3]);
+    };
 
-    char *subcommand = argv[1];
-    if (strcmp(subcommand, "sim") == 0)
+    if (strcmp(argv[1], "sim") == 0)
     {
-        simulate_program(program, 4);
+        simulate_program(program);
     }
 
-    else if (strcmp(subcommand, "com") == 0)
+    else if (strcmp(argv[1], "com") == 0)
     {
-        compile_program(program, 4);
+        compile_program(program, "output.asm");
         system("nasm -fmacho64 -o output.o output.asm");
         system("ld output.o -o output -macosx_version_min 11.0 -L /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem");
+        system("rm output.asm output.o");
     }
 
     else
     {
         usage();
-        std::cerr << "ERROR: unknown subcommand " << subcommand << "\n";
-        exit(1);
+        std::cerr << "ERROR: unknown subcommand " << argv[1] << "\n";
+        exit(EXIT_FAILURE);
     }
 }
