@@ -5,3 +5,4 @@ clean:
 	-rm cell
 	-rm *.asm
 	-rm *.o 
+	-rm *.out
