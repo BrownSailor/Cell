@@ -1,42 +1,4 @@
-/* Cell:    a stack-based programming language written in C++
- * Author:  Shreyas Ravi
- * Created: September 24 2021
- */
-
-#include <iostream>
-#include <fstream>
-#include <stack>
-#include <vector>
-
-// Operations
-enum
-{
-    OP_PUSH,  // push value to stack
-    OP_PLUS,  // add top two values on stack
-    OP_MINUS, // subtract top two values on stack
-    OP_MUL,   // subtract top two values on stack
-    OP_DIV,   // subtract top two values on stack
-    OP_MOD,   // subtract top two values on stack
-    OP_DUMP,  // print top value on stack to console
-    LEN_OPS   // number of valid operations
-};
-
-struct code
-{
-    int op_type;
-    int value;
-};
-
-code push(int x);
-code plus();
-code minus();
-code dump();
-bool string_is_int(std::string s);
-code parse_op(std::string value);
-std::vector<code> load_program(std::string input_file);
-void simulate_program(std::vector<code> program);
-void compile_program(std::vector<code> program, std::string output_file);
-void usage();
+#include "include/cell.h"
 
 code push(int x)
 {
@@ -65,7 +27,7 @@ bool string_is_int(std::string s)
     return *p == 0;
 }
 
-code parse_op(std::string value)
+code parse_op(std::string value, std::string msg)
 {
     if (value == "+")
     {
@@ -82,7 +44,17 @@ code parse_op(std::string value)
         return dump();
     }
 
-    return push(std::stoi(value));
+    try 
+    {
+        return push(std::stoi(value));
+    }
+    
+    catch (const std::exception& e)
+    {
+        std::size_t last_colon = msg.find_last_of(':');
+        std::cerr << msg.substr(0, last_colon) << ": invalid command" << msg.substr(last_colon) << "\n";
+        exit(EXIT_FAILURE);
+    }
 }
 
 std::vector<code> load_program(std::string input_file)
@@ -92,11 +64,33 @@ std::vector<code> load_program(std::string input_file)
     try
     {
         in.open(input_file);
-        std::string value;
-        while (!in.eof())
+        std::string line;
+
+        std::vector<std::string> lexed_file = lex_file(input_file);
+        int curr = 0;
+        while (getline(in, line))
         {
-            in >> value;
-            program.push_back(parse_op(value));
+            std::vector<std::string> tokens;
+            int col = strip_col(line, 0);
+
+            while (col < line.size())
+            {
+                int col_end = line.find(' ', col);
+
+                if (col_end < 0)
+                {
+                    col_end = line.size();
+                }
+
+                tokens.push_back(line.substr(col, col_end - col));
+                col = strip_col(line, col_end);
+            }
+
+            for (auto token : tokens)
+            {
+                program.push_back(parse_op(token, lexed_file[curr]));
+                curr++;
+            }
         }
     }
 
@@ -244,69 +238,4 @@ void usage()
     std::cout << "SUBCOMMANDS:\n";
     std::cout << "    sim <input files>                      Simulate the program\n";
     std::cout << "    com <executable name> <input files>    Compile the program\n";
-}
-
-int main(int argc, char *argv[])
-{
-
-    if (argc < 2)
-    {
-        usage();
-        std::cerr << "ERROR: no subcommand provided\n";
-        exit(EXIT_FAILURE);
-    }
-
-    if (strcmp(argv[1], "sim") == 0)
-    {
-        if (argc < 3)
-        {
-            usage();
-            std::cerr << "ERROR: no input file provided\n";
-            exit(EXIT_FAILURE);
-        }
-
-        std::vector<code> program = load_program(argv[2]);
-        simulate_program(program);
-    }
-
-    else if (strcmp(argv[1], "com") == 0)
-    {
-        if (argc < 4)
-        {
-            usage();
-
-            if (strstr(".cll", argv[2]) == NULL)
-                std::cerr << "ERROR: no input file provided\n";
-            else
-                std::cerr << "ERROR: no executable name provided\n";
-
-            exit(EXIT_FAILURE);
-        }
-
-        std::vector<code> program = load_program(argv[3]);
-        std::string output_file = argv[2];
-
-        std::string asm_command = "nasm -fmacho64 -o " + output_file + ".o " + output_file + ".asm";
-        std::string lnk_command = "ld " + output_file + ".o -o " + output_file + ".out -macosx_version_min 11.0 -L /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem";
-        std::string rmf_command = "rm " + output_file + ".asm " + output_file + ".o";
-
-        std::cout << "[INFO] Generating " << output_file << ".asm\n";
-        compile_program(program, output_file + ".asm");
-
-        std::cout << "[CMD] " << asm_command << "\n";
-        system(asm_command.c_str());
-
-        std::cout << "[CMD] " << lnk_command << "\n";
-        system(lnk_command.c_str());
-
-        // std::cout << "[CMD] " << rmf_command << "\n";
-        // system(rmf_command.c_str());
-    }
-
-    else
-    {
-        usage();
-        std::cerr << "ERROR: unknown subcommand " << argv[1] << "\n";
-        exit(EXIT_FAILURE);
-    }
 }
