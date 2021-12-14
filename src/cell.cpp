@@ -15,9 +15,24 @@ code minus()
     return { OP_MINUS, };
 }
 
+code equal()
+{
+    return { OP_EQUAL, };
+}
+
 code dump()
 {
     return { OP_DUMP, };
+}
+
+code iff()
+{
+    return { OP_IF, };
+}
+
+code end()
+{
+    return { OP_END, };
 }
 
 bool string_is_int(std::string s)
@@ -39,9 +54,24 @@ code parse_op(std::string value, std::string msg)
         return minus();
     }
 
-    if (value == "dump")
+    if (value == "=")
+    {
+        return equal();
+    }
+
+    if (value == ".")
     {
         return dump();
+    }
+
+    if (value == "if")
+    {
+        return iff();
+    }
+
+    if (value == "end")
+    {
+        return end();
     }
 
     try 
@@ -55,6 +85,30 @@ code parse_op(std::string value, std::string msg)
         std::cerr << msg.substr(0, last_colon) << ": invalid command" << msg.substr(last_colon) << "\n";
         exit(EXIT_FAILURE);
     }
+}
+
+std::vector<code> parse_blocks(std::vector<code> program)
+{
+    std::stack<int> stack;
+
+    for (int i = 0; i < program.size(); i++)
+    {
+        code elem = program[i];
+        if (elem.op_type == OP_IF)
+        {
+            stack.push(i);
+        }
+
+        else if (elem.op_type == OP_END)
+        {
+            int if_addr = stack.top();
+            stack.pop();
+
+            program[if_addr] = { OP_IF, i };
+        }
+    }
+
+    return program;
 }
 
 std::vector<code> load_program(std::string input_file)
@@ -92,6 +146,8 @@ std::vector<code> load_program(std::string input_file)
                 curr++;
             }
         }
+
+        program = parse_blocks(program);
     }
 
     catch(const std::exception& e)
@@ -107,12 +163,14 @@ std::vector<code> load_program(std::string input_file)
 void simulate_program(std::vector<code> program)
 {
     std::stack<int> stack;
-
-    for (auto elem : program)
+    int i = 0;
+    while (i < program.size())
     {
+        code elem = program[i];
         if (elem.op_type == OP_PUSH)
         {
             stack.push(elem.value);
+            i++;
         }
 
         else if (elem.op_type == OP_PLUS)
@@ -124,6 +182,7 @@ void simulate_program(std::vector<code> program)
             stack.pop();
 
             stack.push(a + b);
+            i++;
         }
 
         else if (elem.op_type == OP_MINUS)
@@ -135,12 +194,39 @@ void simulate_program(std::vector<code> program)
             stack.pop();
 
             stack.push(-a + b);
+            i++;
+        }
+
+        else if (elem.op_type == OP_EQUAL)
+        {
+            int a = stack.top();
+            stack.pop();
+
+            int b = stack.top();
+            stack.pop();
+
+            a == b ? stack.push(1) : stack.push(0);
+            i++;
         }
 
         else if (elem.op_type == OP_DUMP)
         {
             std::cout << stack.top() << "\n";
             stack.pop();
+            i++;
+        }
+
+        else if (elem.op_type == OP_IF)
+        {
+            int cond = stack.top();
+            stack.pop();
+
+            cond == 0 ? i = elem.value : i++;
+        }
+
+        else if (elem.op_type == OP_END)
+        {
+            i++;
         }
 
         else
@@ -193,17 +279,18 @@ void compile_program(std::vector<code> program, std::string output_file)
     out << "section .text\n";
     out << "_main:\n";
 
-    for (auto elem : program)
+    for (int i = 0; i < program.size(); i++)
     {
+        code elem = program[i];
         if (elem.op_type == OP_PUSH)
         {
-            out << "\n    ;; push " << elem.value << "\n";
+            out << "    ;; -- push --\n";
             out << "    push " << elem.value << "\n";
         }
 
         else if (elem.op_type == OP_PLUS)
         {
-            out << "\n    ;; plus\n";
+            out << "    ;; -- plus --\n";
             out << "    pop rax\n";
             out << "    pop rbx\n";
             out << "    add rax, rbx\n";
@@ -212,24 +299,53 @@ void compile_program(std::vector<code> program, std::string output_file)
 
         else if (elem.op_type == OP_MINUS)
         {
-            out << "\n    ;; minus\n";
+            out << "    ;; -- minus --\n";
             out << "    pop rbx\n";
             out << "    pop rax\n";
             out << "    sub rax, rbx\n";
             out << "    push rax\n";
         }
 
+        else if (elem.op_type == OP_EQUAL)
+        {
+            out << "    ;; -- equal --\n";
+            out << "    pop rax\n";
+            out << "    pop rbx\n";
+            out << "    mov rcx, 1\n";
+            out << "    mov rdx, 0\n";
+            out << "    cmp rax, rbx\n";
+            out << "    mov rax, rdx\n";
+            out << "    cmove rax, rcx\n";
+            out << "    push rax\n";
+        }
+
         else if (elem.op_type == OP_DUMP)
         {
-            out << "\n    ;; dump\n";
+            out << "    ;; -- dump --\n";
             out << "    pop rdi\n";
             out << "    call dump\n";
         }
+
+        else if (elem.op_type == OP_IF)
+        {
+            out << "    ;; -- if --\n";
+            out << "    pop rax\n";
+            out << "    test rax, rax\n";
+            out << "    jz addr_" << elem.value << "\n";
+        }
+
+        else if (elem.op_type == OP_END)
+        {
+            out << "    ;; -- end --\n";
+            out << "addr_" << i << ":\n";
+        }
     }
-    out << "\n    ;; exit\n";
+    out << "    ;; -- exit --\n";
     out << "    mov rax, 0x2000001\n";
     out << "    mov rdi, 0\n";
     out << "    syscall\n";
+
+    out.close();
 }
 
 void usage()
