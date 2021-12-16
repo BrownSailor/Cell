@@ -4,7 +4,7 @@ An experiment to create a compiled stack-based programming language just for fun
 
 ## Example
 ```
-2 3 + dump
+2 3 + .
 ```
 
 will produce console output 
@@ -22,7 +22,7 @@ Simulation runs an interpreter on the program
 ```js
 $ cat program.cll
 
-2 3 + dump
+2 3 + .
 
 $ ./cell sim program.cll
 
@@ -36,7 +36,7 @@ Compilation generates assembly code, compiles it with [nasm](https://www.nasm.us
 ```js
 $ cat program.cll
 
-2 3 + dump
+2 3 + .
 
 $ ./cell com program.out program.cll
 
