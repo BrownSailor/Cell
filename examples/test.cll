@@ -1,19 +1,6 @@
-2 3 + .
-7 3 - .
-2 2 + 4 = .
-
-4 5 + 9 = if
-    3 2 + 5 = if
-        23 .
-    else
-        42 .
-    end
-else
-    69 .
-end
-
-10
-dup 10 <= if
-    inc
+10 while dup 0 > do
     dup .
+    dec
 end
+
+42 .

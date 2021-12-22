@@ -75,6 +75,16 @@ code dec()
     return { OP_DEC, };
 }
 
+code wile()
+{
+    return { OP_WHILE, };
+}
+
+code doo()
+{
+    return { OP_DO, };
+}
+
 bool string_is_int(std::string s)
 {
     char *p;
@@ -154,6 +164,16 @@ code parse_op(std::string value, std::string msg)
         return dec();
     }
 
+    if (value == "while")
+    {
+        return wile();
+    }
+
+    if (value == "do")
+    {
+        return doo();
+    }
+
     try 
     {
         return push(std::stoi(value));
@@ -196,7 +216,27 @@ std::vector<code> parse_blocks(std::vector<code> program)
             if (program[block_i].op_type == OP_IF || program[block_i].op_type == OP_ELSE)
             {
                 program[block_i] = { program[block_i].op_type, i };
+                program[i] = { OP_END, i + 1 };
             }
+
+            else if (program[block_i].op_type == OP_DO)
+            {
+                program[i] = { OP_END, program[block_i].value};
+                program[block_i] = { OP_DO, i + 1 };
+            }
+        }
+
+        else if (elem.op_type == OP_WHILE)
+        {
+            stack.push(i);
+        }
+
+        else if (elem.op_type == OP_DO)
+        {
+            int while_i = stack.top();
+            stack.pop();
+            program[i] = { OP_DO, while_i };
+            stack.push(i);
         }
     }
 
@@ -323,7 +363,7 @@ void simulate_program(std::vector<code> program)
 
         else if (elem.op_type == OP_END)
         {
-            i++;
+            i = elem.value;
         }
 
         else if (elem.op_type == OP_DUP)
@@ -401,6 +441,19 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
+        else if (elem.op_type == OP_WHILE)
+        {
+            i++;
+        }
+
+        else if (elem.op_type == OP_DO)
+        {
+            int a = stack.top();
+            stack.pop();
+
+            a == 0 ? i = elem.value : i++;
+        }
+
         else
         {
             std::cerr << "Unreachable\n";
@@ -451,9 +504,12 @@ void compile_program(std::vector<code> program, std::string output_file)
     out << "section .text\n";
     out << "_main:\n";
 
-    for (int i = 0; i < program.size(); i++)
+    int i = 0;
+    for (i = 0; i < program.size(); i++)
     {
         code elem = program[i];
+        out << "\naddr_" << i << ":\n";
+
         if (elem.op_type == OP_PUSH)
         {
             out << "    ;; -- push --\n";
@@ -510,13 +566,16 @@ void compile_program(std::vector<code> program, std::string output_file)
         {
             out << "    ;; -- else --\n";
             out << "    jmp addr_" << elem.value << "\n";
-            out << "addr_" << i + 1 << ":\n";
         }
 
         else if (elem.op_type == OP_END)
         {
             out << "    ;; -- end --\n";
-            out << "addr_" << i << ":\n";
+
+            if (i + 1 != elem.value)
+            {
+                out << "    jmp addr_" << elem.value << "\n";
+            }
         }
 
         else if (elem.op_type == OP_DUP)
@@ -530,8 +589,8 @@ void compile_program(std::vector<code> program, std::string output_file)
         else if (elem.op_type == OP_GT)
         {
             out << "    ;; -- greater than --\n";
-            out << "    pop rax\n";
             out << "    pop rbx\n";
+            out << "    pop rax\n";
             out << "    mov rcx, 1\n";
             out << "    mov rdx, 0\n";
             out << "    cmp rax, rbx\n";
@@ -543,8 +602,8 @@ void compile_program(std::vector<code> program, std::string output_file)
         else if (elem.op_type == OP_LT)
         {
             out << "    ;; -- less than --\n";
-            out << "    pop rax\n";
             out << "    pop rbx\n";
+            out << "    pop rax\n";
             out << "    mov rcx, 1\n";
             out << "    mov rdx, 0\n";
             out << "    cmp rax, rbx\n";
@@ -556,8 +615,8 @@ void compile_program(std::vector<code> program, std::string output_file)
         else if (elem.op_type == OP_GTE)
         {
             out << "    ;; -- greater than or equal --\n";
-            out << "    pop rax\n";
             out << "    pop rbx\n";
+            out << "    pop rax\n";
             out << "    mov rcx, 1\n";
             out << "    mov rdx, 0\n";
             out << "    cmp rax, rbx\n";
@@ -569,8 +628,8 @@ void compile_program(std::vector<code> program, std::string output_file)
         else if (elem.op_type == OP_LTE)
         {
             out << "    ;; -- less than or equal --\n";
-            out << "    pop rax\n";
             out << "    pop rbx\n";
+            out << "    pop rax\n";
             out << "    mov rcx, 1\n";
             out << "    mov rdx, 0\n";
             out << "    cmp rax, rbx\n";
@@ -595,7 +654,22 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
+        else if (elem.op_type == OP_WHILE)
+        {
+            out << "    ;; -- while --\n";
+        }
+
+        else if (elem.op_type == OP_DO)
+        {
+            out << "    ;; -- do --\n";
+            out << "    pop rax\n";
+            out << "    test rax, rax\n";
+            out << "    jz addr_" << elem.value << "\n";
+        }
+
     }
+    
+    out << "\naddr_" << i << ":\n";
     out << "    ;; -- exit --\n";
     out << "    mov rax, 0x2000001\n";
     out << "    mov rdi, 0\n";

@@ -1,4 +1,4 @@
-/* Cell:    a stack-based programming language written in C++
+/* Cell:    a programming language written in C++
  * Author:  Shreyas Ravi
  * Created: September 24 2021
  */

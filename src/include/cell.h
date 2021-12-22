@@ -20,7 +20,8 @@ enum
     OP_LT,    // compare less than of top two values on stack
     OP_GTE,   // compare greater than or equal of top two values on stack
     OP_LTE,   // compare less than or equal of top two values on stack
-    OP_WHILE, // while block
+    OP_WHILE, // while condition
+    OP_DO,    // do block
     OP_INC,   // increment top value on stack
     OP_DEC,   // decrement top value on stack
     LEN_OPS   // number of valid operations
@@ -47,6 +48,8 @@ code gte();
 code lte();
 code inc();
 code dec();
+code wile();
+code doo();
 bool string_is_int(std::string s);
 code parse_op(std::string value, std::string msg);
 std::vector<code> parse_blocks(std::vector<code> program);
