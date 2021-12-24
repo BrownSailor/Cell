@@ -1,0 +1,62 @@
+use std;
+
+printSum(a: int, b: int): int
+{
+    print a + b;
+}
+
+returnSum(a: int, b: int): int
+{
+    return a + b;
+}
+
+num: int = 5;
+print "Hello, world!";
+
+if num > 5
+{
+    print "num is greater than 5";
+} 
+
+elif num < 5
+{
+    print "num is less than 5";
+}
+
+else 
+{
+    print "num is equal to 5";
+}
+
+while num > 0 
+{
+    print num;
+    num--;
+}
+
+for i: int = 0; i < 10; i++
+{
+    print i;
+}
+
+Breakfast: class
+{
+    init(meat: str, bread: str)
+    {
+        this.meat = meat;
+        this.bread = bread;
+    }
+
+    serve(who: str) {
+        print "Enjoy your " + this.meat + " and " + this.bread + ", " + who + ".";
+    }
+}
+
+Brunch < Breakfast: class
+{
+    init(meat: str, bread: str, drink: str)
+    {
+        super.init(meat, bread);
+        this.drink = drink;
+    }
+}

@@ -1,6 +1,0 @@
-10 while dup 0 > do
-    dup .
-    dec
-end
-
-42 .
