@@ -7,6 +7,18 @@
 typedef enum OpCode
 {
     OP_CONSTANT,
+    OP_ADD,
+    OP_SUB,
+    OP_MUL,
+    OP_DIV,
+    OP_MOD,
+    OP_NEG,
+    OP_LT,
+    OP_LTE,
+    OP_GT,
+    OP_GTE,
+    OP_EQ,
+    OP_NEQ,
     OP_RETURN,
 } OpCode;
 

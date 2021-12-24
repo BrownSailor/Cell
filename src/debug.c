@@ -45,6 +45,42 @@ int disassembleInstruction(Chunk *chunk, int offset)
 
     case OP_CONSTANT:
         return constantInstruction("OP_CONSTANT", chunk, offset);
+    
+    case OP_ADD:
+        return simpleInstruction("OP_ADD", offset);
+
+    case OP_SUB:
+        return simpleInstruction("OP_SUB", offset);
+
+    case OP_MUL:
+        return simpleInstruction("OP_MUL", offset);
+
+    case OP_DIV:
+        return simpleInstruction("OP_DIV", offset);
+
+    case OP_MOD:
+        return simpleInstruction("OP_MOD", offset);
+
+    case OP_GT:
+        return simpleInstruction("OP_GT", offset);
+
+    case OP_GTE:
+        return simpleInstruction("OP_GTE", offset);
+
+    case OP_LT:
+        return simpleInstruction("OP_LT", offset);
+
+    case OP_LTE:
+        return simpleInstruction("OP_LTE", offset);
+
+    case OP_EQ:
+        return simpleInstruction("OP_EQ", offset);
+
+    case OP_NEQ:
+        return simpleInstruction("OP_NEQ", offset);
+
+    case OP_NEG:
+        return simpleInstruction("OP_NEG", offset);
 
     case OP_RETURN:
         return simpleInstruction("OP_RETURN", offset);
