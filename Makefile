@@ -1,5 +1,5 @@
 build:
-	g++ -std=c++17 -o cell src/*.cpp
+	gcc -o cell src/*.c
 
 clean:
 	-rm cell
