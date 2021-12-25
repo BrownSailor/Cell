@@ -73,7 +73,7 @@ int disassembleInstruction(Chunk *chunk, int offset)
     case OP_LTE:
         return simpleInstruction("OP_LTE", offset);
 
-    case OP_EQ:
+    case OP_EQEQ:
         return simpleInstruction("OP_EQ", offset);
 
     case OP_NEQ:

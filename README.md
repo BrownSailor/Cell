@@ -75,7 +75,7 @@ Data types:
 
 ```
 int: integer (1, -48),
-flo: floating point number (25.0, 31.31,
+flo: floating point number (25.0, 31.31),
 bool: boolean (tru, fls),
 char: character ('c', 'o'),
 str: string ("Hello world!")

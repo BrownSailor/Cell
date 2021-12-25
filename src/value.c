@@ -1,5 +1,4 @@
 #include "include/value.h"
-#include "include/memory.h"
 
 void initValueArray(ValueArray *array)
 {

@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "value.h"
+#include "memory.h"
 
 typedef enum OpCode
 {
@@ -17,7 +18,7 @@ typedef enum OpCode
     OP_LTE,
     OP_GT,
     OP_GTE,
-    OP_EQ,
+    OP_EQEQ,
     OP_NEQ,
     OP_RETURN,
 } OpCode;

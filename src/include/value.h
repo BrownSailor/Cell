@@ -1,6 +1,9 @@
 #ifndef CELL_VALUE_H
 #define CELL_VALUE_H
 
+#include "common.h"
+#include "memory.h"
+
 typedef int Value;
 
 typedef struct ValueArray
