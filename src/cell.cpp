@@ -246,15 +246,17 @@ std::vector<code> parse_blocks(std::vector<code> program)
 std::vector<code> load_program(std::string input_file)
 {
     std::vector<code> program;
-    std::ifstream in;
+    std::stringstream ss;
     try
     {
-        in.open(input_file);
+        std::string file = remove_comments(input_file);
+        ss << file;
         std::string line;
 
         std::vector<std::string> lexed_file = lex_file(input_file);
+
         int curr = 0;
-        while (getline(in, line))
+        while (getline(ss, line))
         {
             std::vector<std::string> tokens;
             int col = strip_col(line, 0);
@@ -288,6 +290,8 @@ std::vector<code> load_program(std::string input_file)
         std::cerr << "ERROR: could not find file `" << input_file << "`\n";
         exit(EXIT_FAILURE);
     }
+
+    ss.clear();
 
     return program;
 }
