@@ -1,149 +1,52 @@
 # Cell
 
-## \*\***WORK IN PROGRESS**\*\*
+An experiment to create a compiled stack-based programming language just for fun
 
-An experiment to create a compiled programming language just for fun
-
+## Example
 ```
-use std;
-
-printSum(a: int, b: int): int
-{
-    print a + b;
-}
-
-returnSum(a: int, b: int): int
-{
-    return a + b;
-}
-
-num: int = 5;
-print "Hello, world!";
-
-if num > 5
-{
-    print "num is greater than 5";
-} 
-
-elif num < 5
-{
-    print "num is less than 5";
-}
-
-else 
-{
-    print "num is equal to 5";
-}
-
-while num > 0 
-{
-    print num;
-    num--;
-}
-
-for i: int = 0; i < 10; i++
-{
-    print i;
-}
-
-Breakfast: class
-{
-    init(meat: str, bread: str)
-    {
-        this.meat = meat;
-        this.bread = bread;
-    }
-
-    serve(who: str) {
-        print "Enjoy your " + this.meat + " and " + this.bread + ", " + who + ".";
-    }
-}
-
-Brunch < Breakfast: class
-{
-    init(meat: str, bread: str, drink: str)
-    {
-        super.init(meat, bread);
-        this.drink = drink;
-    }
-}
+2 3 + dump
 ```
 
-### Features
-
-Data types:
+will produce console output 
 
 ```
-int: integer (1, -48),
-flo: floating point number (25.0, 31.31),
-bool: boolean (tru, fls),
-char: character ('c', 'o'),
-str: string ("Hello world!")
-void: void
+5
 ```
 
-Variables are declared and initialized in the following manner
+## Usage
 
-```
-num: int;
-num = 5;
+### Simulation
 
-text: string = "Welcome to Cell!";
-```
+Simulation runs an interpreter on the program
 
-There will be support for type inference, which will look like this
+```js
+$ cat program.cll
 
-```
-inferredInt = 5;
-```
+2 3 + dump
 
-Functions are called by their name and the parameters passed inside parentheses `()`.
+$ ./cell sim program.cll
 
-```
-minVal: int = min(5, 3);
-printNewLine();
+5
 ```
 
-They are declared in the following manner:
-```
-printSum(a: int, b: int): void
-{
-    print a + b;
-}
-```
+### Compilation
 
-Classes follow this synntax
-```
-Breakfast: class
-{
-    init(meat: str, bread: str)
-    {
-        this.meat = meat;
-        this.bread = bread;
-    }
+Compilation generates assembly code, compiles it with [nasm](https://www.nasm.us/), and links it with [ld](https://www.gnu.org/software/binutils/)
 
-    serve(who: str) {
-        print "Enjoy your " + this.meat + " and " + this.bread + ", " + who + ".";
-    }
-}
-```
+```js
+$ cat program.cll
 
-Instances of classes follow this syntax
-```
-baconAndToast: Breakfast("bacon", "toast");
-copyOfBaconAndToast: Breakfast = baconAndToast;
+2 3 + .
 
-baconAndToast.serve("Joe Biden");
-```
+$ ./cell com program.out program.cll
 
-A class that inherits properties from a parent class is declared like so
-```
-Brunch < Breakfast: class
-{
-    init(meat: str, bread: str, drink: str)
-    {
-        super.init(meat, bread);
-        this.drink = drink;
-    }
-}
+[INFO] Generating program.asm
+
+[CMD] nasm -o program.o program.asm
+
+[CMD] ld program.o -o program.out
+
+$ ./program.out
+
+5
 ```
