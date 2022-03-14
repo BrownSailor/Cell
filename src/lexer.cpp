@@ -5,16 +5,33 @@ std::string remove_comments(std::string input_file)
 {
     std::string file, line;
     std::ifstream in;
-    in.open(input_file);
 
-    while (getline(in, line))
+    try
     {
-        file += line.substr(0, line.find("//")) + "\n";
+        in.open(input_file);
+            
+        while (getline(in, line))
+        {
+            file += line.substr(0, line.find("//")) + "\n";
+        }
+
+        in.close();
+
+        return file;
     }
 
-    in.close();
-
-    return file;
+    catch(const std::exception& e)
+    {
+        std::cout << "Usage: cell <SUBCOMMAND> [ARGS]\n";
+        std::cout << "SUBCOMMANDS:\n";
+        std::cout << "    sim <input files>                      Simulate the program\n";
+        std::cout << "    com <executable name> <input files>    Compile the program\n";
+        std::cerr << "ERROR: could not find file `" << input_file << "`\n";
+        
+        exit(EXIT_FAILURE);
+        
+        return "";
+    }
 }
 
 int strip_col(std::string line, int col)

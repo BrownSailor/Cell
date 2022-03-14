@@ -29,28 +29,11 @@ enum
 
 struct code
 {
-    int op_type;
-    int value;
+    int type = -1;      // type of operation
+    int value = -1;     // value (int for push, jump address for conditionals)
+    std::string loc;
 };
 
-code push(int x);
-code plus();
-code minus();
-code equal();
-code dump();
-code iff();
-code elze();
-code end();
-code dup();
-code gt();
-code lt();
-code gte();
-code lte();
-code inc();
-code dec();
-code wile();
-code doo();
-bool string_is_int(std::string s);
 code parse_op(std::string value, std::string msg);
 std::vector<code> parse_blocks(std::vector<code> program);
 std::vector<code> load_program(std::string input_file);

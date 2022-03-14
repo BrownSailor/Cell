@@ -5,6 +5,7 @@
 
 #include "include/cell.h"
 #include "include/lexer.h"
+#include <string.h>
 
 using namespace std;
 

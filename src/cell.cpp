@@ -1,189 +1,103 @@
 #include "include/cell.h"
 
-code push(int x)
+void print_error(std::string loc, std::string msg)
 {
-    return { OP_PUSH, x };
-}
-
-code plus()
-{
-    return { OP_PLUS, };
-}
-
-code minus()
-{
-    return { OP_MINUS, };
-}
-
-code equal()
-{
-    return { OP_EQUAL, };
-}
-
-code dump()
-{
-    return { OP_DUMP, };
-}
-
-code iff()
-{
-    return { OP_IF, };
-}
-
-code elze()
-{
-    return { OP_ELSE, };
-}
-
-code end()
-{
-    return { OP_END, };
-}
-
-code dup()
-{
-    return { OP_DUP, };
-}
-
-code gt()
-{
-    return { OP_GT, };
-}
-
-code lt()
-{
-    return { OP_LT, };
-}
-
-code gte()
-{
-    return { OP_GTE, };
-}
-
-code lte()
-{
-    return { OP_LTE, };
-}
-
-code inc()
-{
-    return { OP_INC, };
-}
-
-code dec()
-{
-    return { OP_DEC, };
-}
-
-code wile()
-{
-    return { OP_WHILE, };
-}
-
-code doo()
-{
-    return { OP_DO, };
-}
-
-bool string_is_int(std::string s)
-{
-    char *p;
-    strtol(s.c_str(), &p, 10);
-    return *p == 0;
+    std::size_t last_colon = loc.find_last_of(':');
+    std::cerr << loc.substr(0, last_colon) << ": " << msg << loc.substr(last_colon) << "\n";
+    exit(EXIT_FAILURE);
 }
 
 code parse_op(std::string value, std::string msg)
 {
     if (value == "+")
     {
-        return plus();
+        return { .type = OP_PLUS, .loc = msg };
     }
 
     if (value == "-")
     {
-        return minus();
+        return { .type = OP_MINUS, .loc = msg };
     }
 
     if (value == "=")
     {
-        return equal();
+        return { .type = OP_EQUAL, .loc = msg };
     }
 
     if (value == "dump")
     {
-        return dump();
+        return { .type = OP_DUMP, .loc = msg };
     }
 
     if (value == "if")
     {
-        return iff();
+        return { .type = OP_IF, .loc = msg };
     }
 
     if (value == "else")
     {
-        return elze();
+        return { .type = OP_ELSE, .loc = msg };
     }
 
     if (value == "end")
     {
-        return end();
+        return { .type = OP_END, .loc = msg };
     }
 
     if (value == "dup")
     {
-        return dup();
+        return { .type = OP_DUP, .loc = msg };
     }
 
     if (value == ">")
     {
-        return gt();
+        return { .type = OP_GT, .loc = msg };
     }
 
     if (value == "<")
     {
-        return lt();
+        return { .type = OP_LT, .loc = msg };
     }
 
     if (value == ">=")
     {
-        return gte();
+        return { .type = OP_GTE, .loc = msg };
     }
 
     if (value == "<=")
     {
-        return lte();
+        return { .type = OP_LTE, .loc = msg };
     }
 
     if (value == "inc")
     {
-        return inc();
+        return { .type = OP_INC, .loc = msg };
     }
 
     if (value == "dec")
     {
-        return dec();
+        return { .type = OP_DEC, .loc = msg };
     }
 
     if (value == "while")
     {
-        return wile();
+        return { .type = OP_WHILE, .loc = msg };
     }
 
     if (value == "do")
     {
-        return doo();
+        return { .type = OP_DO, .loc = msg };
     }
 
     try 
     {
-        return push(std::stoi(value));
+        return { .type = OP_PUSH, .value = std::stoi(value), .loc = msg };
     }
     
     catch (const std::exception& e)
     {
-        std::size_t last_colon = msg.find_last_of(':');
-        std::cerr << msg.substr(0, last_colon) << ": invalid command" << msg.substr(last_colon) << "\n";
-        exit(EXIT_FAILURE);
+        print_error(msg, "invalid command");
+        return {};
     }
 }
 
@@ -193,51 +107,66 @@ std::vector<code> parse_blocks(std::vector<code> program)
 
     for (int i = 0; i < program.size(); i++)
     {
-        code elem = program[i];
-        if (elem.op_type == OP_IF)
+        code op = program[i];
+        if (op.type == OP_IF)
         {
             stack.push(i);
         }
 
-        else if (elem.op_type == OP_ELSE)
+        else if (op.type == OP_ELSE)
         {
             int if_i = stack.top();
             stack.pop();
+
+            if (program[if_i].type != OP_IF)
+            {
+                print_error(program[if_i].loc, "ERROR: `else` keyword can only be used in conjunction with `if`");
+            }
 
             program[if_i] = { OP_IF, i + 1 };
             stack.push(i);
         }
 
-        else if (elem.op_type == OP_END)
+        else if (op.type == OP_END)
         {
             int block_i = stack.top();
             stack.pop();
 
-            if (program[block_i].op_type == OP_IF || program[block_i].op_type == OP_ELSE)
+            if (program[block_i].type == OP_IF || program[block_i].type == OP_ELSE)
             {
-                program[block_i] = { program[block_i].op_type, i };
+                program[block_i] = { program[block_i].type, i };
                 program[i] = { OP_END, i + 1 };
             }
 
-            else if (program[block_i].op_type == OP_DO)
+            else if (program[block_i].type == OP_DO)
             {
                 program[i] = { OP_END, program[block_i].value};
                 program[block_i] = { OP_DO, i + 1 };
             }
+
+            else
+            {
+                print_error(program[block_i].loc, "ERROR: `end` keyword can only be used in conjunction with `if-else`, `do`, or `while`");
+            }
         }
 
-        else if (elem.op_type == OP_WHILE)
+        else if (op.type == OP_WHILE)
         {
             stack.push(i);
         }
 
-        else if (elem.op_type == OP_DO)
+        else if (op.type == OP_DO)
         {
             int while_i = stack.top();
             stack.pop();
             program[i] = { OP_DO, while_i };
             stack.push(i);
         }
+    }
+
+    if (stack.size() > 0)
+    {
+        print_error(program[stack.top()].loc, "ERROR: unclosed block");
     }
 
     return program;
@@ -247,49 +176,40 @@ std::vector<code> load_program(std::string input_file)
 {
     std::vector<code> program;
     std::stringstream ss;
-    try
+
+    std::string file = remove_comments(input_file);
+    ss << file;
+    std::string line;
+
+    std::vector<std::string> lexed_file = lex_file(input_file);
+
+    int curr = 0;
+    while (getline(ss, line))
     {
-        std::string file = remove_comments(input_file);
-        ss << file;
-        std::string line;
+        std::vector<std::string> tokens;
+        int col = strip_col(line, 0);
 
-        std::vector<std::string> lexed_file = lex_file(input_file);
-
-        int curr = 0;
-        while (getline(ss, line))
+        while (col < line.size())
         {
-            std::vector<std::string> tokens;
-            int col = strip_col(line, 0);
+            int col_end = line.find(' ', col);
 
-            while (col < line.size())
+            if (col_end < 0)
             {
-                int col_end = line.find(' ', col);
-
-                if (col_end < 0)
-                {
-                    col_end = line.size();
-                }
-
-                tokens.push_back(line.substr(col, col_end - col));
-                col = strip_col(line, col_end);
+                col_end = line.size();
             }
 
-            for (auto token : tokens)
-            {
-                program.push_back(parse_op(token, lexed_file[curr]));
-                curr++;
-            }
+            tokens.push_back(line.substr(col, col_end - col));
+            col = strip_col(line, col_end);
         }
 
-        program = parse_blocks(program);
+        for (auto token : tokens)
+        {
+            program.push_back(parse_op(token, lexed_file[curr]));
+            curr++;
+        }
     }
 
-    catch(const std::exception& e)
-    {
-        usage();
-        std::cerr << "ERROR: could not find file `" << input_file << "`\n";
-        exit(EXIT_FAILURE);
-    }
+    program = parse_blocks(program);
 
     ss.clear();
 
@@ -302,14 +222,14 @@ void simulate_program(std::vector<code> program)
     int i = 0;
     while (i < program.size())
     {
-        code elem = program[i];
-        if (elem.op_type == OP_PUSH)
+        code op = program[i];
+        if (op.type == OP_PUSH)
         {
-            stack.push(elem.value);
+            stack.push(op.value);
             i++;
         }
 
-        else if (elem.op_type == OP_PLUS)
+        else if (op.type == OP_PLUS)
         {
             int a = stack.top();
             stack.pop();
@@ -321,7 +241,7 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (elem.op_type == OP_MINUS)
+        else if (op.type == OP_MINUS)
         {
             int a = stack.top();
             stack.pop();
@@ -333,7 +253,7 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (elem.op_type == OP_EQUAL)
+        else if (op.type == OP_EQUAL)
         {
             int a = stack.top();
             stack.pop();
@@ -345,39 +265,39 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (elem.op_type == OP_DUMP)
+        else if (op.type == OP_DUMP)
         {
             std::cout << stack.top() << "\n";
             stack.pop();
             i++;
         }
 
-        else if (elem.op_type == OP_IF)
+        else if (op.type == OP_IF)
         {
             int cond = stack.top();
             stack.pop();
 
-            cond == 0 ? i = elem.value : i++;
+            cond == 0 ? i = op.value : i++;
         }
 
-        else if (elem.op_type == OP_ELSE)
+        else if (op.type == OP_ELSE)
         {
-            i = elem.value;
+            i = op.value;
         }
 
-        else if (elem.op_type == OP_END)
+        else if (op.type == OP_END)
         {
-            i = elem.value;
+            i = op.value;
         }
 
-        else if (elem.op_type == OP_DUP)
+        else if (op.type == OP_DUP)
         {
             int a = stack.top();
             stack.push(a);
             i++;
         }
 
-        else if (elem.op_type == OP_GT)
+        else if (op.type == OP_GT)
         {
             int a = stack.top();
             stack.pop();
@@ -389,7 +309,7 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (elem.op_type == OP_LT)
+        else if (op.type == OP_LT)
         {
             int a = stack.top();
             stack.pop();
@@ -401,7 +321,7 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (elem.op_type == OP_GTE)
+        else if (op.type == OP_GTE)
         {
             int a = stack.top();
             stack.pop();
@@ -413,7 +333,7 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (elem.op_type == OP_LTE)
+        else if (op.type == OP_LTE)
         {
             int a = stack.top();
             stack.pop();
@@ -425,7 +345,7 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (elem.op_type == OP_INC)
+        else if (op.type == OP_INC)
         {
             int a = stack.top();
             stack.pop();
@@ -435,7 +355,7 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (elem.op_type == OP_DEC)
+        else if (op.type == OP_DEC)
         {
             int a = stack.top();
             stack.pop();
@@ -445,17 +365,17 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (elem.op_type == OP_WHILE)
+        else if (op.type == OP_WHILE)
         {
             i++;
         }
 
-        else if (elem.op_type == OP_DO)
+        else if (op.type == OP_DO)
         {
             int a = stack.top();
             stack.pop();
 
-            a == 0 ? i = elem.value : i++;
+            a == 0 ? i = op.value : i++;
         }
 
         else
@@ -511,16 +431,16 @@ void compile_program(std::vector<code> program, std::string output_file)
     int i = 0;
     for (i = 0; i < program.size(); i++)
     {
-        code elem = program[i];
+        code op = program[i];
         out << "\naddr_" << i << ":\n";
 
-        if (elem.op_type == OP_PUSH)
+        if (op.type == OP_PUSH)
         {
             out << "    ;; -- push --\n";
-            out << "    push " << elem.value << "\n";
+            out << "    push " << op.value << "\n";
         }
 
-        else if (elem.op_type == OP_PLUS)
+        else if (op.type == OP_PLUS)
         {
             out << "    ;; -- plus --\n";
             out << "    pop rax\n";
@@ -529,7 +449,7 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_MINUS)
+        else if (op.type == OP_MINUS)
         {
             out << "    ;; -- minus --\n";
             out << "    pop rbx\n";
@@ -538,7 +458,7 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_EQUAL)
+        else if (op.type == OP_EQUAL)
         {
             out << "    ;; -- equal --\n";
             out << "    pop rax\n";
@@ -551,38 +471,38 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_DUMP)
+        else if (op.type == OP_DUMP)
         {
             out << "    ;; -- dump --\n";
             out << "    pop rdi\n";
             out << "    call dump\n";
         }
 
-        else if (elem.op_type == OP_IF)
+        else if (op.type == OP_IF)
         {
             out << "    ;; -- if --\n";
             out << "    pop rax\n";
             out << "    test rax, rax\n";
-            out << "    jz addr_" << elem.value << "\n";
+            out << "    jz addr_" << op.value << "\n";
         }
 
-        else if (elem.op_type == OP_ELSE)
+        else if (op.type == OP_ELSE)
         {
             out << "    ;; -- else --\n";
-            out << "    jmp addr_" << elem.value << "\n";
+            out << "    jmp addr_" << op.value << "\n";
         }
 
-        else if (elem.op_type == OP_END)
+        else if (op.type == OP_END)
         {
             out << "    ;; -- end --\n";
 
-            if (i + 1 != elem.value)
+            if (i + 1 != op.value)
             {
-                out << "    jmp addr_" << elem.value << "\n";
+                out << "    jmp addr_" << op.value << "\n";
             }
         }
 
-        else if (elem.op_type == OP_DUP)
+        else if (op.type == OP_DUP)
         {
             out << "    ;; -- dup --\n";
             out << "    pop rax\n";
@@ -590,7 +510,7 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_GT)
+        else if (op.type == OP_GT)
         {
             out << "    ;; -- greater than --\n";
             out << "    pop rbx\n";
@@ -603,7 +523,7 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_LT)
+        else if (op.type == OP_LT)
         {
             out << "    ;; -- less than --\n";
             out << "    pop rbx\n";
@@ -616,7 +536,7 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_GTE)
+        else if (op.type == OP_GTE)
         {
             out << "    ;; -- greater than or equal --\n";
             out << "    pop rbx\n";
@@ -629,7 +549,7 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_LTE)
+        else if (op.type == OP_LTE)
         {
             out << "    ;; -- less than or equal --\n";
             out << "    pop rbx\n";
@@ -642,7 +562,7 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_INC)
+        else if (op.type == OP_INC)
         {
             out << "    ;; -- inc --\n";
             out << "    pop rax\n";
@@ -650,7 +570,7 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_DEC)
+        else if (op.type == OP_DEC)
         {
             out << "    ;; -- dec --\n";
             out << "    pop rax\n";
@@ -658,17 +578,17 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (elem.op_type == OP_WHILE)
+        else if (op.type == OP_WHILE)
         {
             out << "    ;; -- while --\n";
         }
 
-        else if (elem.op_type == OP_DO)
+        else if (op.type == OP_DO)
         {
             out << "    ;; -- do --\n";
             out << "    pop rax\n";
             out << "    test rax, rax\n";
-            out << "    jz addr_" << elem.value << "\n";
+            out << "    jz addr_" << op.value << "\n";
         }
 
     }
