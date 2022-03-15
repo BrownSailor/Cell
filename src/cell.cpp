@@ -49,6 +49,11 @@ code parse_op(std::string value, std::string msg)
         return { .type = OP_DUP, .loc = msg };
     }
 
+    if (value == "dup2")
+    {
+        return { .type = OP_DUP2, .loc = msg };
+    }
+
     if (value == ">")
     {
         return { .type = OP_GT, .loc = msg };
@@ -87,6 +92,31 @@ code parse_op(std::string value, std::string msg)
     if (value == "do")
     {
         return { .type = OP_DO, .loc = msg };
+    }
+
+    if (value == "mem")
+    {
+        return { .type = OP_MEM, .loc = msg };
+    }
+
+    if (value == ",")
+    {
+        return { .type = OP_LOAD, .loc = msg };
+    }
+
+    if (value == ".")
+    {
+        return { .type = OP_STORE, .loc = msg };
+    }
+
+    if (value == "write")
+    {
+        return { .type = OP_WRITE, .loc = msg };
+    }
+
+    if (value == "exit")
+    {
+        return { .type = OP_EXIT, .loc = msg };
     }
 
     try 
@@ -219,6 +249,9 @@ std::vector<code> load_program(std::string input_file)
 void simulate_program(std::vector<code> program)
 {
     std::stack<int> stack;
+    byte memory[MEM_CAPACITY];
+    memset(memory, (byte)(0), MEM_CAPACITY);
+
     int i = 0;
     while (i < program.size())
     {
@@ -293,6 +326,17 @@ void simulate_program(std::vector<code> program)
         else if (op.type == OP_DUP)
         {
             int a = stack.top();
+            stack.push(a);
+            i++;
+        }
+
+        else if (op.type == OP_DUP2)
+        {
+            int a = stack.top();
+            stack.pop();
+            int b = stack.top();
+            stack.push(a);
+            stack.push(b);
             stack.push(a);
             i++;
         }
@@ -378,6 +422,57 @@ void simulate_program(std::vector<code> program)
             a == 0 ? i = op.value : i++;
         }
 
+        else if (op.type == OP_MEM)
+        {
+            stack.push(0);
+            i++;
+        }
+
+        else if (op.type == OP_LOAD)
+        {
+            int addr = stack.top();
+            stack.pop();
+            stack.push(memory[addr]);
+            i++;
+        }
+
+        else if (op.type == OP_STORE)
+        {
+            int value = stack.top();
+            stack.pop();
+            int addr = stack.top();
+            stack.pop();
+
+            memory[addr] = (value & ((1ULL << 8) - 1));
+            i++;
+        }
+
+        else if (op.type == OP_WRITE)
+        {
+            int fd = stack.top();
+            stack.pop();
+            
+            int addr = stack.top();
+            stack.pop();
+
+            int size = stack.top();
+            stack.pop();
+
+            for (int c = 0; c < size; c++)
+            {
+                std::cout << memory[addr + c];
+            }
+
+            i++;
+        }
+
+        else if (op.type == OP_EXIT)
+        {
+            int exit_code = stack.top();
+            stack.pop();
+            exit(exit_code);
+        }
+
         else
         {
             std::cerr << "Unreachable\n";
@@ -390,6 +485,7 @@ void compile_program(std::vector<code> program, std::string output_file)
     std::ofstream out;
     out.open(output_file);
 
+    out << "default rel\n\n";
     out << "dump:\n";
     out << "    sub     rsp, 40\n";
     out << "    mov     BYTE [rsp+31], 10\n";
@@ -510,6 +606,17 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
+        else if (op.type == OP_DUP2)
+        {
+            out << "    ;; -- dup2 --\n";
+            out << "    pop rbx\n";
+            out << "    pop rax\n";
+            out << "    push rax\n";
+            out << "    push rbx\n";
+            out << "    push rax\n";
+            out << "    push rbx\n";
+        }
+
         else if (op.type == OP_GT)
         {
             out << "    ;; -- greater than --\n";
@@ -591,6 +698,51 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    jz addr_" << op.value << "\n";
         }
 
+        else if (op.type == OP_MEM)
+        {
+            out << "    ;; -- mem --\n";
+            out << "    xor rdi, rdi\n";
+            out << "    lea rdi, [mem]\n";
+            out << "    push rdi\n";
+        }
+
+        else if (op.type == OP_LOAD)
+        {
+            out << "    ;; -- load (,) --\n";
+            out << "    pop rax\n";
+            out << "    xor rbx, rbx\n";
+            out << "    mov bl, [rax]\n";
+            out << "    push rbx\n";
+        }
+
+        else if (op.type == OP_STORE)
+        {
+            out << "    ;; -- store (.) --\n";
+            out << "    pop rbx\n";
+            out << "    pop rax\n";
+            out << "    mov [rax], bl\n";
+        }
+
+        else if (op.type == OP_WRITE)
+        {
+            out << "    ;; -- write --\n";
+
+            // order to pass parameters for syscall:
+            // rax (syscall number), then rdi, rsi, rdx, rcx, r8, r9
+            out << "    mov rax, 0x2000004\n";
+            out << "    pop rdi\n";
+            out << "    pop rsi\n";
+            out << "    pop rdx\n";
+            out << "    syscall\n";
+        }
+
+        else if (op.type == OP_EXIT)
+        {
+            out << "    ;; -- exit --\n";
+            out << "    mov rax, 0x2000001\n";
+            out << "    pop rdi\n";
+            out << "    syscall\n";
+        }
     }
     
     out << "\naddr_" << i << ":\n";
@@ -598,6 +750,9 @@ void compile_program(std::vector<code> program, std::string output_file)
     out << "    mov rax, 0x2000001\n";
     out << "    mov rdi, 0\n";
     out << "    syscall\n";
+
+    out << "\nsection .bss\n";
+    out << "mem: resb " << MEM_CAPACITY << "\n";
 
     out.close();
 }

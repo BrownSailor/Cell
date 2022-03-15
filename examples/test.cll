@@ -1,5 +1,0 @@
-// Print numbers in decreasing order from 15 to 1
-15 while dup 0 > do
-    dup dump
-    dec
-end
