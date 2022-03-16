@@ -11,7 +11,6 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-
     if (argc < 2)
     {
         usage();
@@ -28,7 +27,7 @@ int main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
-        std::vector<code> program = load_program(argv[2]);
+        std::vector<Code> program = load_program(argv[2]);
         simulate_program(program);
     }
 
@@ -46,7 +45,7 @@ int main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
-        std::vector<code> program = load_program(argv[3]);
+        std::vector<Code> program = load_program(argv[3]);
         std::string output_file = argv[2];
 
         std::string asm_command = "nasm -fmacho64 -o " + output_file + ".o " + output_file + ".asm";

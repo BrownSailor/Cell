@@ -7,177 +7,41 @@ void print_error(std::string loc, std::string msg)
     exit(EXIT_FAILURE);
 }
 
-code parse_op(std::string value, std::string msg)
+Code parse_op(Token token)
 {
-    if (value == "+")
+    if (token.type == TOKEN_INT)
     {
-        return { .type = OP_PLUS, .loc = msg };
+        return { .type = OP_PUSH, .value = token.int_val, .loc = token.loc };
     }
 
-    if (value == "-")
+    else if (token.type == TOKEN_WORD)
     {
-        return { .type = OP_MINUS, .loc = msg };
-    }
+        if (BUILT_IN_WORDS.count(token.str_val))
+        {
+            return { .type = BUILT_IN_WORDS[token.str_val], .loc = token.loc };
+        }
 
-    if (value == "=")
-    {
-        return { .type = OP_EQUAL, .loc = msg };
-    }
-
-    if (value == "print")
-    {
-        return { .type = OP_PRINT, .loc = msg };
-    }
-
-    if (value == "if")
-    {
-        return { .type = OP_IF, .loc = msg };
-    }
-
-    if (value == "else")
-    {
-        return { .type = OP_ELSE, .loc = msg };
-    }
-
-    if (value == "end")
-    {
-        return { .type = OP_END, .loc = msg };
-    }
-
-    if (value == "dup")
-    {
-        return { .type = OP_DUP, .loc = msg };
-    }
-
-    if (value == "dup2")
-    {
-        return { .type = OP_DUP2, .loc = msg };
-    }
-
-    if (value == "drop")
-    {
-        return { .type = OP_DROP, .loc = msg };
-    }
-
-    if (value == "swap")
-    {
-        return { .type = OP_SWAP, .loc = msg };
-    }
-
-    if (value == "over")
-    {
-        return { .type = OP_OVER, .loc = msg };
-    }
-
-    if (value == ">")
-    {
-        return { .type = OP_GT, .loc = msg };
-    }
-
-    if (value == "<")
-    {
-        return { .type = OP_LT, .loc = msg };
-    }
-
-    if (value == ">=")
-    {
-        return { .type = OP_GTE, .loc = msg };
-    }
-
-    if (value == "<=")
-    {
-        return { .type = OP_LTE, .loc = msg };
-    }
-
-    if (value == "inc")
-    {
-        return { .type = OP_INC, .loc = msg };
-    }
-
-    if (value == "dec")
-    {
-        return { .type = OP_DEC, .loc = msg };
-    }
-
-    if (value == "<<")
-    {
-        return { .type = OP_SHL, .loc = msg };
-    }
-
-    if (value == ">>")
-    {
-        return { .type = OP_SHR, .loc = msg };
-    }
-
-    if (value == "|")
-    {
-        return { .type = OP_LOR, .loc = msg };
-    }
-
-    if (value == "^")
-    {
-        return { .type = OP_XOR, .loc = msg };
-    }
-
-    if (value == "&")
-    {
-        return { .type = OP_LAND, .loc = msg };
-    }
-
-    if (value == "while")
-    {
-        return { .type = OP_WHILE, .loc = msg };
-    }
-
-    if (value == "do")
-    {
-        return { .type = OP_DO, .loc = msg };
-    }
-
-    if (value == "mem")
-    {
-        return { .type = OP_MEM, .loc = msg };
-    }
-
-    if (value == ",")
-    {
-        return { .type = OP_LOAD, .loc = msg };
-    }
-
-    if (value == ".")
-    {
-        return { .type = OP_STORE, .loc = msg };
-    }
-
-    if (value == "write")
-    {
-        return { .type = OP_WRITE, .loc = msg };
-    }
-
-    if (value == "exit")
-    {
-        return { .type = OP_EXIT, .loc = msg };
-    }
-
-    try 
-    {
-        return { .type = OP_PUSH, .value = std::stoi(value), .loc = msg };
+        else
+        {
+            print_error(token.loc, "invalid command");
+            return {};
+        }
     }
     
-    catch (const std::exception& e)
+    else
     {
-        print_error(msg, "invalid command");
+        print_error(token.loc, "invalid command");
         return {};
     }
 }
 
-std::vector<code> parse_blocks(std::vector<code> program)
+std::vector<Code> parse_blocks(std::vector<Code> program)
 {
     std::stack<int> stack;
 
     for (int i = 0; i < program.size(); i++)
     {
-        code op = program[i];
+        Code op = program[i];
         if (op.type == OP_IF)
         {
             stack.push(i);
@@ -242,41 +106,20 @@ std::vector<code> parse_blocks(std::vector<code> program)
     return program;
 }
 
-std::vector<code> load_program(std::string input_file)
+std::vector<Code> load_program(std::string input_file)
 {
-    std::vector<code> program;
+    std::vector<Code> program;
     std::stringstream ss;
 
     std::string file = remove_comments(input_file);
     ss << file;
     std::string line;
 
-    std::vector<std::string> lexed_file = lex_file(input_file);
+    std::vector<Token> lexed_file = lex_file(input_file);
 
-    int curr = 0;
-    while (getline(ss, line))
+    for (auto token : lexed_file)
     {
-        std::vector<std::string> tokens;
-        int col = strip_col(line, 0);
-
-        while (col < line.size())
-        {
-            int col_end = line.find(' ', col);
-
-            if (col_end < 0)
-            {
-                col_end = line.size();
-            }
-
-            tokens.push_back(line.substr(col, col_end - col));
-            col = strip_col(line, col_end);
-        }
-
-        for (auto token : tokens)
-        {
-            program.push_back(parse_op(token, lexed_file[curr]));
-            curr++;
-        }
+        program.push_back(parse_op(token));
     }
 
     program = parse_blocks(program);
@@ -286,7 +129,7 @@ std::vector<code> load_program(std::string input_file)
     return program;
 }
 
-void simulate_program(std::vector<code> program)
+void simulate_program(std::vector<Code> program)
 {
     std::stack<int> stack;
     byte memory[MEM_CAPACITY];
@@ -295,7 +138,7 @@ void simulate_program(std::vector<code> program)
     int i = 0;
     while (i < program.size())
     {
-        code op = program[i];
+        Code op = program[i];
         if (op.type == OP_PUSH)
         {
             stack.push(op.value);
@@ -614,7 +457,7 @@ void simulate_program(std::vector<code> program)
     }
 }
 
-void compile_program(std::vector<code> program, std::string output_file)
+void compile_program(std::vector<Code> program, std::string output_file)
 {
     std::ofstream out;
     out.open(output_file);
@@ -661,7 +504,7 @@ void compile_program(std::vector<code> program, std::string output_file)
     int i = 0;
     for (i = 0; i < program.size(); i++)
     {
-        code op = program[i];
+        Code op = program[i];
         out << "\naddr_" << i << ":\n";
 
         if (op.type == OP_PUSH)
@@ -766,7 +609,7 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rbx\n";
         }
 
-        else if (op.type == OP_SWAP)
+        else if (op.type == OP_OVER)
         {
             out << "    ;; -- over --\n";
             out << "    pop rax\n";

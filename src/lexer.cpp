@@ -41,9 +41,22 @@ int strip_col(std::string line, int col)
     return col;
 }
 
-std::map<int, std::string> lex_line(std::string line)
+Token lex_word(std::string word)
 {
-    std::map<int, std::string> tokens;
+    try
+    {
+        return { .type = TOKEN_INT, .int_val = std::stoi(word) };
+    }
+    catch(const std::exception& e)
+    {
+        return { .type = TOKEN_WORD, .str_val = word };
+    }
+    
+}
+
+std::map<int, Token> lex_line(std::string line)
+{
+    std::map<int, Token> tokens;
     int col = strip_col(line, 0);
     while (col < line.size())
     {
@@ -54,32 +67,42 @@ std::map<int, std::string> lex_line(std::string line)
             col_end = line.size();
         }
 
-        tokens.insert({col, line.substr(col, col_end - col)});
+        tokens.insert({ col, lex_word(line.substr(col, col_end - col)) });
         col = strip_col(line, col_end);
     }
 
     return tokens;
 }
 
-std::vector<std::string> lex_file(std::string input_file)
+std::vector<Token> lex_file(std::string input_file)
 {
     // std::ifstream in;
     // in.open(input_file);
     std::string file = remove_comments(input_file);
     std::stringstream ss(file);
 
-    std::vector<std::string> file_tokens;
+    std::vector<Token> file_tokens;
     std::string line;
 
     int row = 0;
     while (getline(ss, line))
     {
         // line = line.substr(0, line.find("//"));
-        std::map<int, std::string> col_vals = lex_line(line);
+        std::map<int, Token> col_vals = lex_line(line);
 
-        for (auto [k, v] : col_vals)
+        for (auto [col, v] : col_vals)
         {
-            file_tokens.push_back(input_file + ":" + std::to_string(row + 1) + ":" + std::to_string(k + 1) + ": " + v);
+            std::string location = input_file + ":" + 
+                                   std::to_string(row + 1) + ":" + 
+                                   std::to_string(col + 1) + ": " + 
+                                   (v.type == TOKEN_INT ? std::to_string(v.int_val) : v.str_val);
+
+            // std::string location = input_file + ":" + 
+            //                        std::to_string(row + 1) + ":" + 
+            //                        std::to_string(col + 1) + ": ";
+
+            v.loc = location;
+            file_tokens.push_back(v);
         }
         row++;
     }
