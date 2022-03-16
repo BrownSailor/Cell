@@ -19,5 +19,5 @@ mem 10 + 100 .
 mem 11 + 33  .
 mem 12 + 10  .
 
-// write memory to stdout (fd 1)
+// write memory to stdout (fd)
 13 mem 1 write

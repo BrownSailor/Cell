@@ -24,9 +24,9 @@ code parse_op(std::string value, std::string msg)
         return { .type = OP_EQUAL, .loc = msg };
     }
 
-    if (value == "dump")
+    if (value == "print")
     {
-        return { .type = OP_DUMP, .loc = msg };
+        return { .type = OP_PRINT, .loc = msg };
     }
 
     if (value == "if")
@@ -52,6 +52,21 @@ code parse_op(std::string value, std::string msg)
     if (value == "dup2")
     {
         return { .type = OP_DUP2, .loc = msg };
+    }
+
+    if (value == "drop")
+    {
+        return { .type = OP_DROP, .loc = msg };
+    }
+
+    if (value == "swap")
+    {
+        return { .type = OP_SWAP, .loc = msg };
+    }
+
+    if (value == "over")
+    {
+        return { .type = OP_OVER, .loc = msg };
     }
 
     if (value == ">")
@@ -82,6 +97,31 @@ code parse_op(std::string value, std::string msg)
     if (value == "dec")
     {
         return { .type = OP_DEC, .loc = msg };
+    }
+
+    if (value == "<<")
+    {
+        return { .type = OP_SHL, .loc = msg };
+    }
+
+    if (value == ">>")
+    {
+        return { .type = OP_SHR, .loc = msg };
+    }
+
+    if (value == "|")
+    {
+        return { .type = OP_LOR, .loc = msg };
+    }
+
+    if (value == "^")
+    {
+        return { .type = OP_XOR, .loc = msg };
+    }
+
+    if (value == "&")
+    {
+        return { .type = OP_LAND, .loc = msg };
     }
 
     if (value == "while")
@@ -298,7 +338,7 @@ void simulate_program(std::vector<code> program)
             i++;
         }
 
-        else if (op.type == OP_DUMP)
+        else if (op.type == OP_PRINT)
         {
             std::cout << stack.top() << "\n";
             stack.pop();
@@ -338,6 +378,40 @@ void simulate_program(std::vector<code> program)
             stack.push(a);
             stack.push(b);
             stack.push(a);
+            i++;
+        }
+
+        else if (op.type == OP_DROP)
+        {
+            stack.pop();
+            i++;
+        }
+
+        else if (op.type == OP_SWAP)
+        {
+            int a = stack.top();
+            stack.pop();
+            int b = stack.top();
+            stack.pop();
+
+            stack.push(a);
+            stack.push(b);
+
+            i++;
+        }
+
+        else if (op.type == OP_OVER)
+        {
+            int a = stack.top();
+            stack.pop();
+
+            int b = stack.top();
+            stack.pop();
+
+            stack.push(b);
+            stack.push(a);
+            stack.push(b);
+
             i++;
         }
 
@@ -405,6 +479,66 @@ void simulate_program(std::vector<code> program)
             stack.pop();
             a--;
             stack.push(a);
+
+            i++;
+        }
+
+        else if (op.type == OP_SHL)
+        {
+            int a = stack.top();
+            stack.pop();
+            int b = stack.top();
+            stack.pop();
+
+            stack.push(b << a);
+
+            i++;
+        }
+
+        else if (op.type == OP_SHR)
+        {
+            int a = stack.top();
+            stack.pop();
+            int b = stack.top();
+            stack.pop();
+
+            stack.push(b >> a);
+
+            i++;
+        }
+
+        else if (op.type == OP_LOR)
+        {
+            int a = stack.top();
+            stack.pop();
+            int b = stack.top();
+            stack.pop();
+
+            stack.push(a | b);
+
+            i++;
+        }
+
+        else if (op.type == OP_XOR)
+        {
+            int a = stack.top();
+            stack.pop();
+            int b = stack.top();
+            stack.pop();
+
+            stack.push(a ^ b);
+
+            i++;
+        }
+
+        else if (op.type == OP_LAND)
+        {
+            int a = stack.top();
+            stack.pop();
+            int b = stack.top();
+            stack.pop();
+
+            stack.push(a & b);
 
             i++;
         }
@@ -486,7 +620,7 @@ void compile_program(std::vector<code> program, std::string output_file)
     out.open(output_file);
 
     out << "default rel\n\n";
-    out << "dump:\n";
+    out << "print:\n";
     out << "    sub     rsp, 40\n";
     out << "    mov     BYTE [rsp+31], 10\n";
     out << "    lea     rdx, [rsp+30]\n\n";
@@ -567,11 +701,11 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    push rax\n";
         }
 
-        else if (op.type == OP_DUMP)
+        else if (op.type == OP_PRINT)
         {
-            out << "    ;; -- dump --\n";
+            out << "    ;; -- print --\n";
             out << "    pop rdi\n";
-            out << "    call dump\n";
+            out << "    call print\n";
         }
 
         else if (op.type == OP_IF)
@@ -612,6 +746,31 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    pop rbx\n";
             out << "    pop rax\n";
             out << "    push rax\n";
+            out << "    push rbx\n";
+            out << "    push rax\n";
+            out << "    push rbx\n";
+        }
+
+        else if (op.type == OP_DROP)
+        {
+            out << "    ;; -- drop --\n";
+            out << "    pop rax\n";
+        }
+
+        else if (op.type == OP_SWAP)
+        {
+            out << "    ;; -- swap --\n";
+            out << "    pop rax\n";
+            out << "    pop rbx\n";
+            out << "    push rax\n";
+            out << "    push rbx\n";
+        }
+
+        else if (op.type == OP_SWAP)
+        {
+            out << "    ;; -- over --\n";
+            out << "    pop rax\n";
+            out << "    pop rbx\n";
             out << "    push rbx\n";
             out << "    push rax\n";
             out << "    push rbx\n";
@@ -683,6 +842,51 @@ void compile_program(std::vector<code> program, std::string output_file)
             out << "    pop rax\n";
             out << "    sub rax, 1\n";
             out << "    push rax\n";
+        }
+
+        else if (op.type == OP_SHL)
+        {
+            out << "    ;; -- shl (<<) --\n";
+            out << "    pop rcx\n";
+            out << "    pop rbx\n";
+            out << "    shl rbx, cl\n";
+            out << "    push rbx\n";
+        }
+
+        else if (op.type == OP_SHR)
+        {
+            out << "    ;; -- shr (>>) --\n";
+            out << "    pop rcx\n";
+            out << "    pop rbx\n";
+            out << "    shr rbx, cl\n";
+            out << "    push rbx\n";
+        }
+
+        else if (op.type == OP_LOR)
+        {
+            out << "    ;; -- lor (|) --\n";
+            out << "    pop rcx\n";
+            out << "    pop rbx\n";
+            out << "    or rbx, rcx\n";
+            out << "    push rbx\n";
+        }
+
+        else if (op.type == OP_XOR)
+        {
+            out << "    ;; -- xor (^) --\n";
+            out << "    pop rcx\n";
+            out << "    pop rbx\n";
+            out << "    xor rbx, rcx\n";
+            out << "    push rbx\n";
+        }
+
+        else if (op.type == OP_LAND)
+        {
+            out << "    ;; -- and (&) --\n";
+            out << "    pop rcx\n";
+            out << "    pop rbx\n";
+            out << "    and rbx, rcx\n";
+            out << "    push rbx\n";
         }
 
         else if (op.type == OP_WHILE)
