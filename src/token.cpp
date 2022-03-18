@@ -2,23 +2,15 @@
 
 std::unordered_map<std::string, int> BUILT_IN_WORDS =
 {
-    { "+", OP_PLUS },
-    { "-", OP_MINUS },
-    { "=", OP_EQ },
-    { "!=", OP_NEQ },
     { "print", OP_PRINT },
-    { "if", OP_IF },
-    { "else", OP_ELSE },
-    { "end", OP_END },
     { "dup", OP_DUP },
     { "dup2", OP_DUP2 },
     { "drop", OP_DROP },
     { "swap", OP_SWAP },
     { "over", OP_OVER },
-    { ">", OP_GT },
-    { "<", OP_LT },
-    { ">=", OP_GTE },
-    { "<=", OP_LTE },
+
+    { "+", OP_PLUS },
+    { "-", OP_MINUS },
     { "inc", OP_INC },
     { "dec", OP_DEC },
     { "<<", OP_SHL },
@@ -26,13 +18,27 @@ std::unordered_map<std::string, int> BUILT_IN_WORDS =
     { "|", OP_LOR },
     { "^", OP_XOR },
     { "&", OP_LAND },
+
+    { "=", OP_EQ },
+    { "!=", OP_NEQ },
+    { ">", OP_GT },
+    { "<", OP_LT },
+    { ">=", OP_GTE },
+    { "<=", OP_LTE },
+
+    { "if", OP_IF },
+    { "else", OP_ELSE },
+    { "end", OP_END },
     { "while", OP_WHILE },
     { "do", OP_DO },
+
     { "mem", OP_MEM },
     { ",", OP_LOAD },
     { ".", OP_STORE },
-    { "write", OP_WRITE },
-    { "exit", OP_EXIT }
+
+    { "sys_write", OP_SYS_WRITE },
+    { "sys_read", OP_SYS_READ },
+    { "sys_exit", OP_SYS_EXIT }
 };
 
 void preprocess_lookup()

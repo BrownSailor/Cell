@@ -10,4 +10,4 @@ mem 3 + 10 .
     inc
 end
 
-4 mem 1 write
+4 mem 1 sys_write

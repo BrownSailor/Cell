@@ -556,7 +556,7 @@ void simulate_program(std::vector<Code> program)
                 break;
             }
 
-            case OP_WRITE:
+            case OP_SYS_WRITE:
             {
                 int fd = stack.top();
                 stack.pop();
@@ -576,7 +576,7 @@ void simulate_program(std::vector<Code> program)
                 break;
             }
 
-            case OP_EXIT:
+            case OP_SYS_EXIT:
             {
                 int exit_code = stack.top();
                 stack.pop();
@@ -967,7 +967,7 @@ void compile_program(std::vector<Code> program, std::string output_file)
                 break;
             }
 
-            case OP_WRITE:
+            case OP_SYS_WRITE:
             {
                 out << "    ;; -- write --\n";
 
@@ -981,7 +981,7 @@ void compile_program(std::vector<Code> program, std::string output_file)
                 break;
             }
 
-            case OP_EXIT:
+            case OP_SYS_EXIT:
             {
                 out << "    ;; -- exit --\n";
                 out << "    mov rax, 0x2000001\n";
