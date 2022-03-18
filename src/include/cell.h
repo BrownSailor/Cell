@@ -10,16 +10,20 @@
 
 #define byte uint8_t
 
-// 1MB max for memory purposes
-const int MEM_CAPACITY = (1ULL << 20);
+// Space allocated for memory purposes, split into halves for string and data
+const int STR_CAPACITY = 640000;
+const int MEM_CAPACITY = 640000;
 
 struct Code
 {
-    int type = -1;      // type of operation
-    int value = 0;     // value (int for push, jump address for conditionals)
+    int type = -1;              // type of operation
+    int value = 0;              // value (int for push, jump address for conditionals)
+    std::string data = "";      // data (string for push)
+    int addr = -1;              // addr (string data)
     std::string loc;
 };
 
+std::string unescape(const std::string& s);
 Code parse_op(std::string value, std::string msg);
 std::vector<Code> parse_blocks(std::vector<Code> program);
 std::vector<Code> load_program(std::string input_file);

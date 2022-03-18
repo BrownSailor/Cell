@@ -7,31 +7,68 @@ void print_error(std::string loc, std::string msg)
     exit(EXIT_FAILURE);
 }
 
-Code parse_op(Token token)
+/*
+ * Un-escape a string via this stackoverflow thread
+ * https://stackoverflow.com/questions/5612182/convert-string-with-explicit-escape-sequence-into-relative-character
+ */
+std::string unescape(const std::string& s)
 {
-    if (token.type == TOKEN_INT)
+    std::string res;
+    std::string::const_iterator it = s.begin();
+    while (it != s.end())
     {
-        return { .type = OP_PUSH, .value = token.int_val, .loc = token.loc };
+        char c = *it++;
+        if (c == '\\' && it != s.end())
+        {
+            switch (*it++) {
+            case '\\': c = '\\'; break;
+            case 'n': c = '\n'; break;
+            case 't': c = '\t'; break;
+            // all other escapes
+            default: 
+            // invalid escape sequence - skip it. alternatively you can copy it as is, throw an exception...
+            continue;
+            }
+        }
+        res += c;
     }
 
-    else if (token.type == TOKEN_WORD)
+    return res;
+}
+
+Code parse_op(Token token)
+{
+    switch (token.type)
     {
-        if (BUILT_IN_WORDS.count(token.str_val))
+        case TOKEN_INT:
         {
-            return { .type = BUILT_IN_WORDS[token.str_val], .loc = token.loc };
+            return { .type = OP_PUSH_INT, .value = token.int_val, .loc = token.loc };
         }
 
-        else
+        case TOKEN_STR:
+        {
+            return { .type = OP_PUSH_STR, .data = unescape(token.str_val), .loc = token.loc };
+        }
+
+        case TOKEN_WORD:
+        {
+            if (BUILT_IN_WORDS.count(token.str_val))
+            {
+                return { .type = BUILT_IN_WORDS[token.str_val], .loc = token.loc };
+            }
+
+            else
+            {
+                print_error(token.loc, "invalid command");
+                return {};
+            }
+        }
+
+        default:
         {
             print_error(token.loc, "invalid command");
             return {};
         }
-    }
-    
-    else
-    {
-        print_error(token.loc, "invalid command");
-        return {};
     }
 }
 
@@ -42,59 +79,76 @@ std::vector<Code> parse_blocks(std::vector<Code> program)
     for (int i = 0; i < program.size(); i++)
     {
         Code op = program[i];
-        if (op.type == OP_IF)
-        {
-            stack.push(i);
-        }
 
-        else if (op.type == OP_ELSE)
+        switch (op.type)
         {
-            int if_i = stack.top();
-            stack.pop();
-
-            if (program[if_i].type != OP_IF)
+            case OP_IF:
             {
-                print_error(program[if_i].loc, "ERROR: `else` keyword can only be used in conjunction with `if`");
+                stack.push(i);
+                break;
+            }
+            
+            case OP_ELSE:
+            {
+                int if_i = stack.top();
+                stack.pop();
+
+                if (program[if_i].type != OP_IF)
+                {
+                    print_error(program[if_i].loc, "ERROR: `else` keyword can only be used in conjunction with `if`");
+                }
+
+                program[if_i] = { OP_IF, i + 1 };
+                stack.push(i);
+
+                break;
             }
 
-            program[if_i] = { OP_IF, i + 1 };
-            stack.push(i);
-        }
-
-        else if (op.type == OP_END)
-        {
-            int block_i = stack.top();
-            stack.pop();
-
-            if (program[block_i].type == OP_IF || program[block_i].type == OP_ELSE)
+            case OP_END:
             {
-                program[block_i] = { program[block_i].type, i };
-                program[i] = { OP_END, i + 1 };
+                int block_i = stack.top();
+                stack.pop();
+
+                if (program[block_i].type == OP_IF || program[block_i].type == OP_ELSE)
+                {
+                    program[block_i] = { program[block_i].type, i };
+                    program[i] = { OP_END, i + 1 };
+                }
+
+                else if (program[block_i].type == OP_DO)
+                {
+                    program[i] = { OP_END, program[block_i].value};
+                    program[block_i] = { OP_DO, i + 1 };
+                }
+
+                else
+                {
+                    print_error(program[block_i].loc, "ERROR: `end` keyword can only be used in conjunction with `if-else`, `do`, or `while`");
+                }
+                
+                break;
             }
 
-            else if (program[block_i].type == OP_DO)
+            case OP_WHILE:
             {
-                program[i] = { OP_END, program[block_i].value};
-                program[block_i] = { OP_DO, i + 1 };
+                stack.push(i);
+                break;
             }
 
-            else
+            case OP_DO:
             {
-                print_error(program[block_i].loc, "ERROR: `end` keyword can only be used in conjunction with `if-else`, `do`, or `while`");
+                int while_i = stack.top();
+                stack.pop();
+                program[i] = { OP_DO, while_i };
+                stack.push(i);
+
+                break;
             }
-        }
 
-        else if (op.type == OP_WHILE)
-        {
-            stack.push(i);
-        }
-
-        else if (op.type == OP_DO)
-        {
-            int while_i = stack.top();
-            stack.pop();
-            program[i] = { OP_DO, while_i };
-            stack.push(i);
+            default:
+            {
+                break;
+            }
         }
     }
 
@@ -132,327 +186,409 @@ std::vector<Code> load_program(std::string input_file)
 void simulate_program(std::vector<Code> program)
 {
     std::stack<int> stack;
-    byte memory[MEM_CAPACITY];
-    memset(memory, (byte)(0), MEM_CAPACITY);
+    byte memory[STR_CAPACITY + MEM_CAPACITY];
+    memset(memory, (byte)(0), STR_CAPACITY + MEM_CAPACITY);
+    int str_size = 0;
 
     int i = 0;
     while (i < program.size())
     {
         Code op = program[i];
-        if (op.type == OP_PUSH)
+
+        switch (op.type)
         {
-            stack.push(op.value);
-            i++;
-        }
-
-        else if (op.type == OP_PLUS)
-        {
-            int a = stack.top();
-            stack.pop();
-
-            int b = stack.top();
-            stack.pop();
-
-            stack.push(a + b);
-            i++;
-        }
-
-        else if (op.type == OP_MINUS)
-        {
-            int a = stack.top();
-            stack.pop();
-
-            int b = stack.top();
-            stack.pop();
-
-            stack.push(-a + b);
-            i++;
-        }
-
-        else if (op.type == OP_EQUAL)
-        {
-            int a = stack.top();
-            stack.pop();
-
-            int b = stack.top();
-            stack.pop();
-
-            a == b ? stack.push(1) : stack.push(0);
-            i++;
-        }
-
-        else if (op.type == OP_PRINT)
-        {
-            std::cout << stack.top() << "\n";
-            stack.pop();
-            i++;
-        }
-
-        else if (op.type == OP_IF)
-        {
-            int cond = stack.top();
-            stack.pop();
-
-            cond == 0 ? i = op.value : i++;
-        }
-
-        else if (op.type == OP_ELSE)
-        {
-            i = op.value;
-        }
-
-        else if (op.type == OP_END)
-        {
-            i = op.value;
-        }
-
-        else if (op.type == OP_DUP)
-        {
-            int a = stack.top();
-            stack.push(a);
-            i++;
-        }
-
-        else if (op.type == OP_DUP2)
-        {
-            int a = stack.top();
-            stack.pop();
-            int b = stack.top();
-            stack.push(a);
-            stack.push(b);
-            stack.push(a);
-            i++;
-        }
-
-        else if (op.type == OP_DROP)
-        {
-            stack.pop();
-            i++;
-        }
-
-        else if (op.type == OP_SWAP)
-        {
-            int a = stack.top();
-            stack.pop();
-            int b = stack.top();
-            stack.pop();
-
-            stack.push(a);
-            stack.push(b);
-
-            i++;
-        }
-
-        else if (op.type == OP_OVER)
-        {
-            int a = stack.top();
-            stack.pop();
-
-            int b = stack.top();
-            stack.pop();
-
-            stack.push(b);
-            stack.push(a);
-            stack.push(b);
-
-            i++;
-        }
-
-        else if (op.type == OP_GT)
-        {
-            int a = stack.top();
-            stack.pop();
-
-            int b = stack.top();
-            stack.pop();
-
-            b > a ? stack.push(1) : stack.push(0);
-            i++;
-        }
-
-        else if (op.type == OP_LT)
-        {
-            int a = stack.top();
-            stack.pop();
-
-            int b = stack.top();
-            stack.pop();
-
-            a > b ? stack.push(1) : stack.push(0);
-            i++;
-        }
-
-        else if (op.type == OP_GTE)
-        {
-            int a = stack.top();
-            stack.pop();
-
-            int b = stack.top();
-            stack.pop();
-
-            b >= a ? stack.push(1) : stack.push(0);
-            i++;
-        }
-
-        else if (op.type == OP_LTE)
-        {
-            int a = stack.top();
-            stack.pop();
-
-            int b = stack.top();
-            stack.pop();
-
-            a >= b ? stack.push(1) : stack.push(0);
-            i++;
-        }
-
-        else if (op.type == OP_INC)
-        {
-            int a = stack.top();
-            stack.pop();
-            a++;
-            stack.push(a);
-
-            i++;
-        }
-
-        else if (op.type == OP_DEC)
-        {
-            int a = stack.top();
-            stack.pop();
-            a--;
-            stack.push(a);
-
-            i++;
-        }
-
-        else if (op.type == OP_SHL)
-        {
-            int a = stack.top();
-            stack.pop();
-            int b = stack.top();
-            stack.pop();
-
-            stack.push(b << a);
-
-            i++;
-        }
-
-        else if (op.type == OP_SHR)
-        {
-            int a = stack.top();
-            stack.pop();
-            int b = stack.top();
-            stack.pop();
-
-            stack.push(b >> a);
-
-            i++;
-        }
-
-        else if (op.type == OP_LOR)
-        {
-            int a = stack.top();
-            stack.pop();
-            int b = stack.top();
-            stack.pop();
-
-            stack.push(a | b);
-
-            i++;
-        }
-
-        else if (op.type == OP_XOR)
-        {
-            int a = stack.top();
-            stack.pop();
-            int b = stack.top();
-            stack.pop();
-
-            stack.push(a ^ b);
-
-            i++;
-        }
-
-        else if (op.type == OP_LAND)
-        {
-            int a = stack.top();
-            stack.pop();
-            int b = stack.top();
-            stack.pop();
-
-            stack.push(a & b);
-
-            i++;
-        }
-
-        else if (op.type == OP_WHILE)
-        {
-            i++;
-        }
-
-        else if (op.type == OP_DO)
-        {
-            int a = stack.top();
-            stack.pop();
-
-            a == 0 ? i = op.value : i++;
-        }
-
-        else if (op.type == OP_MEM)
-        {
-            stack.push(0);
-            i++;
-        }
-
-        else if (op.type == OP_LOAD)
-        {
-            int addr = stack.top();
-            stack.pop();
-            stack.push(memory[addr]);
-            i++;
-        }
-
-        else if (op.type == OP_STORE)
-        {
-            int value = stack.top();
-            stack.pop();
-            int addr = stack.top();
-            stack.pop();
-
-            memory[addr] = (value & ((1ULL << 8) - 1));
-            i++;
-        }
-
-        else if (op.type == OP_WRITE)
-        {
-            int fd = stack.top();
-            stack.pop();
-            
-            int addr = stack.top();
-            stack.pop();
-
-            int size = stack.top();
-            stack.pop();
-
-            for (int c = 0; c < size; c++)
+            case OP_PUSH_INT:
             {
-                std::cout << memory[addr + c];
+                stack.push(op.value);
+                i++;
+
+                break;
             }
 
-            i++;
-        }
+            case OP_PUSH_STR:
+            {
+                stack.push(op.data.size());
 
-        else if (op.type == OP_EXIT)
-        {
-            int exit_code = stack.top();
-            stack.pop();
-            exit(exit_code);
-        }
+                if (op.addr != -1)
+                {
+                    stack.push(op.addr);
+                }
+                else
+                {
+                    op.addr = str_size;
+                    memcpy(&memory[str_size], &op.data[0], op.data.size() * sizeof(char));
+                    str_size += op.data.size();
+                    stack.push(op.addr);
+                }
+                i++;
 
-        else
-        {
-            std::cerr << "Unreachable\n";
+                break;
+            }
+
+            case OP_PLUS:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                stack.push(a + b);
+                i++;
+
+                break;
+            }
+
+            case OP_MINUS:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                stack.push(-a + b);
+                i++;
+
+                break;
+            }
+
+            case OP_EQ:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                a == b ? stack.push(1) : stack.push(0);
+                i++;
+
+                break;
+            }
+
+            case OP_NEQ:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                a != b ? stack.push(1) : stack.push(0);
+                i++;
+
+                break;
+            }
+
+            case OP_PRINT:
+            {
+                std::cout << stack.top() << "\n";
+                stack.pop();
+                i++;
+                
+                break;
+            }
+
+            case OP_IF:
+            {
+                int cond = stack.top();
+                stack.pop();
+
+                cond == 0 ? i = op.value : i++;
+
+                break;
+            }
+
+            case OP_ELSE:
+            {
+                i = op.value;
+                break;
+            }
+
+            case OP_END:
+            {
+                i = op.value;
+                break;
+            }
+
+            case OP_DUP:
+            {
+                int a = stack.top();
+                stack.push(a);
+                i++;
+
+                break;
+            }
+
+            case OP_DUP2:
+            {
+                int a = stack.top();
+                stack.pop();
+                int b = stack.top();
+                stack.push(a);
+                stack.push(b);
+                stack.push(a);
+                i++;
+
+                break;
+            }
+
+            case OP_DROP:
+            {
+                stack.pop();
+                i++;
+
+                break;
+            }
+
+            case OP_SWAP:
+            {
+                int a = stack.top();
+                stack.pop();
+                int b = stack.top();
+                stack.pop();
+
+                stack.push(a);
+                stack.push(b);
+
+                i++;
+
+                break;
+            }
+
+            case OP_OVER:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                stack.push(b);
+                stack.push(a);
+                stack.push(b);
+
+                i++;
+
+                break;
+            }
+
+            case OP_GT:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                b > a ? stack.push(1) : stack.push(0);
+                i++;
+                break;
+            }
+
+            case OP_LT:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                a > b ? stack.push(1) : stack.push(0);
+                i++;
+                break;
+            }
+
+            case OP_GTE:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                b >= a ? stack.push(1) : stack.push(0);
+                i++;
+                break;
+            }
+
+            case OP_LTE:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                a >= b ? stack.push(1) : stack.push(0);
+                i++;
+                break;
+            }
+
+            case OP_INC:
+            {
+                int a = stack.top();
+                stack.pop();
+                a++;
+                stack.push(a);
+
+                i++;
+                break;
+            }
+
+            case OP_DEC:
+            {
+                int a = stack.top();
+                stack.pop();
+                a--;
+                stack.push(a);
+
+                i++;
+                break;
+            }
+
+            case OP_SHL:
+            {
+                int a = stack.top();
+                stack.pop();
+                int b = stack.top();
+                stack.pop();
+
+                stack.push(b << a);
+
+                i++;
+                break;
+            }
+
+            case OP_SHR:
+            {
+                int a = stack.top();
+                stack.pop();
+                int b = stack.top();
+                stack.pop();
+
+                stack.push(b >> a);
+
+                i++;
+                break;
+            }
+
+            case OP_LOR:
+            {
+                int a = stack.top();
+                stack.pop();
+                int b = stack.top();
+                stack.pop();
+
+                stack.push(a | b);
+
+                i++;
+                break;
+            }
+
+            case OP_XOR:
+            {
+                int a = stack.top();
+                stack.pop();
+                int b = stack.top();
+                stack.pop();
+
+                stack.push(a ^ b);
+
+                i++;
+                break;
+            }
+
+            case OP_LAND:
+            {
+                int a = stack.top();
+                stack.pop();
+                int b = stack.top();
+                stack.pop();
+
+                stack.push(a & b);
+
+                i++;
+                break;
+            }
+
+            case OP_WHILE:
+            {
+                i++;
+                break;
+            }
+
+            case OP_DO:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                a == 0 ? i = op.value : i++;
+                break;
+            }
+
+            case OP_MEM:
+            {
+                stack.push(STR_CAPACITY);
+                i++;
+                break;
+            }
+
+            case OP_LOAD:
+            {
+                int addr = stack.top();
+                stack.pop();
+                stack.push(memory[addr]);
+                i++;
+                break;
+            }
+
+            case OP_STORE:
+            {
+                int value = stack.top();
+                stack.pop();
+                int addr = stack.top();
+                stack.pop();
+
+                memory[addr] = (value & ((1ULL << 8) - 1));
+                i++;
+                break;
+            }
+
+            case OP_WRITE:
+            {
+                int fd = stack.top();
+                stack.pop();
+                
+                int addr = stack.top();
+                stack.pop();
+
+                int size = stack.top();
+                stack.pop();
+
+                for (int c = 0; c < size; c++)
+                {
+                    std::cout << memory[addr + c];
+                }
+
+                i++;
+                break;
+            }
+
+            case OP_EXIT:
+            {
+                int exit_code = stack.top();
+                stack.pop();
+                exit(exit_code);
+                break;
+            }
+
+            default:
+            {
+                std::cerr << "Unreachable\n";
+                break;
+            }
         }
     }
 }
@@ -501,294 +637,363 @@ void compile_program(std::vector<Code> program, std::string output_file)
     out << "section .text\n";
     out << "_main:\n";
 
+    std::vector<std::string> strs;
+
     int i = 0;
     for (i = 0; i < program.size(); i++)
     {
         Code op = program[i];
         out << "\naddr_" << i << ":\n";
 
-        if (op.type == OP_PUSH)
+        switch (op.type)
         {
-            out << "    ;; -- push --\n";
-            out << "    push " << op.value << "\n";
-        }
-
-        else if (op.type == OP_PLUS)
-        {
-            out << "    ;; -- plus --\n";
-            out << "    pop rax\n";
-            out << "    pop rbx\n";
-            out << "    add rax, rbx\n";
-            out << "    push rax\n";
-        }
-
-        else if (op.type == OP_MINUS)
-        {
-            out << "    ;; -- minus --\n";
-            out << "    pop rbx\n";
-            out << "    pop rax\n";
-            out << "    sub rax, rbx\n";
-            out << "    push rax\n";
-        }
-
-        else if (op.type == OP_EQUAL)
-        {
-            out << "    ;; -- equal --\n";
-            out << "    pop rax\n";
-            out << "    pop rbx\n";
-            out << "    mov rcx, 1\n";
-            out << "    mov rdx, 0\n";
-            out << "    cmp rax, rbx\n";
-            out << "    mov rax, rdx\n";
-            out << "    cmove rax, rcx\n";
-            out << "    push rax\n";
-        }
-
-        else if (op.type == OP_PRINT)
-        {
-            out << "    ;; -- print --\n";
-            out << "    pop rdi\n";
-            out << "    call print\n";
-        }
-
-        else if (op.type == OP_IF)
-        {
-            out << "    ;; -- if --\n";
-            out << "    pop rax\n";
-            out << "    test rax, rax\n";
-            out << "    jz addr_" << op.value << "\n";
-        }
-
-        else if (op.type == OP_ELSE)
-        {
-            out << "    ;; -- else --\n";
-            out << "    jmp addr_" << op.value << "\n";
-        }
-
-        else if (op.type == OP_END)
-        {
-            out << "    ;; -- end --\n";
-
-            if (i + 1 != op.value)
+            case OP_PUSH_INT:
             {
-                out << "    jmp addr_" << op.value << "\n";
+                out << "    ;; -- push int --\n";
+                out << "    mov rax, " << op.value << "\n";
+                out << "    push rax\n";
+                break;
             }
-        }
 
-        else if (op.type == OP_DUP)
-        {
-            out << "    ;; -- dup --\n";
-            out << "    pop rax\n";
-            out << "    push rax\n";
-            out << "    push rax\n";
-        }
+            case OP_PUSH_STR:
+            {
+                out << "    ;; -- push str --\n";
+                out << "    mov rax, " << op.data.size() << "\n";
+                out << "    push rax\n";
+                out << "    lea rax, [str_" << strs.size() << "]\n";
+                out << "    push rax\n";
+                strs.push_back(op.data);
 
-        else if (op.type == OP_DUP2)
-        {
-            out << "    ;; -- dup2 --\n";
-            out << "    pop rbx\n";
-            out << "    pop rax\n";
-            out << "    push rax\n";
-            out << "    push rbx\n";
-            out << "    push rax\n";
-            out << "    push rbx\n";
-        }
+                break;
+            }
 
-        else if (op.type == OP_DROP)
-        {
-            out << "    ;; -- drop --\n";
-            out << "    pop rax\n";
-        }
+            case OP_PLUS:
+            {
+                out << "    ;; -- plus --\n";
+                out << "    pop rax\n";
+                out << "    pop rbx\n";
+                out << "    add rax, rbx\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_SWAP)
-        {
-            out << "    ;; -- swap --\n";
-            out << "    pop rax\n";
-            out << "    pop rbx\n";
-            out << "    push rax\n";
-            out << "    push rbx\n";
-        }
+            case OP_MINUS:
+            {
+                out << "    ;; -- minus --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    sub rax, rbx\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_OVER)
-        {
-            out << "    ;; -- over --\n";
-            out << "    pop rax\n";
-            out << "    pop rbx\n";
-            out << "    push rbx\n";
-            out << "    push rax\n";
-            out << "    push rbx\n";
-        }
+            case OP_EQ:
+            {
+                out << "    ;; -- equal --\n";
+                out << "    pop rax\n";
+                out << "    pop rbx\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmove rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_GT)
-        {
-            out << "    ;; -- greater than --\n";
-            out << "    pop rbx\n";
-            out << "    pop rax\n";
-            out << "    mov rcx, 1\n";
-            out << "    mov rdx, 0\n";
-            out << "    cmp rax, rbx\n";
-            out << "    mov rax, rdx\n";
-            out << "    cmovg rax, rcx\n";
-            out << "    push rax\n";
-        }
+            case OP_NEQ:
+            {
+                out << "    ;; -- equal --\n";
+                out << "    pop rax\n";
+                out << "    pop rbx\n";
+                out << "    mov rcx, 0\n";
+                out << "    mov rdx, 1\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmove rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_LT)
-        {
-            out << "    ;; -- less than --\n";
-            out << "    pop rbx\n";
-            out << "    pop rax\n";
-            out << "    mov rcx, 1\n";
-            out << "    mov rdx, 0\n";
-            out << "    cmp rax, rbx\n";
-            out << "    mov rax, rdx\n";
-            out << "    cmovl rax, rcx\n";
-            out << "    push rax\n";
-        }
+            case OP_PRINT:
+            {
+                out << "    ;; -- print --\n";
+                out << "    pop rdi\n";
+                out << "    call print\n";
+                break;
+            }
 
-        else if (op.type == OP_GTE)
-        {
-            out << "    ;; -- greater than or equal --\n";
-            out << "    pop rbx\n";
-            out << "    pop rax\n";
-            out << "    mov rcx, 1\n";
-            out << "    mov rdx, 0\n";
-            out << "    cmp rax, rbx\n";
-            out << "    mov rax, rdx\n";
-            out << "    cmovge rax, rcx\n";
-            out << "    push rax\n";
-        }
+            case OP_IF:
+            {
+                out << "    ;; -- if --\n";
+                out << "    pop rax\n";
+                out << "    test rax, rax\n";
+                out << "    jz addr_" << op.value << "\n";
+                break;
+            }
 
-        else if (op.type == OP_LTE)
-        {
-            out << "    ;; -- less than or equal --\n";
-            out << "    pop rbx\n";
-            out << "    pop rax\n";
-            out << "    mov rcx, 1\n";
-            out << "    mov rdx, 0\n";
-            out << "    cmp rax, rbx\n";
-            out << "    mov rax, rdx\n";
-            out << "    cmovle rax, rcx\n";
-            out << "    push rax\n";
-        }
+            case OP_ELSE:
+            {
+                out << "    ;; -- else --\n";
+                out << "    jmp addr_" << op.value << "\n";
+                break;
+            }
 
-        else if (op.type == OP_INC)
-        {
-            out << "    ;; -- inc --\n";
-            out << "    pop rax\n";
-            out << "    add rax, 1\n";
-            out << "    push rax\n";
-        }
+            case OP_END:
+            {
+                out << "    ;; -- end --\n";
 
-        else if (op.type == OP_DEC)
-        {
-            out << "    ;; -- dec --\n";
-            out << "    pop rax\n";
-            out << "    sub rax, 1\n";
-            out << "    push rax\n";
-        }
+                if (i + 1 != op.value)
+                {
+                    out << "    jmp addr_" << op.value << "\n";
+                    break;
+                }
+                break;
+            }
 
-        else if (op.type == OP_SHL)
-        {
-            out << "    ;; -- shl (<<) --\n";
-            out << "    pop rcx\n";
-            out << "    pop rbx\n";
-            out << "    shl rbx, cl\n";
-            out << "    push rbx\n";
-        }
+            case OP_DUP:
+            {
+                out << "    ;; -- dup --\n";
+                out << "    pop rax\n";
+                out << "    push rax\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_SHR)
-        {
-            out << "    ;; -- shr (>>) --\n";
-            out << "    pop rcx\n";
-            out << "    pop rbx\n";
-            out << "    shr rbx, cl\n";
-            out << "    push rbx\n";
-        }
+            case OP_DUP2:
+            {
+                out << "    ;; -- dup2 --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    push rax\n";
+                out << "    push rbx\n";
+                out << "    push rax\n";
+                out << "    push rbx\n";
+                break;
+            }
 
-        else if (op.type == OP_LOR)
-        {
-            out << "    ;; -- lor (|) --\n";
-            out << "    pop rcx\n";
-            out << "    pop rbx\n";
-            out << "    or rbx, rcx\n";
-            out << "    push rbx\n";
-        }
+            case OP_DROP:
+            {
+                out << "    ;; -- drop --\n";
+                out << "    pop rax\n";
+                break;
+            }
 
-        else if (op.type == OP_XOR)
-        {
-            out << "    ;; -- xor (^) --\n";
-            out << "    pop rcx\n";
-            out << "    pop rbx\n";
-            out << "    xor rbx, rcx\n";
-            out << "    push rbx\n";
-        }
+            case OP_SWAP:
+            {
+                out << "    ;; -- swap --\n";
+                out << "    pop rax\n";
+                out << "    pop rbx\n";
+                out << "    push rax\n";
+                out << "    push rbx\n";
+                break;
+            }
 
-        else if (op.type == OP_LAND)
-        {
-            out << "    ;; -- and (&) --\n";
-            out << "    pop rcx\n";
-            out << "    pop rbx\n";
-            out << "    and rbx, rcx\n";
-            out << "    push rbx\n";
-        }
+            case OP_OVER:
+            {
+                out << "    ;; -- over --\n";
+                out << "    pop rax\n";
+                out << "    pop rbx\n";
+                out << "    push rbx\n";
+                out << "    push rax\n";
+                out << "    push rbx\n";
+                break;
+            }
 
-        else if (op.type == OP_WHILE)
-        {
-            out << "    ;; -- while --\n";
-        }
+            case OP_GT:
+            {
+                out << "    ;; -- greater than --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmovg rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_DO)
-        {
-            out << "    ;; -- do --\n";
-            out << "    pop rax\n";
-            out << "    test rax, rax\n";
-            out << "    jz addr_" << op.value << "\n";
-        }
+            case OP_LT:
+            {
+                out << "    ;; -- less than --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmovl rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_MEM)
-        {
-            out << "    ;; -- mem --\n";
-            out << "    xor rdi, rdi\n";
-            out << "    lea rdi, [mem]\n";
-            out << "    push rdi\n";
-        }
+            case OP_GTE:
+            {
+                out << "    ;; -- greater than or equal --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmovge rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_LOAD)
-        {
-            out << "    ;; -- load (,) --\n";
-            out << "    pop rax\n";
-            out << "    xor rbx, rbx\n";
-            out << "    mov bl, [rax]\n";
-            out << "    push rbx\n";
-        }
+            case OP_LTE:
+            {
+                out << "    ;; -- less than or equal --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmovle rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_STORE)
-        {
-            out << "    ;; -- store (.) --\n";
-            out << "    pop rbx\n";
-            out << "    pop rax\n";
-            out << "    mov [rax], bl\n";
-        }
+            case OP_INC:
+            {
+                out << "    ;; -- inc --\n";
+                out << "    pop rax\n";
+                out << "    add rax, 1\n";
+                out << "    push rax\n";
+                break;
+            }
 
-        else if (op.type == OP_WRITE)
-        {
-            out << "    ;; -- write --\n";
+            case OP_DEC:
+            {
+                out << "    ;; -- dec --\n";
+                out << "    pop rax\n";
+                out << "    sub rax, 1\n";
+                out << "    push rax\n";
+                break;
+            }
 
-            // order to pass parameters for syscall:
-            // rax (syscall number), then rdi, rsi, rdx, rcx, r8, r9
-            out << "    mov rax, 0x2000004\n";
-            out << "    pop rdi\n";
-            out << "    pop rsi\n";
-            out << "    pop rdx\n";
-            out << "    syscall\n";
-        }
+            case OP_SHL:
+            {
+                out << "    ;; -- shl (<<) --\n";
+                out << "    pop rcx\n";
+                out << "    pop rbx\n";
+                out << "    shl rbx, cl\n";
+                out << "    push rbx\n";
+                break;
+            }
 
-        else if (op.type == OP_EXIT)
-        {
-            out << "    ;; -- exit --\n";
-            out << "    mov rax, 0x2000001\n";
-            out << "    pop rdi\n";
-            out << "    syscall\n";
+            case OP_SHR:
+            {
+                out << "    ;; -- shr (>>) --\n";
+                out << "    pop rcx\n";
+                out << "    pop rbx\n";
+                out << "    shr rbx, cl\n";
+                out << "    push rbx\n";
+                break;
+            }
+
+            case OP_LOR:
+            {
+                out << "    ;; -- lor (|) --\n";
+                out << "    pop rcx\n";
+                out << "    pop rbx\n";
+                out << "    or rbx, rcx\n";
+                out << "    push rbx\n";
+                break;
+            }
+
+            case OP_XOR:
+            {
+                out << "    ;; -- xor (^) --\n";
+                out << "    pop rcx\n";
+                out << "    pop rbx\n";
+                out << "    xor rbx, rcx\n";
+                out << "    push rbx\n";
+                break;
+            }
+
+            case OP_LAND:
+            {
+                out << "    ;; -- and (&) --\n";
+                out << "    pop rcx\n";
+                out << "    pop rbx\n";
+                out << "    and rbx, rcx\n";
+                out << "    push rbx\n";
+                break;
+            }
+
+            case OP_WHILE:
+            {
+                out << "    ;; -- while --\n";
+                break;
+            }
+
+            case OP_DO:
+            {
+                out << "    ;; -- do --\n";
+                out << "    pop rax\n";
+                out << "    test rax, rax\n";
+                out << "    jz addr_" << op.value << "\n";
+                break;
+            }
+
+            case OP_MEM:
+            {
+                out << "    ;; -- mem --\n";
+                out << "    xor rdi, rdi\n";
+                out << "    lea rdi, [mem]\n";
+                out << "    push rdi\n";
+                break;
+            }
+
+            case OP_LOAD:
+            {
+                out << "    ;; -- load (,) --\n";
+                out << "    pop rax\n";
+                out << "    xor rbx, rbx\n";
+                out << "    mov bl, [rax]\n";
+                out << "    push rbx\n";
+                break;
+            }
+
+            case OP_STORE:
+            {
+                out << "    ;; -- store (.) --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov [rax], bl\n";
+                break;
+            }
+
+            case OP_WRITE:
+            {
+                out << "    ;; -- write --\n";
+
+                // order to pass parameters for syscall:
+                // rax (syscall number), then rdi, rsi, rdx, rcx, r8, r9
+                out << "    mov rax, 0x2000004\n";
+                out << "    pop rdi\n";
+                out << "    pop rsi\n";
+                out << "    pop rdx\n";
+                out << "    syscall\n";
+                break;
+            }
+
+            case OP_EXIT:
+            {
+                out << "    ;; -- exit --\n";
+                out << "    mov rax, 0x2000001\n";
+                out << "    pop rdi\n";
+                out << "    syscall\n";
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
         }
     }
     
@@ -797,6 +1002,18 @@ void compile_program(std::vector<Code> program, std::string output_file)
     out << "    mov rax, 0x2000001\n";
     out << "    mov rdi, 0\n";
     out << "    syscall\n";
+
+    out << "\nsection .data\n";
+    for (int i = 0; i < strs.size(); i++)
+    {
+        out << "str_" << i << ": db ";
+
+        for (auto c : strs[i])
+        {
+            out << (int)(c) << ",";
+        }
+        out << (int)('\0') << "\n";
+    }
 
     out << "\nsection .bss\n";
     out << "mem: resb " << MEM_CAPACITY << "\n";

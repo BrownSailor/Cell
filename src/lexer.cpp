@@ -51,7 +51,6 @@ Token lex_word(std::string word)
     {
         return { .type = TOKEN_WORD, .str_val = word };
     }
-    
 }
 
 std::map<int, Token> lex_line(std::string line)
@@ -60,15 +59,31 @@ std::map<int, Token> lex_line(std::string line)
     int col = strip_col(line, 0);
     while (col < line.size())
     {
-        int col_end = line.find(' ', col);
-
-        if (col_end < 0)
+        int col_end = -1;
+        if (line[col] == '"')
         {
-            col_end = line.size();
+            col_end = line.find('"', col + 1);
+            if (col_end < 0)
+            {
+                col_end = line.size();
+            }
+
+            Token token = { .type = TOKEN_STR, .str_val = line.substr(col + 1, col_end - col - 1) };
+            tokens.insert({ col, token });
+            col = strip_col(line, col_end + 1);
         }
 
-        tokens.insert({ col, lex_word(line.substr(col, col_end - col)) });
-        col = strip_col(line, col_end);
+        else
+        {
+            col_end = line.find(' ', col);
+            if (col_end < 0)
+            {
+                col_end = line.size();
+            }
+
+            tokens.insert({ col, lex_word(line.substr(col, col_end - col)) });
+            col = strip_col(line, col_end);
+        }
     }
 
     return tokens;

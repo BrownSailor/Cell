@@ -4,7 +4,8 @@ std::unordered_map<std::string, int> BUILT_IN_WORDS =
 {
     { "+", OP_PLUS },
     { "-", OP_MINUS },
-    { "=", OP_EQUAL },
+    { "=", OP_EQ },
+    { "!=", OP_NEQ },
     { "print", OP_PRINT },
     { "if", OP_IF },
     { "else", OP_ELSE },
