@@ -1,9 +1,9 @@
-/* Cell:    a programming language written in C++
+/* slang:   a stack-based programming language written in C++
  * Author:  Shreyas Ravi
  * Created: September 24 2021
  */
 
-#include "include/cell.h"
+#include "include/slang.h"
 #include "include/lexer.h"
 #include <string.h>
 
@@ -27,7 +27,7 @@ int main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
-        std::vector<Code> program = load_program(argv[2]);
+        std::vector<Op> program = load_program(argv[2]);
         simulate_program(program);
     }
 
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
         {
             usage();
 
-            if (strstr(".cll", argv[2]) == NULL)
+            if (strstr(".sl", argv[2]) == NULL)
                 std::cerr << "ERROR: no input file provided\n";
             else
                 std::cerr << "ERROR: no executable name provided\n";
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
-        std::vector<Code> program = load_program(argv[3]);
+        std::vector<Op> program = load_program(argv[3]);
         std::string output_file = argv[2];
 
         std::string asm_command = "nasm -fmacho64 -o " + output_file + ".o " + output_file + ".asm";

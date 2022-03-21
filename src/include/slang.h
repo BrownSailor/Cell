@@ -6,6 +6,7 @@
 #include <stack>
 #include <vector>
 #include <string.h>
+#include <algorithm>
 #include "lexer.h"
 
 #define byte uint8_t
@@ -14,21 +15,27 @@
 const int STR_CAPACITY = 640000;
 const int MEM_CAPACITY = 640000;
 
-struct Code
+struct Op
 {
     int type = -1;              // type of operation
     int value = 0;              // value (int for push, jump address for conditionals)
     std::string data = "";      // data (string for push)
     int addr = -1;              // addr (string data)
-    std::string loc;
+    std::string loc;            // location in file
 };
 
+struct Macro
+{
+    std::string loc;          // location of macro definition
+    std::vector<Token> body;  // body of macro
+};
+
+void print_error(std::string loc, std::string msg, bool flag=false);
 std::string unescape(const std::string& s);
-Code parse_op(std::string value, std::string msg);
-std::vector<Code> parse_blocks(std::vector<Code> program);
-std::vector<Code> load_program(std::string input_file);
-void simulate_program(std::vector<Code> program);
-void compile_program(std::vector<Code> program, std::string output_file);
+std::vector<Op> parse_blocks(std::vector<Op> program);
+std::vector<Op> load_program(std::string input_file);
+void simulate_program(std::vector<Op> program);
+void compile_program(std::vector<Op> program, std::string output_file);
 void usage();
 
 #endif

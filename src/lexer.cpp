@@ -12,7 +12,7 @@ std::string remove_comments(std::string input_file)
             
         while (getline(in, line))
         {
-            file += line.substr(0, line.find("//")) + "\n";
+            file += (line.substr(0, line.find("//")) + "\n");
         }
 
         in.close();

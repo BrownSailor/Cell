@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 // Tokens
 enum
@@ -18,7 +19,7 @@ enum
 {
     OP_PUSH_INT,    // push int value to stack
     OP_PUSH_STR,    // push string value to stack
-    OP_PRINT,       // print top value on stack to console
+    OP_DUMP,        // print top value on stack to console
     OP_DUP,         // duplicate top value on the stack
     OP_DUP2,        // duplicate top 2 values on the stack
     OP_DROP,        // pop top value off the stack

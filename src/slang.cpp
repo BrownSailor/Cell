@@ -1,9 +1,18 @@
-#include "include/cell.h"
+#include "include/slang.h"
 
-void print_error(std::string loc, std::string msg)
+void print_error(std::string loc, std::string msg, bool flag)
 {
     std::size_t last_colon = loc.find_last_of(':');
-    std::cerr << loc.substr(0, last_colon) << ": " << msg << loc.substr(last_colon) << "\n";
+    if (flag)
+    {
+        std::cerr << loc.substr(0, last_colon) << ": " << msg << "\n";
+    }
+
+    else
+    {
+        std::cerr << loc.substr(0, last_colon) << ": " << msg << loc.substr(last_colon) << "\n";
+    }
+
     exit(EXIT_FAILURE);
 }
 
@@ -36,119 +45,186 @@ std::string unescape(const std::string& s)
     return res;
 }
 
-Code parse_op(Token token)
+std::vector<Op> parse_blocks(std::vector<Token> tokens)
 {
-    switch (token.type)
+    std::vector<Token> tokens_r = tokens;
+    std::reverse(tokens_r.begin(), tokens_r.end());
+
+    std::stack<int> stack;
+    std::vector<Op> program;
+    std::unordered_map<std::string, Macro> macros;
+
+    int i = 0;
+    while (tokens_r.size() > 0)
     {
-        case TOKEN_INT:
+        Token token = tokens_r.back();
+        tokens_r.pop_back();
+
+        Op op;
+
+        if (token.type == TOKEN_INT)
         {
-            return { .type = OP_PUSH_INT, .value = token.int_val, .loc = token.loc };
+            op = { .type = OP_PUSH_INT, .value = token.int_val, .loc = token.loc };
         }
 
-        case TOKEN_STR:
+        else if (token.type == TOKEN_STR)
         {
-            return { .type = OP_PUSH_STR, .data = unescape(token.str_val), .loc = token.loc };
+            op = { .type = OP_PUSH_STR, .data = unescape(token.str_val), .loc = token.loc };
         }
 
-        case TOKEN_WORD:
+        else if (token.type == TOKEN_WORD)
         {
             if (BUILT_IN_WORDS.count(token.str_val))
             {
-                return { .type = BUILT_IN_WORDS[token.str_val], .loc = token.loc };
+                op = { .type = BUILT_IN_WORDS[token.str_val], .loc = token.loc };
+            }
+
+            else if (macros.count(token.str_val))
+            {
+                std::vector<Token> macro_r = macros[token.str_val].body;
+                std::reverse(macro_r.begin(), macro_r.end());
+
+                tokens_r.insert(tokens_r.end(), macro_r.begin(), macro_r.end());
+                continue;
             }
 
             else
             {
                 print_error(token.loc, "invalid command");
-                return {};
             }
         }
 
-        default:
+        if (op.type == OP_IF)
         {
-            print_error(token.loc, "invalid command");
-            return {};
+            program.push_back(op);
+            stack.push(i);
+
+            i++;
         }
-    }
-}
-
-std::vector<Code> parse_blocks(std::vector<Code> program)
-{
-    std::stack<int> stack;
-
-    for (int i = 0; i < program.size(); i++)
-    {
-        Code op = program[i];
-
-        switch (op.type)
-        {
-            case OP_IF:
-            {
-                stack.push(i);
-                break;
-            }
             
-            case OP_ELSE:
+        else if (op.type == OP_ELSE)
+        {
+            program.push_back(op);
+            int if_i = stack.top();
+            stack.pop();
+
+            if (program[if_i].type != OP_IF)
             {
-                int if_i = stack.top();
-                stack.pop();
-
-                if (program[if_i].type != OP_IF)
-                {
-                    print_error(program[if_i].loc, "ERROR: `else` keyword can only be used in conjunction with `if`");
-                }
-
-                program[if_i] = { OP_IF, i + 1 };
-                stack.push(i);
-
-                break;
+                std::cout << program[if_i].value << "\n";
+                print_error(program[if_i].loc, "ERROR: `else` keyword can only be used in conjunction with `if`", true);
             }
 
-            case OP_END:
+            program[if_i].value = i + 1;
+            stack.push(i);
+
+            i++;
+        }
+
+        else if (op.type == OP_END)
+        {
+            program.push_back(op);
+            int block_i = stack.top();
+            stack.pop();
+
+            if (program[block_i].type == OP_IF || program[block_i].type == OP_ELSE)
             {
-                int block_i = stack.top();
-                stack.pop();
+                program[block_i].value = i;
+                program[i].value = i + 1;
+            }
 
-                if (program[block_i].type == OP_IF || program[block_i].type == OP_ELSE)
-                {
-                    program[block_i] = { program[block_i].type, i };
-                    program[i] = { OP_END, i + 1 };
-                }
+            else if (program[block_i].type == OP_DO)
+            {
+                program[i].value = program[block_i].value;
+                program[block_i].value = i + 1;
+            }
 
-                else if (program[block_i].type == OP_DO)
+            else
+            {
+                print_error(program[block_i].loc, "ERROR: `end` keyword can only be used in conjunction with `if-else`, `do`, or `while`", true);
+            }
+
+            i++;
+        }
+
+        else if (op.type == OP_WHILE)
+        {
+            program.push_back(op);
+            stack.push(i);
+
+            i++;
+        }
+
+        else if (op.type == OP_DO)
+        {
+            program.push_back(op);
+            int while_i = stack.top();
+            stack.pop();
+            program[i].value = while_i;
+            stack.push(i);
+
+            i++;
+        }
+
+        else if (op.type == OP_DEF)
+        {
+            if (tokens_r.size() == 0)
+            {
+                print_error(op.loc, "ERROR: expected identifier after `def`", true);
+            }
+
+            else
+            {
+                token = tokens_r.back();
+                tokens_r.pop_back();
+
+                if (token.type != TOKEN_WORD)
                 {
-                    program[i] = { OP_END, program[block_i].value};
-                    program[block_i] = { OP_DO, i + 1 };
+                    print_error(token.loc, "ERROR: expected word after `def`", true);
                 }
 
                 else
                 {
-                    print_error(program[block_i].loc, "ERROR: `end` keyword can only be used in conjunction with `if-else`, `do`, or `while`");
+                    if (macros.count(token.str_val))
+                    {
+                        print_error(token.loc, "ERROR: redefinition of already existing macro `" + token.str_val + "`", true);
+                    }
+
+                    if (BUILT_IN_WORDS.count(token.str_val))
+                    {
+                        print_error(token.loc, "ERROR: cannot define macro for built-in operation `" + token.str_val + "`", true);
+                    }
+                    // Macro macro = { .loc = op.loc, .body = {} };
+                    std::string name = token.str_val;
+                    macros[name] = { .loc = op.loc, .body = {} };
+
+                    while (tokens_r.size())
+                    {
+                        token = tokens_r.back();
+                        tokens_r.pop_back();
+
+                        if (token.type == TOKEN_WORD && token.str_val == "end")
+                        {
+                            break;
+                        }
+
+                        else
+                        {
+                            macros[name].body.push_back(token);
+                        }
+                    }
+
+                    if (token.type != TOKEN_WORD or token.str_val != "end")
+                    {
+                        print_error(token.loc, "ERROR: expected `end` to close `def`, found `" + token.str_val + "` instead", true);
+                    }
                 }
-                
-                break;
             }
+        }
 
-            case OP_WHILE:
-            {
-                stack.push(i);
-                break;
-            }
-
-            case OP_DO:
-            {
-                int while_i = stack.top();
-                stack.pop();
-                program[i] = { OP_DO, while_i };
-                stack.push(i);
-
-                break;
-            }
-
-            default:
-            {
-                break;
-            }
+        else
+        {
+            program.push_back(op);
+            i++;
         }
     }
 
@@ -160,30 +236,16 @@ std::vector<Code> parse_blocks(std::vector<Code> program)
     return program;
 }
 
-std::vector<Code> load_program(std::string input_file)
+std::vector<Op> load_program(std::string input_file)
 {
-    std::vector<Code> program;
-    std::stringstream ss;
-
-    std::string file = remove_comments(input_file);
-    ss << file;
-    std::string line;
-
+    std::vector<Op> program;
     std::vector<Token> lexed_file = lex_file(input_file);
-
-    for (auto token : lexed_file)
-    {
-        program.push_back(parse_op(token));
-    }
-
-    program = parse_blocks(program);
-
-    ss.clear();
+    program = parse_blocks(lexed_file);
 
     return program;
 }
 
-void simulate_program(std::vector<Code> program)
+void simulate_program(std::vector<Op> program)
 {
     std::stack<int> stack;
     byte memory[STR_CAPACITY + MEM_CAPACITY];
@@ -193,7 +255,7 @@ void simulate_program(std::vector<Code> program)
     int i = 0;
     while (i < program.size())
     {
-        Code op = program[i];
+        Op op = program[i];
 
         switch (op.type)
         {
@@ -281,7 +343,7 @@ void simulate_program(std::vector<Code> program)
                 break;
             }
 
-            case OP_PRINT:
+            case OP_DUMP:
             {
                 std::cout << stack.top() << "\n";
                 stack.pop();
@@ -528,6 +590,11 @@ void simulate_program(std::vector<Code> program)
                 break;
             }
 
+            case OP_DEF:
+            {
+                break;
+            }
+
             case OP_MEM:
             {
                 stack.push(STR_CAPACITY);
@@ -593,13 +660,13 @@ void simulate_program(std::vector<Code> program)
     }
 }
 
-void compile_program(std::vector<Code> program, std::string output_file)
+void compile_program(std::vector<Op> program, std::string output_file)
 {
     std::ofstream out;
     out.open(output_file);
 
     out << "default rel\n\n";
-    out << "print:\n";
+    out << "dump:\n";
     out << "    sub     rsp, 40\n";
     out << "    mov     BYTE [rsp+31], 10\n";
     out << "    lea     rdx, [rsp+30]\n\n";
@@ -642,7 +709,7 @@ void compile_program(std::vector<Code> program, std::string output_file)
     int i = 0;
     for (i = 0; i < program.size(); i++)
     {
-        Code op = program[i];
+        Op op = program[i];
         out << "\naddr_" << i << ":\n";
 
         switch (op.type)
@@ -715,11 +782,11 @@ void compile_program(std::vector<Code> program, std::string output_file)
                 break;
             }
 
-            case OP_PRINT:
+            case OP_DUMP:
             {
-                out << "    ;; -- print --\n";
+                out << "    ;; -- dump --\n";
                 out << "    pop rdi\n";
-                out << "    call print\n";
+                out << "    call dump\n";
                 break;
             }
 
@@ -748,6 +815,11 @@ void compile_program(std::vector<Code> program, std::string output_file)
                     out << "    jmp addr_" << op.value << "\n";
                     break;
                 }
+                break;
+            }
+
+            case OP_DEF:
+            {
                 break;
             }
 

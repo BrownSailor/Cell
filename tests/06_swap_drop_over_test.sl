@@ -1,13 +1,13 @@
 1 2 3 4 5
 swap
-print   // should print 4; 1 2 3 5 on stack
+dump   // should dump 4; 1 2 3 5 on stack
 
 drop
-print   // should print 3; 1 2 on stack
+dump   // should dump 3; 1 2 on stack
 
 over
 
-// should print 1 2 1
-print
-print
-print
+// should dump 1 2 1
+dump
+dump
+dump

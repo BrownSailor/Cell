@@ -2,7 +2,7 @@
 
 std::unordered_map<std::string, int> BUILT_IN_WORDS =
 {
-    { "print", OP_PRINT },
+    { "dump", OP_DUMP },
     { "dup", OP_DUP },
     { "dup2", OP_DUP2 },
     { "drop", OP_DROP },
@@ -31,6 +31,7 @@ std::unordered_map<std::string, int> BUILT_IN_WORDS =
     { "end", OP_END },
     { "while", OP_WHILE },
     { "do", OP_DO },
+    { "def", OP_DEF },
 
     { "mem", OP_MEM },
     { ",", OP_LOAD },
@@ -40,8 +41,3 @@ std::unordered_map<std::string, int> BUILT_IN_WORDS =
     { "sys_read", OP_SYS_READ },
     { "sys_exit", OP_SYS_EXIT }
 };
-
-void preprocess_lookup()
-{
-    
-}
