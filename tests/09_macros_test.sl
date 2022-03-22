@@ -7,5 +7,5 @@ end
 def N 100 end
 
 N 0 while dup2 > do
-    dup dump inc
+    ++ dup dump
 end

@@ -11,8 +11,9 @@ std::unordered_map<std::string, int> BUILT_IN_WORDS =
 
     { "+", OP_PLUS },
     { "-", OP_MINUS },
-    { "inc", OP_INC },
-    { "dec", OP_DEC },
+    { "*", OP_MUL },
+    { "++", OP_INC },
+    { "--", OP_DEC },
     { "<<", OP_SHL },
     { ">>", OP_SHR },
     { "|", OP_LOR },
@@ -34,10 +35,12 @@ std::unordered_map<std::string, int> BUILT_IN_WORDS =
     { "def", OP_DEF },
 
     { "mem", OP_MEM },
-    { ",", OP_LOAD },
-    { ".", OP_STORE },
+    { "load", OP_LOAD },
+    { "store", OP_STORE },
 
     { "sys_write", OP_SYS_WRITE },
     { "sys_read", OP_SYS_READ },
-    { "sys_exit", OP_SYS_EXIT }
+    { "sys_exit", OP_SYS_EXIT },
+
+    { "use", OP_USE }
 };

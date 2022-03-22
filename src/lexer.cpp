@@ -91,8 +91,6 @@ std::map<int, Token> lex_line(std::string line)
 
 std::vector<Token> lex_file(std::string input_file)
 {
-    // std::ifstream in;
-    // in.open(input_file);
     std::string file = remove_comments(input_file);
     std::stringstream ss(file);
 

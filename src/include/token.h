@@ -28,6 +28,7 @@ enum
 
     OP_PLUS,        // add top two values on stack
     OP_MINUS,       // subtract top two values on stack
+    OP_MUL,         // multiply top two values on stack
     OP_INC,         // increment top value on stack
     OP_DEC,         // decrement top value on stack
     OP_SHL,         // bitwise shift left
@@ -57,6 +58,8 @@ enum
     OP_SYS_WRITE,   // write syscall
     OP_SYS_READ,    // read syscall
     OP_SYS_EXIT,    // exit syscall
+
+    OP_USE,         // use mechanism for including external files
     LEN_OPS         // number of valid operations
 };
 

@@ -1,3 +1,5 @@
-// print Hello World! to stdout
+// Print "Hello, World!" to standard output
 
-"Hello World!\n" 1 sys_write
+use "std.sl"
+
+"Hello, World!\n" write

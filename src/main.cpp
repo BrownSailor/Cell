@@ -61,8 +61,8 @@ int main(int argc, char **argv)
         std::cout << "[CMD] " << lnk_command << "\n";
         system(lnk_command.c_str());
 
-        // cout << "[CMD] " << rmf_command << "\n";
-        // system(rmf_command.c_str());
+        cout << "[CMD] " << rmf_command << "\n";
+        system(rmf_command.c_str());
     }
 
     else

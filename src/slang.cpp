@@ -221,6 +221,33 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
             }
         }
 
+        else if (op.type == OP_USE)
+        {
+            if (tokens_r.size() == 0)
+            {
+                print_error(op.loc, "ERROR: expected file path after `use`", true);
+            }
+
+            else
+            {
+                token = tokens_r.back();
+                tokens_r.pop_back();
+
+                if (token.type != TOKEN_STR)
+                {
+                    print_error(token.loc, "ERROR: expected string after `use`", true);
+                }
+
+                else
+                {
+                    std::vector<Token> file = lex_file(token.str_val);
+                    std::reverse(file.begin(), file.end());
+
+                    tokens_r.insert(tokens_r.end(), file.begin(), file.end());
+                }
+            }
+        }
+
         else
         {
             program.push_back(op);
@@ -287,90 +314,12 @@ void simulate_program(std::vector<Op> program)
                 break;
             }
 
-            case OP_PLUS:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(a + b);
-                i++;
-
-                break;
-            }
-
-            case OP_MINUS:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(-a + b);
-                i++;
-
-                break;
-            }
-
-            case OP_EQ:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                a == b ? stack.push(1) : stack.push(0);
-                i++;
-
-                break;
-            }
-
-            case OP_NEQ:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                a != b ? stack.push(1) : stack.push(0);
-                i++;
-
-                break;
-            }
-
             case OP_DUMP:
             {
                 std::cout << stack.top() << "\n";
                 stack.pop();
                 i++;
                 
-                break;
-            }
-
-            case OP_IF:
-            {
-                int cond = stack.top();
-                stack.pop();
-
-                cond == 0 ? i = op.value : i++;
-
-                break;
-            }
-
-            case OP_ELSE:
-            {
-                i = op.value;
-                break;
-            }
-
-            case OP_END:
-            {
-                i = op.value;
                 break;
             }
 
@@ -436,7 +385,7 @@ void simulate_program(std::vector<Op> program)
                 break;
             }
 
-            case OP_GT:
+            case OP_PLUS:
             {
                 int a = stack.top();
                 stack.pop();
@@ -444,12 +393,13 @@ void simulate_program(std::vector<Op> program)
                 int b = stack.top();
                 stack.pop();
 
-                b > a ? stack.push(1) : stack.push(0);
+                stack.push(a + b);
                 i++;
+
                 break;
             }
 
-            case OP_LT:
+            case OP_MINUS:
             {
                 int a = stack.top();
                 stack.pop();
@@ -457,12 +407,13 @@ void simulate_program(std::vector<Op> program)
                 int b = stack.top();
                 stack.pop();
 
-                a > b ? stack.push(1) : stack.push(0);
+                stack.push(-a + b);
                 i++;
+
                 break;
             }
 
-            case OP_GTE:
+            case OP_MUL:
             {
                 int a = stack.top();
                 stack.pop();
@@ -470,21 +421,9 @@ void simulate_program(std::vector<Op> program)
                 int b = stack.top();
                 stack.pop();
 
-                b >= a ? stack.push(1) : stack.push(0);
+                stack.push(a * b);
                 i++;
-                break;
-            }
 
-            case OP_LTE:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                a >= b ? stack.push(1) : stack.push(0);
-                i++;
                 break;
             }
 
@@ -575,6 +514,108 @@ void simulate_program(std::vector<Op> program)
                 break;
             }
 
+            case OP_EQ:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                a == b ? stack.push(1) : stack.push(0);
+                i++;
+
+                break;
+            }
+
+            case OP_NEQ:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                a != b ? stack.push(1) : stack.push(0);
+                i++;
+
+                break;
+            }
+
+            case OP_GT:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                b > a ? stack.push(1) : stack.push(0);
+                i++;
+                break;
+            }
+
+            case OP_LT:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                a > b ? stack.push(1) : stack.push(0);
+                i++;
+                break;
+            }
+
+            case OP_GTE:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                b >= a ? stack.push(1) : stack.push(0);
+                i++;
+                break;
+            }
+
+            case OP_LTE:
+            {
+                int a = stack.top();
+                stack.pop();
+
+                int b = stack.top();
+                stack.pop();
+
+                a >= b ? stack.push(1) : stack.push(0);
+                i++;
+                break;
+            }
+
+            case OP_IF:
+            {
+                int cond = stack.top();
+                stack.pop();
+
+                cond == 0 ? i = op.value : i++;
+
+                break;
+            }
+
+            case OP_ELSE:
+            {
+                i = op.value;
+                break;
+            }
+
+            case OP_END:
+            {
+                i = op.value;
+                break;
+            }
+
             case OP_WHILE:
             {
                 i++;
@@ -587,11 +628,6 @@ void simulate_program(std::vector<Op> program)
                 stack.pop();
 
                 a == 0 ? i = op.value : i++;
-                break;
-            }
-
-            case OP_DEF:
-            {
                 break;
             }
 
@@ -734,92 +770,11 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 break;
             }
 
-            case OP_PLUS:
-            {
-                out << "    ;; -- plus --\n";
-                out << "    pop rax\n";
-                out << "    pop rbx\n";
-                out << "    add rax, rbx\n";
-                out << "    push rax\n";
-                break;
-            }
-
-            case OP_MINUS:
-            {
-                out << "    ;; -- minus --\n";
-                out << "    pop rbx\n";
-                out << "    pop rax\n";
-                out << "    sub rax, rbx\n";
-                out << "    push rax\n";
-                break;
-            }
-
-            case OP_EQ:
-            {
-                out << "    ;; -- equal --\n";
-                out << "    pop rax\n";
-                out << "    pop rbx\n";
-                out << "    mov rcx, 1\n";
-                out << "    mov rdx, 0\n";
-                out << "    cmp rax, rbx\n";
-                out << "    mov rax, rdx\n";
-                out << "    cmove rax, rcx\n";
-                out << "    push rax\n";
-                break;
-            }
-
-            case OP_NEQ:
-            {
-                out << "    ;; -- equal --\n";
-                out << "    pop rax\n";
-                out << "    pop rbx\n";
-                out << "    mov rcx, 0\n";
-                out << "    mov rdx, 1\n";
-                out << "    cmp rax, rbx\n";
-                out << "    mov rax, rdx\n";
-                out << "    cmove rax, rcx\n";
-                out << "    push rax\n";
-                break;
-            }
-
             case OP_DUMP:
             {
                 out << "    ;; -- dump --\n";
                 out << "    pop rdi\n";
                 out << "    call dump\n";
-                break;
-            }
-
-            case OP_IF:
-            {
-                out << "    ;; -- if --\n";
-                out << "    pop rax\n";
-                out << "    test rax, rax\n";
-                out << "    jz addr_" << op.value << "\n";
-                break;
-            }
-
-            case OP_ELSE:
-            {
-                out << "    ;; -- else --\n";
-                out << "    jmp addr_" << op.value << "\n";
-                break;
-            }
-
-            case OP_END:
-            {
-                out << "    ;; -- end --\n";
-
-                if (i + 1 != op.value)
-                {
-                    out << "    jmp addr_" << op.value << "\n";
-                    break;
-                }
-                break;
-            }
-
-            case OP_DEF:
-            {
                 break;
             }
 
@@ -872,60 +827,33 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 break;
             }
 
-            case OP_GT:
+            case OP_PLUS:
             {
-                out << "    ;; -- greater than --\n";
-                out << "    pop rbx\n";
+                out << "    ;; -- plus --\n";
                 out << "    pop rax\n";
-                out << "    mov rcx, 1\n";
-                out << "    mov rdx, 0\n";
-                out << "    cmp rax, rbx\n";
-                out << "    mov rax, rdx\n";
-                out << "    cmovg rax, rcx\n";
+                out << "    pop rbx\n";
+                out << "    add rax, rbx\n";
                 out << "    push rax\n";
                 break;
             }
 
-            case OP_LT:
+            case OP_MINUS:
             {
-                out << "    ;; -- less than --\n";
+                out << "    ;; -- minus --\n";
                 out << "    pop rbx\n";
                 out << "    pop rax\n";
-                out << "    mov rcx, 1\n";
-                out << "    mov rdx, 0\n";
-                out << "    cmp rax, rbx\n";
-                out << "    mov rax, rdx\n";
-                out << "    cmovl rax, rcx\n";
+                out << "    sub rax, rbx\n";
                 out << "    push rax\n";
                 break;
             }
 
-            case OP_GTE:
+            case OP_MUL:
             {
-                out << "    ;; -- greater than or equal --\n";
-                out << "    pop rbx\n";
+                out << "    ;; -- mul --\n";
                 out << "    pop rax\n";
-                out << "    mov rcx, 1\n";
-                out << "    mov rdx, 0\n";
-                out << "    cmp rax, rbx\n";
-                out << "    mov rax, rdx\n";
-                out << "    cmovge rax, rcx\n";
-                out << "    push rax\n";
-                break;
-            }
-
-            case OP_LTE:
-            {
-                out << "    ;; -- less than or equal --\n";
                 out << "    pop rbx\n";
-                out << "    pop rax\n";
-                out << "    mov rcx, 1\n";
-                out << "    mov rdx, 0\n";
-                out << "    cmp rax, rbx\n";
-                out << "    mov rax, rdx\n";
-                out << "    cmovle rax, rcx\n";
+                out << "    mul rbx\n";
                 out << "    push rax\n";
-                break;
             }
 
             case OP_INC:
@@ -996,6 +924,118 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 break;
             }
 
+            case OP_EQ:
+            {
+                out << "    ;; -- equal --\n";
+                out << "    pop rax\n";
+                out << "    pop rbx\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmove rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_NEQ:
+            {
+                out << "    ;; -- equal --\n";
+                out << "    pop rax\n";
+                out << "    pop rbx\n";
+                out << "    mov rcx, 0\n";
+                out << "    mov rdx, 1\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmove rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_GT:
+            {
+                out << "    ;; -- greater than --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmovg rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_LT:
+            {
+                out << "    ;; -- less than --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmovl rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_GTE:
+            {
+                out << "    ;; -- greater than or equal --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmovge rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_LTE:
+            {
+                out << "    ;; -- less than or equal --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov rcx, 1\n";
+                out << "    mov rdx, 0\n";
+                out << "    cmp rax, rbx\n";
+                out << "    mov rax, rdx\n";
+                out << "    cmovle rax, rcx\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_IF:
+            {
+                out << "    ;; -- if --\n";
+                out << "    pop rax\n";
+                out << "    test rax, rax\n";
+                out << "    jz addr_" << op.value << "\n";
+                break;
+            }
+
+            case OP_ELSE:
+            {
+                out << "    ;; -- else --\n";
+                out << "    jmp addr_" << op.value << "\n";
+                break;
+            }
+
+            case OP_END:
+            {
+                out << "    ;; -- end --\n";
+
+                if (i + 1 != op.value)
+                {
+                    out << "    jmp addr_" << op.value << "\n";
+                    break;
+                }
+                break;
+            }
+
             case OP_WHILE:
             {
                 out << "    ;; -- while --\n";
@@ -1022,7 +1062,7 @@ void compile_program(std::vector<Op> program, std::string output_file)
 
             case OP_LOAD:
             {
-                out << "    ;; -- load (,) --\n";
+                out << "    ;; -- load --\n";
                 out << "    pop rax\n";
                 out << "    xor rbx, rbx\n";
                 out << "    mov bl, [rax]\n";
@@ -1032,7 +1072,7 @@ void compile_program(std::vector<Op> program, std::string output_file)
 
             case OP_STORE:
             {
-                out << "    ;; -- store (.) --\n";
+                out << "    ;; -- store --\n";
                 out << "    pop rbx\n";
                 out << "    pop rax\n";
                 out << "    mov [rax], bl\n";
