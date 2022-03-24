@@ -17,11 +17,11 @@ const int MEM_CAPACITY = 640000;
 
 struct Op
 {
-    int type = -1;              // type of operation
-    int value = 0;              // value (int for push, jump address for conditionals)
-    std::string data = "";      // data (string for push)
-    int addr = -1;              // addr (string data)
-    std::string loc;            // location in file
+    int type = -1;                  // type of operation
+    unsigned long long value = 0;   // value (int for push, jump address for conditionals)
+    std::string data = "";          // data (string for push)
+    int addr = -1;                  // addr (string data)
+    std::string loc;                // location in file
 };
 
 struct Macro
@@ -30,11 +30,9 @@ struct Macro
     std::vector<Token> body;  // body of macro
 };
 
-void print_error(std::string loc, std::string msg, bool flag=false);
 std::string unescape(const std::string& s);
 std::vector<Op> parse_blocks(std::vector<Op> program);
 std::vector<Op> load_program(std::string input_file);
-void simulate_program(std::vector<Op> program);
 void compile_program(std::vector<Op> program, std::string output_file);
 void usage();
 

@@ -1,21 +1,5 @@
 #include "include/slang.h"
 
-void print_error(std::string loc, std::string msg, bool flag)
-{
-    std::size_t last_colon = loc.find_last_of(':');
-    if (flag)
-    {
-        std::cerr << loc.substr(0, last_colon) << ": " << msg << "\n";
-    }
-
-    else
-    {
-        std::cerr << loc.substr(0, last_colon) << ": " << msg << loc.substr(last_colon) << "\n";
-    }
-
-    exit(EXIT_FAILURE);
-}
-
 /*
  * Un-escape a string via this stackoverflow thread
  * https://stackoverflow.com/questions/5612182/convert-string-with-explicit-escape-sequence-into-relative-character
@@ -63,6 +47,11 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
         Op op;
 
         if (token.type == TOKEN_INT)
+        {
+            op = { .type = OP_PUSH_INT, .value = token.int_val, .loc = token.loc };
+        }
+
+        else if (token.type == TOKEN_CHAR)
         {
             op = { .type = OP_PUSH_INT, .value = token.int_val, .loc = token.loc };
         }
@@ -196,13 +185,14 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
                     // Macro macro = { .loc = op.loc, .body = {} };
                     std::string name = token.str_val;
                     macros[name] = { .loc = op.loc, .body = {} };
+                    int num_end = 0;
 
                     while (tokens_r.size())
                     {
                         token = tokens_r.back();
                         tokens_r.pop_back();
-
-                        if (token.type == TOKEN_WORD && token.str_val == "end")
+                        
+                        if (token.type == TOKEN_WORD && token.str_val == "end" && num_end == 0)
                         {
                             break;
                         }
@@ -210,6 +200,18 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
                         else
                         {
                             macros[name].body.push_back(token);
+                            if (token.type == TOKEN_WORD)
+                            {
+                                if (token.str_val == "if" or token.str_val == "while" or token.str_val == "def")
+                                {
+                                    num_end++;
+                                }
+
+                                else if (token.str_val == "end")
+                                {
+                                    num_end--;
+                                }
+                            }
                         }
                     }
 
@@ -272,430 +274,6 @@ std::vector<Op> load_program(std::string input_file)
     return program;
 }
 
-void simulate_program(std::vector<Op> program)
-{
-    std::stack<int> stack;
-    byte memory[STR_CAPACITY + MEM_CAPACITY];
-    memset(memory, (byte)(0), STR_CAPACITY + MEM_CAPACITY);
-    int str_size = 0;
-
-    int i = 0;
-    while (i < program.size())
-    {
-        Op op = program[i];
-
-        switch (op.type)
-        {
-            case OP_PUSH_INT:
-            {
-                stack.push(op.value);
-                i++;
-
-                break;
-            }
-
-            case OP_PUSH_STR:
-            {
-                stack.push(op.data.size());
-
-                if (op.addr != -1)
-                {
-                    stack.push(op.addr);
-                }
-                else
-                {
-                    op.addr = str_size;
-                    memcpy(&memory[str_size], &op.data[0], op.data.size() * sizeof(char));
-                    str_size += op.data.size();
-                    stack.push(op.addr);
-                }
-                i++;
-
-                break;
-            }
-
-            case OP_DUMP:
-            {
-                std::cout << stack.top() << "\n";
-                stack.pop();
-                i++;
-                
-                break;
-            }
-
-            case OP_DUP:
-            {
-                int a = stack.top();
-                stack.push(a);
-                i++;
-
-                break;
-            }
-
-            case OP_DUP2:
-            {
-                int a = stack.top();
-                stack.pop();
-                int b = stack.top();
-                stack.push(a);
-                stack.push(b);
-                stack.push(a);
-                i++;
-
-                break;
-            }
-
-            case OP_DROP:
-            {
-                stack.pop();
-                i++;
-
-                break;
-            }
-
-            case OP_SWAP:
-            {
-                int a = stack.top();
-                stack.pop();
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(a);
-                stack.push(b);
-
-                i++;
-
-                break;
-            }
-
-            case OP_OVER:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(b);
-                stack.push(a);
-                stack.push(b);
-
-                i++;
-
-                break;
-            }
-
-            case OP_PLUS:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(a + b);
-                i++;
-
-                break;
-            }
-
-            case OP_MINUS:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(-a + b);
-                i++;
-
-                break;
-            }
-
-            case OP_MUL:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(a * b);
-                i++;
-
-                break;
-            }
-
-            case OP_INC:
-            {
-                int a = stack.top();
-                stack.pop();
-                a++;
-                stack.push(a);
-
-                i++;
-                break;
-            }
-
-            case OP_DEC:
-            {
-                int a = stack.top();
-                stack.pop();
-                a--;
-                stack.push(a);
-
-                i++;
-                break;
-            }
-
-            case OP_SHL:
-            {
-                int a = stack.top();
-                stack.pop();
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(b << a);
-
-                i++;
-                break;
-            }
-
-            case OP_SHR:
-            {
-                int a = stack.top();
-                stack.pop();
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(b >> a);
-
-                i++;
-                break;
-            }
-
-            case OP_LOR:
-            {
-                int a = stack.top();
-                stack.pop();
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(a | b);
-
-                i++;
-                break;
-            }
-
-            case OP_XOR:
-            {
-                int a = stack.top();
-                stack.pop();
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(a ^ b);
-
-                i++;
-                break;
-            }
-
-            case OP_LAND:
-            {
-                int a = stack.top();
-                stack.pop();
-                int b = stack.top();
-                stack.pop();
-
-                stack.push(a & b);
-
-                i++;
-                break;
-            }
-
-            case OP_EQ:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                a == b ? stack.push(1) : stack.push(0);
-                i++;
-
-                break;
-            }
-
-            case OP_NEQ:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                a != b ? stack.push(1) : stack.push(0);
-                i++;
-
-                break;
-            }
-
-            case OP_GT:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                b > a ? stack.push(1) : stack.push(0);
-                i++;
-                break;
-            }
-
-            case OP_LT:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                a > b ? stack.push(1) : stack.push(0);
-                i++;
-                break;
-            }
-
-            case OP_GTE:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                b >= a ? stack.push(1) : stack.push(0);
-                i++;
-                break;
-            }
-
-            case OP_LTE:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                int b = stack.top();
-                stack.pop();
-
-                a >= b ? stack.push(1) : stack.push(0);
-                i++;
-                break;
-            }
-
-            case OP_IF:
-            {
-                int cond = stack.top();
-                stack.pop();
-
-                cond == 0 ? i = op.value : i++;
-
-                break;
-            }
-
-            case OP_ELSE:
-            {
-                i = op.value;
-                break;
-            }
-
-            case OP_END:
-            {
-                i = op.value;
-                break;
-            }
-
-            case OP_WHILE:
-            {
-                i++;
-                break;
-            }
-
-            case OP_DO:
-            {
-                int a = stack.top();
-                stack.pop();
-
-                a == 0 ? i = op.value : i++;
-                break;
-            }
-
-            case OP_MEM:
-            {
-                stack.push(STR_CAPACITY);
-                i++;
-                break;
-            }
-
-            case OP_LOAD:
-            {
-                int addr = stack.top();
-                stack.pop();
-                stack.push(memory[addr]);
-                i++;
-                break;
-            }
-
-            case OP_STORE:
-            {
-                int value = stack.top();
-                stack.pop();
-                int addr = stack.top();
-                stack.pop();
-
-                memory[addr] = (value & ((1ULL << 8) - 1));
-                i++;
-                break;
-            }
-
-            case OP_SYS_WRITE:
-            {
-                int fd = stack.top();
-                stack.pop();
-                
-                int addr = stack.top();
-                stack.pop();
-
-                int size = stack.top();
-                stack.pop();
-
-                for (int c = 0; c < size; c++)
-                {
-                    std::cout << memory[addr + c];
-                }
-
-                i++;
-                break;
-            }
-
-            case OP_SYS_EXIT:
-            {
-                int exit_code = stack.top();
-                stack.pop();
-                exit(exit_code);
-                break;
-            }
-
-            default:
-            {
-                std::cerr << "Unreachable\n";
-                break;
-            }
-        }
-    }
-}
-
 void compile_program(std::vector<Op> program, std::string output_file)
 {
     std::ofstream out;
@@ -742,8 +320,8 @@ void compile_program(std::vector<Op> program, std::string output_file)
 
     std::vector<std::string> strs;
 
-    int i = 0;
-    for (i = 0; i < program.size(); i++)
+    unsigned long long i = 0;
+    for (i = 0; i < (unsigned long long)(program.size()); i++)
     {
         Op op = program[i];
         out << "\naddr_" << i << ":\n";
@@ -784,18 +362,6 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 out << "    pop rax\n";
                 out << "    push rax\n";
                 out << "    push rax\n";
-                break;
-            }
-
-            case OP_DUP2:
-            {
-                out << "    ;; -- dup2 --\n";
-                out << "    pop rbx\n";
-                out << "    pop rax\n";
-                out << "    push rax\n";
-                out << "    push rbx\n";
-                out << "    push rax\n";
-                out << "    push rbx\n";
                 break;
             }
 
@@ -854,23 +420,18 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 out << "    pop rbx\n";
                 out << "    mul rbx\n";
                 out << "    push rax\n";
-            }
-
-            case OP_INC:
-            {
-                out << "    ;; -- inc --\n";
-                out << "    pop rax\n";
-                out << "    add rax, 1\n";
-                out << "    push rax\n";
                 break;
             }
 
-            case OP_DEC:
+            case OP_DIVMOD:
             {
-                out << "    ;; -- dec --\n";
+                out << "    ;; -- divmod --\n";
+                out << "    xor rdx, rdx\n";
+                out << "    pop rbx\n";
                 out << "    pop rax\n";
-                out << "    sub rax, 1\n";
+                out << "    div rbx\n";
                 out << "    push rax\n";
+                out << "    push rdx\n";
                 break;
             }
 
@@ -894,9 +455,9 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 break;
             }
 
-            case OP_LOR:
+            case OP_BOR:
             {
-                out << "    ;; -- lor (|) --\n";
+                out << "    ;; -- or --\n";
                 out << "    pop rcx\n";
                 out << "    pop rbx\n";
                 out << "    or rbx, rcx\n";
@@ -906,7 +467,7 @@ void compile_program(std::vector<Op> program, std::string output_file)
 
             case OP_XOR:
             {
-                out << "    ;; -- xor (^) --\n";
+                out << "    ;; -- xor --\n";
                 out << "    pop rcx\n";
                 out << "    pop rbx\n";
                 out << "    xor rbx, rcx\n";
@@ -914,9 +475,9 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 break;
             }
 
-            case OP_LAND:
+            case OP_BAND:
             {
-                out << "    ;; -- and (&) --\n";
+                out << "    ;; -- and --\n";
                 out << "    pop rcx\n";
                 out << "    pop rbx\n";
                 out << "    and rbx, rcx\n";
@@ -1060,9 +621,9 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 break;
             }
 
-            case OP_LOAD:
+            case OP_LOAD_8:
             {
-                out << "    ;; -- load --\n";
+                out << "    ;; -- load8 --\n";
                 out << "    pop rax\n";
                 out << "    xor rbx, rbx\n";
                 out << "    mov bl, [rax]\n";
@@ -1070,35 +631,155 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 break;
             }
 
-            case OP_STORE:
+            case OP_STORE_8:
             {
-                out << "    ;; -- store --\n";
+                out << "    ;; -- store8 --\n";
                 out << "    pop rbx\n";
                 out << "    pop rax\n";
                 out << "    mov [rax], bl\n";
                 break;
             }
 
-            case OP_SYS_WRITE:
+            case OP_LOAD_16:
             {
-                out << "    ;; -- write --\n";
+                out << "    ;; -- load16 --\n";
+                out << "    pop rax\n";
+                out << "    xor rbx, rbx\n";
+                out << "    mov bx, [rax]\n";
+                out << "    push rbx\n";
+                break;
+            }
 
-                // order to pass parameters for syscall:
-                // rax (syscall number), then rdi, rsi, rdx, rcx, r8, r9
-                out << "    mov rax, 0x2000004\n";
+            case OP_STORE_16:
+            {
+                out << "    ;; -- store16 --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov [rax], bx\n";
+                break;
+            }
+
+            case OP_LOAD_32:
+            {
+                out << "    ;; -- load32 --\n";
+                out << "    pop rax\n";
+                out << "    xor rbx, rbx\n";
+                out << "    mov ebx, [rax]\n";
+                out << "    push rbx\n";
+                break;
+            }
+
+            case OP_STORE_32:
+            {
+                out << "    ;; -- store32 --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov [rax], ebx\n";
+                break;
+            }
+
+            case OP_LOAD_64:
+            {
+                out << "    ;; -- load64 --\n";
+                out << "    pop rax\n";
+                out << "    xor rbx, rbx\n";
+                out << "    mov rbx, [rax]\n";
+                out << "    push rbx\n";
+                break;
+            }
+
+            case OP_STORE_64:
+            {
+                out << "    ;; -- store64 --\n";
+                out << "    pop rbx\n";
+                out << "    pop rax\n";
+                out << "    mov [rax], rbx\n";
+                break;
+            }
+            
+            // order to pass parameters for syscall:
+            // rax (syscall number), then rdi, rsi, rdx, rcx, r8, r9
+            case OP_SYS_0:
+            {
+                out << "    ;; -- sys0 --\n";
+                out << "    pop rax\n";
+                out << "    syscall\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_SYS_1:
+            {
+                out << "    ;; -- sys1 --\n";
+                out << "    pop rax\n";
+                out << "    pop rdi\n";
+                out << "    syscall\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_SYS_2:
+            {
+                out << "    ;; -- sys2 --\n";
+                out << "    pop rax\n";
+                out << "    pop rdi\n";
+                out << "    pop rsi\n";
+                out << "    syscall\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_SYS_3:
+            {
+                out << "    ;; -- sys3 --\n";
+                out << "    pop rax\n";
                 out << "    pop rdi\n";
                 out << "    pop rsi\n";
                 out << "    pop rdx\n";
                 out << "    syscall\n";
+                out << "    push rax\n";
                 break;
             }
 
-            case OP_SYS_EXIT:
+            case OP_SYS_4:
             {
-                out << "    ;; -- exit --\n";
-                out << "    mov rax, 0x2000001\n";
+                out << "    ;; -- sys4 --\n";
+                out << "    pop rax\n";
                 out << "    pop rdi\n";
+                out << "    pop rsi\n";
+                out << "    pop rdx\n";
+                out << "    pop rcx\n";
                 out << "    syscall\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_SYS_5:
+            {
+                out << "    ;; -- sys5 --\n";
+                out << "    pop rax\n";
+                out << "    pop rdi\n";
+                out << "    pop rsi\n";
+                out << "    pop rdx\n";
+                out << "    pop rcx\n";
+                out << "    pop r8\n";
+                out << "    syscall\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_SYS_6:
+            {
+                out << "    ;; -- sys6 --\n";
+                out << "    pop rax\n";
+                out << "    pop rdi\n";
+                out << "    pop rsi\n";
+                out << "    pop rdx\n";
+                out << "    pop rcx\n";
+                out << "    pop r8\n";
+                out << "    pop r9\n";
+                out << "    syscall\n";
+                out << "    push rax\n";
                 break;
             }
 
@@ -1116,7 +797,7 @@ void compile_program(std::vector<Op> program, std::string output_file)
     out << "    syscall\n";
 
     out << "\nsection .data\n";
-    for (int i = 0; i < strs.size(); i++)
+    for (int i = 0; i < (int)(strs.size()); i++)
     {
         out << "str_" << i << ": db ";
 
@@ -1135,8 +816,7 @@ void compile_program(std::vector<Op> program, std::string output_file)
 
 void usage()
 {
-    std::cout << "Usage: cell <SUBCOMMAND> [ARGS]\n";
-    std::cout << "SUBCOMMANDS:\n";
-    std::cout << "    sim <input files>                      Simulate the program\n";
-    std::cout << "    com <executable name> <input files>    Compile the program\n";
+    std::cout << "USAGE: ./slang [flags] <executable name> <input file>\n\n";
+    std::cout << "FLAGS:\n";
+    std::cout << "  -d --debug\t\t Generate readable assembly at `<executable_name>.asm`\n";
 }
