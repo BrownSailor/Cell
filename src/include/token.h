@@ -19,6 +19,7 @@ enum
 {
     OP_PUSH_INT,    // push int value to stack
     OP_PUSH_STR,    // push string value to stack
+    OP_PUSH_MEM,    // push relative memory address to stack
     OP_DUMP,        // print top value on stack to console
     OP_DUP,         // duplicate top value on the stack
     OP_DROP,        // pop top value off the stack
@@ -31,9 +32,10 @@ enum
     OP_DIVMOD,      // divmod operation on top two values on stack
     OP_SHL,         // bitwise shift left
     OP_SHR,         // bitwise shift right
-    OP_BOR,         // bitwise or
+    OP_NOT,         // bitwise not
+    OP_OR,          // bitwise or
     OP_XOR,         // bitwise xor
-    OP_BAND,        // bitwise and
+    OP_AND,         // bitwise and
 
     OP_EQ,          // compare equality of top two values on stack
     OP_NEQ,         // compare non-equality of top two values on stack
@@ -48,6 +50,7 @@ enum
     OP_WHILE,       // while condition
     OP_DO,          // do block
     OP_DEF,         // macro block
+    OP_FN,          // function block
 
     OP_MEM,         // memory keyword
     OP_LOAD_8,      // load 8 bits from memory
@@ -73,7 +76,7 @@ enum
 struct Token
 {
     int type = -1;
-    unsigned long long int_val = 0;
+    uint64_t int_val = 0;
     std::string str_val = "";
     std::string loc;
 };

@@ -472,3 +472,30 @@ def drop2 drop drop end
 def inc64 
     dup @64 1 + !64
 end
+
+def dec64
+    dup @64 1 - !64
+end
+
+def inc32
+    dup @32 1 + !32
+end
+
+def dec32
+    dup @32 1 - !32
+end
+
+def inc16
+    dup @16 1 + !16
+end
+
+def dec16
+    dup @16 1 - !16
+end
+
+def sizeof(u64) 8 end
+def sizeof(u32) 4 end
+def sizeof(u16) 2 end
+def sizeof(u8)  1 end
+
+def sizeof(ptr) sizeof(u64) end

@@ -12,16 +12,14 @@
 #define byte uint8_t
 
 // Space allocated for memory purposes, split into halves for string and data
-const int STR_CAPACITY = 640000;
-const int MEM_CAPACITY = 640000;
 
 struct Op
 {
-    int type = -1;                  // type of operation
-    unsigned long long value = 0;   // value (int for push, jump address for conditionals)
-    std::string data = "";          // data (string for push)
-    int addr = -1;                  // addr (string data)
-    std::string loc;                // location in file
+    int type = -1;                // type of operation
+    uint64_t value = 0;           // value (int to push, jump address for blocks)
+    std::string data = "";        // data (string for push)
+    int addr = -1;                // addr (string data)
+    std::string loc;              // location in file
 };
 
 struct Macro

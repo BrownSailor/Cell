@@ -5,7 +5,7 @@ use "std/std.sl"
 
 // Find the largest palindrome made from the product of two 3-digit numbers.
 
-def ans mem end
+mem ans 8 end
 ans 0 !64
 
 100 while dup 1000 < do

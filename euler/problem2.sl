@@ -8,7 +8,7 @@ use "std/std.sl"
 // By considering the terms in the Fibonacci sequence whose values do not exceed four million, 
 // find the sum of the even-valued terms.
 
-def sum mem end
+mem sum 8 end
 sum 0 !64
 
 1 2 while over 4000000 < do

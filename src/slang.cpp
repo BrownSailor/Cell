@@ -1,5 +1,7 @@
 #include "include/slang.h"
 
+int MEM_CAPACITY = 0;
+
 /*
  * Un-escape a string via this stackoverflow thread
  * https://stackoverflow.com/questions/5612182/convert-string-with-explicit-escape-sequence-into-relative-character
@@ -37,6 +39,7 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
     std::stack<int> stack;
     std::vector<Op> program;
     std::unordered_map<std::string, Macro> macros;
+    std::unordered_map<std::string, unsigned long long> memory;
 
     int i = 0;
     while (tokens_r.size() > 0)
@@ -77,11 +80,18 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
                 continue;
             }
 
+            else if (memory.count(token.str_val))
+            {
+                op = { .type = OP_PUSH_MEM, .value = memory[token.str_val], .loc = token.loc };
+            }
+
             else
             {
                 print_error(token.loc, "invalid command");
             }
         }
+
+        // std::cout << token.str_val << "\n";
 
         if (op.type == OP_IF)
         {
@@ -152,6 +162,99 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
             stack.push(i);
 
             i++;
+        }
+
+        else if (op.type == OP_MEM)
+        {
+            if (tokens_r.size() == 0)
+            {
+                print_error(op.loc, "ERROR: expected identifier after `mem`", true);
+            }
+
+            else
+            {
+                token = tokens_r.back();
+                tokens_r.pop_back();
+
+                if (token.type != TOKEN_WORD)
+                {
+                    print_error(token.loc, "ERROR: expected word after `mem`", true);
+                }
+
+                else
+                {
+                    if (memory.count(token.str_val))
+                    {
+                        print_error(token.loc, "ERROR: redefinition of existing memory `" + token.str_val + "`", true);
+                    }
+
+                    if (BUILT_IN_WORDS.count(token.str_val))
+                    {
+                        print_error(token.loc, "ERROR: cannot define memory for built-in operation `" + token.str_val + "`", true);
+                    }
+
+                    std::string name = token.str_val;
+                    std::stack<int> mem_size;
+
+                    while (tokens_r.size())
+                    {
+                        token = tokens_r.back();
+                        tokens_r.pop_back();
+
+                        if (token.type == TOKEN_WORD && token.str_val == "end")
+                        {
+                            break;
+                        }
+
+                        else if (token.type == TOKEN_INT)
+                        {
+                            mem_size.push(token.int_val);
+                        }
+
+                        else if (token.type == TOKEN_WORD)
+                        {
+                            if (token.str_val == "+")
+                            {
+                                int a = mem_size.top();
+                                mem_size.pop();
+
+                                int b = mem_size.top();
+                                mem_size.pop();
+
+                                mem_size.push(a + b);
+                            }
+
+                            else if (token.str_val == "*")
+                            {
+                                int a = mem_size.top();
+                                mem_size.pop();
+
+                                int b = mem_size.top();
+                                mem_size.pop();
+
+                                mem_size.push(a * b);
+                            }
+
+                            else if (macros.count(token.str_val))
+                            {
+                                std::vector<Token> macro_r = macros[token.str_val].body;
+                                std::reverse(macro_r.begin(), macro_r.end());
+
+                                tokens_r.insert(tokens_r.end(), macro_r.begin(), macro_r.end());
+                            }
+                        }
+                    }
+
+                    if (mem_size.size() != 1)
+                    {
+                        print_error(token.loc, "ERROR: cannot use multiple values for memory size declaration", true);
+                    }
+
+                    memory[name] = MEM_CAPACITY;
+                    MEM_CAPACITY += mem_size.top();
+                    mem_size.pop();
+                }
+            }
         }
 
         else if (op.type == OP_DEF)
@@ -320,8 +423,8 @@ void compile_program(std::vector<Op> program, std::string output_file)
 
     std::vector<std::string> strs;
 
-    unsigned long long i = 0;
-    for (i = 0; i < (unsigned long long)(program.size()); i++)
+    uint64_t i = 0;
+    for (i = 0; i < (uint64_t)(program.size()); i++)
     {
         Op op = program[i];
         out << "\naddr_" << i << ":\n";
@@ -345,6 +448,16 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 out << "    push rax\n";
                 strs.push_back(op.data);
 
+                break;
+            }
+
+            case OP_PUSH_MEM:
+            {
+                out << "    ;; -- push mem --\n";
+                out << "    xor rdi, rdi\n";
+                out << "    lea rdi, [mem]\n";
+                out << "    add rdi, " << op.value << "\n";
+                out << "    push rdi\n";
                 break;
             }
 
@@ -455,7 +568,16 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 break;
             }
 
-            case OP_BOR:
+            case OP_NOT:
+            {
+                out << "    ;; -- not --\n";
+                out << "    pop rax\n";
+                out << "    not rax\n";
+                out << "    push rax\n";
+                break;
+            }
+
+            case OP_OR:
             {
                 out << "    ;; -- or --\n";
                 out << "    pop rcx\n";
@@ -475,7 +597,7 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 break;
             }
 
-            case OP_BAND:
+            case OP_AND:
             {
                 out << "    ;; -- and --\n";
                 out << "    pop rcx\n";
@@ -592,7 +714,6 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 if (i + 1 != op.value)
                 {
                     out << "    jmp addr_" << op.value << "\n";
-                    break;
                 }
                 break;
             }
@@ -609,15 +730,6 @@ void compile_program(std::vector<Op> program, std::string output_file)
                 out << "    pop rax\n";
                 out << "    test rax, rax\n";
                 out << "    jz addr_" << op.value << "\n";
-                break;
-            }
-
-            case OP_MEM:
-            {
-                out << "    ;; -- mem --\n";
-                out << "    xor rdi, rdi\n";
-                out << "    lea rdi, [mem]\n";
-                out << "    push rdi\n";
                 break;
             }
 

@@ -5,8 +5,8 @@ use "std/std.sl"
 // What is the 10001st prime number?
 
 def N 10001 end
-def count mem end
-def primes count 8 + end
+mem count 8 end
+mem primes 8 N * 10 + end
 
 def isPrime
     0

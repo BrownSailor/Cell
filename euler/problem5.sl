@@ -5,13 +5,9 @@ use "std/std.sl"
 // What is the smallest positive number that is evenly divisible by all of the numbers from 1 to 20?
 
 def N 20 end
-def pfz mem end
-def arr pfz 8 N * + end
-def ans arr 8 N * + end
-
-def inc64 
-    dup @64 1 + !64
-end
+mem pfz 8 N * end
+mem arr 8 N * end
+mem ans 8 end
 
 2 while dup N <= do
 

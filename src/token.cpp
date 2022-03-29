@@ -14,9 +14,10 @@ std::unordered_map<std::string, int> BUILT_IN_WORDS =
     { "divmod", OP_DIVMOD },
     { "shl", OP_SHL },
     { "shr", OP_SHR },
-    { "or", OP_BOR },
+    { "not", OP_NOT },
+    { "or", OP_OR },
     { "xor", OP_XOR },
-    { "and", OP_BAND },
+    { "and", OP_AND },
 
     { "=", OP_EQ },
     { "!=", OP_NEQ },
@@ -31,6 +32,7 @@ std::unordered_map<std::string, int> BUILT_IN_WORDS =
     { "while", OP_WHILE },
     { "do", OP_DO },
     { "def", OP_DEF },
+    { "fn", OP_FN },
 
     { "mem", OP_MEM },
     { "@8", OP_LOAD_8 },

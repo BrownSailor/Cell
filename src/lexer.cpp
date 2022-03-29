@@ -63,7 +63,7 @@ Token lex_word(std::string word)
     {
         return { .type = TOKEN_INT, .int_val = std::stoull(word) };
     }
-    catch(const std::exception& e)
+    catch (const std::exception& e)
     {
         return { .type = TOKEN_WORD, .str_val = word };
     }
