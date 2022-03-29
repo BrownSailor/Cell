@@ -100,3 +100,16 @@ $ Hello, World!
 | `drop`      | `5 3 drop`   | `5`      | Drop top of stack |
 | `swap`      | `5 3 swap`   | `3 5`      | Swap top of stack |
 | `over`      | `5 3 over`   | `5 3 5`      | Over top of stack |
+
+### Memory Operations
+| Name      | Syntax     | Description     |
+| --------- | ---------- | --------------- |
+| `mem`       | `mem name size end`    | Assign a fixed size block of memory with a name |
+| `!8`       | `!8`      | Store a byte (8 bits) to memory |
+| `@8`       | `@8`      | Load a byte (8 bits) from memory |
+| `!16`       | `!16`      | Store a short (16 bits) to memory |
+| `@16`       | `@16`      | Load a short (16 bits) from memory |
+| `!32`       | `!32`      | Store an integer (32 bits) to memory |
+| `@32`       | `@32`      | Load an integer (32 bits) from memory |
+| `!64`       | `!64`      | Store a long (64 bits) to memory |
+| `@64`       | `@64`      | Load a long (64 bits) from memory |
