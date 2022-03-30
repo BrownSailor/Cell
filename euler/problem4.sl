@@ -21,8 +21,8 @@ ans 0 !64
         swap drop
 
         // product and reverse on top
-        over = if
-            dup ans @64 > if 
+        if over = do
+            if dup ans @64 > do 
                 ans swap !64
             else
                 drop

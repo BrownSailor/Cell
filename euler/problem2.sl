@@ -13,7 +13,7 @@ sum 0 !64
 
 1 2 while over 4000000 < do
     over 
-    dup 2 mod 0 = if 
+    if dup 2 mod 0 = do 
         sum swap sum @64 + !64
     else
         drop

@@ -11,7 +11,7 @@ mem primes 8 N * 10 + end
 def isPrime
     0
     while
-        dup2 8 * primes + @64 dup * >= if
+        if dup2 8 * primes + @64 dup * >= do
             dup2 8 * primes + @64 mod 0 !=
         else
             fls
@@ -30,7 +30,7 @@ end
 2 addPrime
 
 3 while count @64 N < do
-  dup isPrime if dup addPrime end
+  if dup isPrime do dup addPrime end
   2 +
 end drop
 

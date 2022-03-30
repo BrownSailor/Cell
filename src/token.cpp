@@ -27,6 +27,7 @@ std::unordered_map<std::string, int> BUILT_IN_WORDS =
     { "<=", OP_LTE },
 
     { "if", OP_IF },
+    { "elif", OP_ELIF },
     { "else", OP_ELSE },
     { "end", OP_END },
     { "while", OP_WHILE },

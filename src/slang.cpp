@@ -40,6 +40,7 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
     std::vector<Op> program;
     std::unordered_map<std::string, Macro> macros;
     std::unordered_map<std::string, unsigned long long> memory;
+    // int curr_func = 0;
 
     int i = 0;
     while (tokens_r.size() > 0)
@@ -100,21 +101,47 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
 
             i++;
         }
+
+        else if (op.type == OP_ELIF)
+        {
+            program.push_back(op);
+            int do_i = stack.top();
+            stack.pop();
+
+            int do_before = program[do_i].value;
+            if (program[do_before].type == OP_IF)
+            {
+                program[do_i].value = i + 1;
+                stack.push(i);
+            }
+            else if (program[do_before].type == OP_ELIF)
+            {
+                program[do_before].value = i;
+                program[do_i].value = i + 1;
+                stack.push(i);
+            }
+
+            i++;
+        }
             
         else if (op.type == OP_ELSE)
         {
             program.push_back(op);
-            int if_i = stack.top();
+            int do_i = stack.top();
             stack.pop();
 
-            if (program[if_i].type != OP_IF)
+            int do_before = program[do_i].value;
+            if (program[do_before].type == OP_IF)
             {
-                std::cout << program[if_i].value << "\n";
-                print_error(program[if_i].loc, "ERROR: `else` keyword can only be used in conjunction with `if`", true);
+                program[do_i].value = i + 1;
+                stack.push(i);
             }
-
-            program[if_i].value = i + 1;
-            stack.push(i);
+            else if (program[do_before].type == OP_ELIF)
+            {
+                program[do_before].value = i;
+                program[do_i].value = i + 1;
+                stack.push(i);
+            }
 
             i++;
         }
@@ -125,7 +152,7 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
             int block_i = stack.top();
             stack.pop();
 
-            if (program[block_i].type == OP_IF || program[block_i].type == OP_ELSE)
+            if (program[block_i].type == OP_ELSE)
             {
                 program[block_i].value = i;
                 program[i].value = i + 1;
@@ -133,8 +160,26 @@ std::vector<Op> parse_blocks(std::vector<Token> tokens)
 
             else if (program[block_i].type == OP_DO)
             {
-                program[i].value = program[block_i].value;
-                program[block_i].value = i + 1;
+                int do_before = program[block_i].value;
+
+                if (program[do_before].type == OP_WHILE)
+                {
+                    program[i].value = do_before;
+                    program[block_i].value = i + 1;
+                }
+
+                else if (program[do_before].type == OP_IF)
+                {
+                    program[i].value = i + 1;
+                    program[block_i].value = i + 1;
+                }
+
+                else if (program[do_before].type == OP_ELIF)
+                {
+                    program[do_before].value = i;
+                    program[i].value = i + 1;
+                    program[block_i].value = i + 1;
+                }
             }
 
             else
@@ -694,9 +739,16 @@ void compile_program(std::vector<Op> program, std::string output_file)
             case OP_IF:
             {
                 out << "    ;; -- if --\n";
-                out << "    pop rax\n";
-                out << "    test rax, rax\n";
-                out << "    jz addr_" << op.value << "\n";
+                // out << "    pop rax\n";
+                // out << "    test rax, rax\n";
+                // out << "    jz addr_" << op.value << "\n";
+                break;
+            }
+
+            case OP_ELIF:
+            {
+                out << "    ;; -- elif --\n";
+                out << "    jmp addr_" << op.value << "\n";
                 break;
             }
 

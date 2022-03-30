@@ -19,7 +19,7 @@ mem ans 8 end
 
     // factorization
     dup 2 while over 1 != do
-        dup2 mod 0 = if
+        if dup2 mod 0 = do
             dup 8 * arr + inc64
             swap over / swap
         else
@@ -36,9 +36,10 @@ mem ans 8 end
     // end drop
 
     0 while dup N < do
+        if 
         dup  8 * pfz + @64
         over 8 * arr + @64
-        < if
+        < do
             dup  8 * pfz +
             over 8 * arr + @64
             !64

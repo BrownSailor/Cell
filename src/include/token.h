@@ -45,6 +45,7 @@ enum
     OP_LTE,         // compare less than or equal of top two values on stack
     
     OP_IF,          // if block
+    OP_ELIF,        // elif block
     OP_ELSE,        // else block
     OP_END,         // end block
     OP_WHILE,       // while condition

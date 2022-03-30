@@ -5,7 +5,6 @@ def NULL 0 end
 def tru 0 0  = end
 def fls 0 0 != end
 
-
 def stdin  0 end
 def stdout 1 end
 def stderr 2 end

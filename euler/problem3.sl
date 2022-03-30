@@ -5,7 +5,7 @@ use "std/std.sl"
 // What is the largest prime factor of the number 600851475143 ?
 
 600851475143 2 while dup2 / 1 >= do
-    dup2 mod 0 = if
+    if dup2 mod 0 = do
         // dup dump
         swap over / swap
     else
