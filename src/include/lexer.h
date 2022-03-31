@@ -33,11 +33,12 @@ struct Token
 
     Type type;
     std::string data = "";
-    int line = 0;
+    int row = 0;
+    int col = 0;
 };
 
-Token lex_word(const std::string &word, int line);
-void lex_line(const std::string &line, std::vector<Token> &tokens, int line_no);
+Token lex_word(const std::string &word, int row, int col);
+void lex_line(const std::string &line, std::vector<Token> &tokens, int row);
 std::vector<Token> lex(const std::string &input);
 
 void print_token(const Token &token, std::ostream &out=std::cout);

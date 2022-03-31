@@ -3,53 +3,53 @@
 /*
  * lex_word
  *    Purpose: returns the token associated with the current word
- * Parameters: word - the current word to be lexed, line - the current line number
+ * Parameters: word - the current word to be lexed, row - the current row number, col - the current column number
  *    Returns: the token associated with the current word
  */
-Token lex_word(const std::string &word, int line)
+Token lex_word(const std::string &word, int row, int col)
 { 
     if (word == "{")
     { 
-        return { .type = Token::TOK_LBRACE, .data = word, .line = line };
+        return { .type = Token::TOK_LBRACE, .data = word, .row = row, .col = col };
     }
     else if (word == "}")
     { 
-        return { .type = Token::TOK_RBRACE, .data = word, .line = line };
+        return { .type = Token::TOK_RBRACE, .data = word, .row = row, .col = col };
     }
     else if (word == "(")
     { 
-        return { .type = Token::TOK_LPAREN, .data = word, .line = line };
+        return { .type = Token::TOK_LPAREN, .data = word, .row = row, .col = col };
     }
     else if (word == ")")
     { 
-        return { .type = Token::TOK_RPAREN, .data = word, .line = line };
+        return { .type = Token::TOK_RPAREN, .data = word, .row = row, .col = col };
     }
     else if (word == "return")
     { 
-        return { .type = Token::TOK_RETURN, .data = word, .line = line };
+        return { .type = Token::TOK_RETURN, .data = word, .row = row, .col = col };
     }
     else if (word == "int")
     { 
-        return { .type = Token::TOK_INT, .data = word, .line = line };
+        return { .type = Token::TOK_INT, .data = word, .row = row, .col = col };
     }
     else if (word == "eol")
     { 
-        return { .type = Token::TOK_EOL, .data = word, .line = line };
+        return { .type = Token::TOK_EOL, .data = word, .row = row, .col = col };
     }
     else if (word == "eof")
     { 
-        return { .type = Token::TOK_EOF, .data = word, .line = line };
+        return { .type = Token::TOK_EOF, .data = word, .row = row, .col = col };
     }
     else
     { 
         try
         { 
             std::stoi(word);
-            return { .type = Token::TOK_NUM, .data = word, .line = line };
+            return { .type = Token::TOK_NUM, .data = word, .row = row, .col = col };
         }
         catch (const std::exception &e)
         { 
-            return { .type = Token::TOK_ID, .data = word, .line = line };
+            return { .type = Token::TOK_ID, .data = word, .row = row, .col = col };
         }
     }
 }
@@ -57,83 +57,105 @@ Token lex_word(const std::string &word, int line)
 /*
  * lex_line
  *    Purpose: lexes the current line and adds the tokens to the list of tokens
- * Parameters: line - the current line to be lexed, tokens - the list of tokens, line_no - the current line number
+ * Parameters: line - the current line to be lexed, tokens - the list of tokens, row - the current row number
  *    Returns: none
  */
-void lex_line(const std::string &line, std::vector<Token> &tokens, int line_no)
+void lex_line(const std::string &line, std::vector<Token> &tokens, int row)
 {
     std::string curr = "";
+    int col = 1;
+    int col_end = 1;
+
     for (char c : line)
     {
-        if (c == ' ' || c == '\t')
+        if (c == ' ')
         {
+            col_end++;
+
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, line_no));
+                tokens.push_back(lex_word(curr, row, col));
                 curr = "";
             }
 
+            col = col_end;
             continue;
         }
         else if (c == ':')
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, line_no));
+                tokens.push_back(lex_word(curr, row, col));
                 curr = "";
             }
 
-            tokens.push_back({ .type = Token::TOK_COL, .data = ":", .line = line_no });
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_COL, .data = ":", .row = row, .col = col });
+
+            col_end++;
         }
         else if (c == '{')
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, line_no));
+                tokens.push_back(lex_word(curr, row, col));
                 curr = "";
             }
 
-            tokens.push_back({ .type = Token::TOK_LBRACE, .data = "{", .line = line_no });
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_LBRACE, .data = "{", .row = row, .col = col });
+            
+            col_end++;
         }
         else if (c == '}')
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, line_no));
+                tokens.push_back(lex_word(curr, row, col));
                 curr = "";
             }
 
-            tokens.push_back({ .type = Token::TOK_RBRACE, .data = "}", .line = line_no });
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_RBRACE, .data = "}", .row = row, .col = col });
+            
+            col_end++;
         }
         else if (c == '(')
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, line_no));
+                tokens.push_back(lex_word(curr, row, col));
                 curr = "";
             }
 
-            tokens.push_back({ .type = Token::TOK_LPAREN, .data = "(", .line = line_no });
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_LPAREN, .data = "(", .row = row, .col = col });
+            
+            col_end++;
         }
         else if (c == ')')
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, line_no));
+                tokens.push_back(lex_word(curr, row, col));
                 curr = "";
             }
 
-            tokens.push_back({ .type = Token::TOK_RPAREN, .data = ")", .line = line_no });
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_RPAREN, .data = ")", .row = row, .col = col });
+            
+            col_end++;
         }
         else
         {
+            col_end++;
             curr += c;
         }
     }
 
     if (curr != "")
     {
-        tokens.push_back(lex_word(curr, line_no));
+        tokens.push_back(lex_word(curr, row, col));
         curr = "";
     }
 }
@@ -150,21 +172,21 @@ std::vector<Token> lex(const std::string &input)
     in.open(input);
 
     std::string line;
-    int line_no = 1;
+    int row = 1;
     std::vector<Token> tokens;
 
     while (getline(in, line))
     {
         if (line.size() && line.find_first_not_of(" \t\n\v\f\r") != std::string::npos)
         {
-            lex_line(line, tokens, line_no);
-            tokens.push_back({ Token::TOK_EOL, "", line_no });
+            lex_line(line, tokens, row);
+            tokens.push_back({ Token::TOK_EOL, "", .row = row, .col = (int)(line.size()) + 1 });
         }
 
-        line_no++;  
+        row++;  
     }
 
-    tokens.push_back({ Token::TOK_EOF, "", line_no });
+    tokens.push_back({ Token::TOK_EOF, "", .row = row, .col = 1 });
     return tokens;
 }
 
@@ -231,7 +253,7 @@ void print_token(const Token &token, std::ostream &out)
             out << "Unknown token: ";
     }
 
-    out << "\t" << token.data << "\tline " << token.line << "\n";
+    out << "\t" << token.data << "\t" << token.row << ":" << token.col << "\n";
 }
 
 /*
