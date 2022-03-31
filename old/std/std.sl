@@ -498,3 +498,20 @@ def sizeof(u16) 2 end
 def sizeof(u8)  1 end
 
 def sizeof(ptr) sizeof(u64) end
+
+mem randState sizeof(u64) end
+
+def srand 
+    randState swap !64
+end
+
+def RAND_A 25214903917 end
+def RAND_C 11 end
+
+def rand
+    randState @64
+    RAND_A *
+    RAND_C +
+    dup
+    randState swap !64
+end
