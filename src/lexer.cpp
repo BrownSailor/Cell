@@ -1,5 +1,47 @@
 #include "include/lexer.h"
 
+std::unordered_map<std::string, Token::Type> INTRINSICS = 
+{
+    // Intrinsic keywords
+    { "return", Token::TOK_RETURN },
+
+    // Unary operators
+    { "~", Token::TOK_TILDA },
+    { "[]", Token::TOK_ARR },
+
+    // Binary operators
+    { "+", Token::TOK_PLUS },
+    { "-", Token::TOK_MINUS },
+    { "*", Token::TOK_STAR },
+    { "/", Token::TOK_SLASH },
+    { "%", Token::TOK_PERCENT },
+    { "or", Token::TOK_BOR },
+    { "and", Token::TOK_BAND },
+    { "xor", Token::TOK_BXOR },
+    { "<<", Token::TOK_SHL },
+    { ">>", Token::TOK_SHR },
+
+    // Boolean operations
+    { "==", Token::TOK_EQEQ },
+    { "!=", Token::TOK_NEQ },
+    { "<", Token::TOK_LT },
+    { ">", Token::TOK_GT },
+    { "<=", Token::TOK_LTE },
+    { ">=", Token::TOK_GTE },
+
+    // Single character tokens
+    { "{", Token::TOK_LBRACE },
+    { "}", Token::TOK_RBRACE },
+    { "(", Token::TOK_LPAREN },
+    { ")", Token::TOK_RPAREN },
+    { "[", Token::TOK_LBRACK },
+    { "]", Token::TOK_RBRACK },
+    { ":", Token::TOK_COL },
+    { ",", Token::TOK_COM },
+    { "", Token::TOK_EOL },
+    { "", Token::TOK_EOF }
+};
+
 /*
  * lex_word
  *    Purpose: returns the token associated with the current word
@@ -7,38 +49,10 @@
  *    Returns: the token associated with the current word
  */
 Token lex_word(const std::string &word, int row, int col)
-{ 
-    if (word == "{")
-    { 
-        return { .type = Token::TOK_LBRACE, .data = word, .row = row, .col = col };
-    }
-    else if (word == "}")
-    { 
-        return { .type = Token::TOK_RBRACE, .data = word, .row = row, .col = col };
-    }
-    else if (word == "(")
-    { 
-        return { .type = Token::TOK_LPAREN, .data = word, .row = row, .col = col };
-    }
-    else if (word == ")")
-    { 
-        return { .type = Token::TOK_RPAREN, .data = word, .row = row, .col = col };
-    }
-    else if (word == "return")
-    { 
-        return { .type = Token::TOK_RETURN, .data = word, .row = row, .col = col };
-    }
-    else if (word == "int")
-    { 
-        return { .type = Token::TOK_INT, .data = word, .row = row, .col = col };
-    }
-    else if (word == "eol")
-    { 
-        return { .type = Token::TOK_EOL, .data = word, .row = row, .col = col };
-    }
-    else if (word == "eof")
-    { 
-        return { .type = Token::TOK_EOF, .data = word, .row = row, .col = col };
+{
+    if (INTRINSICS.count(word))
+    {
+        return { .type = INTRINSICS[word], .data = word, .row = row, .col = col };
     }
     else
     { 
@@ -60,14 +74,15 @@ Token lex_word(const std::string &word, int row, int col)
  * Parameters: line - the current line to be lexed, tokens - the list of tokens, row - the current row number
  *    Returns: none
  */
-void lex_line(const std::string &line, std::vector<Token> &tokens, int row)
+void lex_line(const std::string &line, std::list<Token> &tokens, int row)
 {
     std::string curr = "";
     int col = 1;
     int col_end = 1;
 
-    for (char c : line)
+    for (size_t i = 0; i < line.size(); i++)
     {
+        char c = line[i];
         if (c == ' ')
         {
             col_end++;
@@ -146,6 +161,54 @@ void lex_line(const std::string &line, std::vector<Token> &tokens, int row)
             
             col_end++;
         }
+        else if (c == '[')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+
+            if (line[i + 1] == ']')
+            {
+                tokens.push_back({ .type = Token::TOK_ARR, .data = "[]", .row = row, .col = col });
+                i++;
+                col_end += 2;
+            }
+            else
+            {
+                tokens.push_back({ .type = Token::TOK_LBRACK, .data = "[", .row = row, .col = col });
+                col_end++;
+            }
+        }
+        else if (c == ']')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_RBRACK, .data = "]", .row = row, .col = col });
+            
+            col_end++;
+        }
+        else if (c == ',')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_COM, .data = ",", .row = row, .col = col });
+
+            col_end++;
+        }
         else
         {
             col_end++;
@@ -166,14 +229,14 @@ void lex_line(const std::string &line, std::vector<Token> &tokens, int row)
  * Parameters: input - the name of the input file
  *   Returns: the list of tokens
  */
-std::vector<Token> lex(const std::string &input)
+std::list<Token> lex(const std::string &input)
 { 
     std::ifstream in;
     in.open(input);
 
     std::string line;
     int row = 1;
-    std::vector<Token> tokens;
+    std::list<Token> tokens;
 
     while (getline(in, line))
     {
@@ -201,44 +264,126 @@ void print_token(const Token &token, std::ostream &out)
 {
     switch (token.type)
     {
-        case Token::TOK_LBRACE:
-            out << "TOKEN_LBRACE: ";
-            break;
-        
-        case Token::TOK_RBRACE:
-            out << "TOKEN_RBRACE: ";
-            break;
-
-        case Token::TOK_LPAREN:
-            out << "TOKEN_LPAREN: ";
-            break;
-
-        case Token::TOK_RPAREN:
-            out << "TOKEN_RPAREN: ";
-            break;
-
-        case Token::TOK_INT:
-            out << "TOKEN_INT: ";
-            break;
-
-        case Token::TOK_RETURN:
-            out << "TOKEN_RETURN: ";
-            break;
-        
-        case Token::TOK_ID: 
-            out << "TOKEN_ID: ";
+        // Non built-ins
+        case Token::TOK_ID:
+            out << "TOKEN_ID";
             break;
 
         case Token::TOK_NUM:
-            out << "TOKEN_NUM: ";
+            out << "TOKEN_NUM";
+            break;
+
+        // Intrinsic keywords
+        case Token::TOK_RETURN:
+            out << "TOKEN_RETURN";
+            break;
+
+        // Unary operators
+        case Token::TOK_TILDA:
+            out << "TOKEN_TILDA";
+            break;
+
+        case Token::TOK_ARR:
+            out << "TOKEN_ARR";
+            break;
+
+        // Binary operators
+        case Token::TOK_PLUS:
+            out << "TOKEN_PLUS";
+            break;
+
+        case Token::TOK_MINUS:  // also unary
+            out << "TOKEN_MINUS";
+            break;
+
+        case Token::TOK_STAR:
+            out << "TOKEN_STAR";
+            break;
+
+        case Token::TOK_SLASH:
+            out << "TOKEN_SLASH";
+            break;
+
+        case Token::TOK_PERCENT:
+            out << "TOKEN_PERCENT";
+            break;
+
+        case Token::TOK_BOR:
+            out << "TOKEN_BOR";
+            break;
+
+        case Token::TOK_BAND:
+            out << "TOKEN_BAND";
+            break;
+
+        case Token::TOK_BXOR:
+            out << "TOKEN_BXOR";
+            break;
+
+        case Token::TOK_SHL:
+            out << "TOKEN_SHL";
+            break;
+
+        case Token::TOK_SHR:
+            out << "TOKEN_SHR";
+            break;
+
+        // Boolean operations
+        case Token::TOK_EQEQ:
+            out << "TOKEN_EQEQ";
+            break;
+
+        case Token::TOK_NEQ:
+            out << "TOKEN_NEQ";
+            break;
+
+        case Token::TOK_LT:
+            out << "TOKEN_LT";
+            break;
+
+        case Token::TOK_GT:
+            out << "TOKEN_GT";
+            break;
+
+        case Token::TOK_LTE:
+            out << "TOKEN_LTE";
+            break;
+
+        case Token::TOK_GTE:
+            out << "TOKEN_GTE";
+            break;
+
+        // Single character tokens
+        case Token::TOK_LBRACE:
+            out << "TOKEN_LBRACE";
+            break;
+
+        case Token::TOK_RBRACE:
+            out << "TOKEN_RBRACE";
+            break;
+
+        case Token::TOK_LPAREN:
+            out << "TOKEN_LPAREN";
+            break;
+
+        case Token::TOK_RPAREN:
+            out << "TOKEN_RPAREN";
+            break;
+
+        case Token::TOK_LBRACK:
+            out << "TOKEN_LBRACK";
+            break;
+
+        case Token::TOK_RBRACK:
+            out << "TOKEN_RBRACK";
             break;
 
         case Token::TOK_COL:
-            out << "TOKEN_COLON: ";
+            out << "TOKEN_COL";
             break;
-        
+
         case Token::TOK_COM:
-            out << "TOKEN_COMMA: ";
+            out << "TOKEN_COM";
             break;
 
         case Token::TOK_EOL:
@@ -262,7 +407,7 @@ void print_token(const Token &token, std::ostream &out)
  * Parameters: tokens - the list of tokens
  *    Returns: none
  */
-void print_lex(const std::vector<Token> &tokens)
+void print_lex(const std::list<Token> &tokens)
 {
     for (const auto &token : tokens)
     {

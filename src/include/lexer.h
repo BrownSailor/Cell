@@ -2,10 +2,12 @@
 #define LEXER_H
 
 #include <string>
+#include <list>
 #include <vector>
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <unordered_map>
 
 /*
  * Token 
@@ -16,17 +18,46 @@ struct Token
 {
     enum Type
     {
+        // Non built-ins
+        TOK_ID,
+        TOK_NUM,
+
+        // Intrinsic keywords
+        TOK_RETURN,
+
+        // Unary operators
+        TOK_TILDA,
+        TOK_ARR,
+
+        // Binary operators
+        TOK_PLUS,
+        TOK_MINUS,  // also unary
+        TOK_STAR,
+        TOK_SLASH,
+        TOK_PERCENT,
+        TOK_BOR,
+        TOK_BAND,
+        TOK_BXOR,
+        TOK_SHL,
+        TOK_SHR,
+
+        // Boolean operations
+        TOK_EQEQ,
+        TOK_NEQ,
+        TOK_LT,
+        TOK_GT,
+        TOK_LTE,
+        TOK_GTE,
+
+        // Single character tokens
         TOK_LBRACE,
         TOK_RBRACE,
         TOK_LPAREN,
         TOK_RPAREN,
-        TOK_INT,
-        TOK_RETURN,
-        TOK_ID,
-        TOK_NUM,
+        TOK_LBRACK,
+        TOK_RBRACK,
         TOK_COL,
         TOK_COM,
-        TOK_STAR,
         TOK_EOL,
         TOK_EOF
     };
@@ -37,11 +68,13 @@ struct Token
     int col = 0;
 };
 
+extern std::unordered_map<std::string, Token::Type> INTRINSICS;
+
 Token lex_word(const std::string &word, int row, int col);
-void lex_line(const std::string &line, std::vector<Token> &tokens, int row);
-std::vector<Token> lex(const std::string &input);
+void lex_line(const std::string &line, std::list<Token> &tokens, int row);
+std::list<Token> lex(const std::string &input);
 
 void print_token(const Token &token, std::ostream &out=std::cout);
-void print_lex(const std::vector<Token> &tokens);
+void print_lex(const std::list<Token> &tokens);
 
 #endif

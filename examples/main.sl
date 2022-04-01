@@ -1,4 +1,3 @@
-main: int
-{
-    ret 0
+main: int {
+    return 0
 }
