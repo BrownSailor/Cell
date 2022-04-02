@@ -1,6 +1,6 @@
-main(argc: int, argv: *str): int 
+main(argc: int, argv: []str): int 
 {
     print "Hello, World!\n"
     
-    ret 0
+    return 0
 }

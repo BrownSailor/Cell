@@ -1,3 +1,3 @@
 main: int {
-    return 0
+    return (3 + 2) / (1 - 2)
 }

@@ -2,8 +2,31 @@
 
 std::string assemble_expr(Node *root)
 {
-    std::string expr = "\tmov rax, ";
-    expr += root->children.front()->token.data + "\n";
+    std::string expr = "";
+
+    for (auto it = root->children.begin(); it != root->children.end(); it++)
+    {
+        if ((*it)->token.type == Token::TOK_MINUS)
+        {
+            expr += assemble_expr(*it);
+            expr += "\tneg rax\n";
+        }
+        else if ((*it)->token.type == Token::TOK_TILDA)
+        {
+            expr += assemble_expr(*it);
+            expr += "\tnot rax\n";
+        }
+        else if ((*it)->token.type == Token::TOK_BANG)
+        {
+            expr += assemble_expr(*it);
+            expr += "\tcmp rax, 0\n";
+            expr += "\tsete al\n";
+        }
+        else
+        {
+            expr += "\tmov rax, " + (*it)->token.data + "\n";
+        }
+    }
 
     return expr;
 }

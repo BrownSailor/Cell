@@ -6,6 +6,7 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "return", Token::TOK_RETURN },
 
     // Unary operators
+    { "!", Token::TOK_BANG },
     { "~", Token::TOK_TILDA },
     { "[]", Token::TOK_ARR },
 
@@ -95,6 +96,97 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
 
             col = col_end;
             continue;
+        }
+        else if (c == '+')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_PLUS, .data = "+", .row = row, .col = col });
+
+            col_end++;
+        }
+        else if (c == '-')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_MINUS, .data = "-", .row = row, .col = col });
+
+            col_end++;
+        }
+        else if (c == '*')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_STAR, .data = "*", .row = row, .col = col });
+
+            col_end++;
+        }
+        else if (c == '/')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_SLASH, .data = "/", .row = row, .col = col });
+
+            col_end++;
+        }
+        else if (c == '%')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_PERCENT, .data = "%", .row = row, .col = col });
+
+            col_end++;
+        }
+        else if (c == '~')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_TILDA, .data = "~", .row = row, .col = col });
+
+            col_end++;
+        }
+        else if (c == '!')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col));
+                curr = "";
+            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_BANG, .data = "!", .row = row, .col = col });
+
+            col_end++;
         }
         else if (c == ':')
         {
@@ -278,6 +370,10 @@ void print_token(const Token &token, std::ostream &out)
             out << "TOKEN_RETURN";
             break;
 
+        case Token::TOK_BANG:
+            out << "TOKEN_BANG";
+            break;
+
         // Unary operators
         case Token::TOK_TILDA:
             out << "TOKEN_TILDA";
@@ -398,7 +494,18 @@ void print_token(const Token &token, std::ostream &out)
             out << "Unknown token: ";
     }
 
-    out << "\t" << token.data << "\t" << token.row << ":" << token.col << "\n";
+    out << ": " << token.data;
+}
+
+/*
+ * print_location
+ *    Purpose: prints the location of the token to the output stream
+ * Parameters: token - the token to be printed, out - the output stream
+ *    Returns: none
+ */
+void print_location(const Token &token, std::ostream &out)
+{
+    out << "\t" << token.row << ":" << token.col << "\n";
 }
 
 /*
@@ -412,5 +519,6 @@ void print_lex(const std::list<Token> &tokens)
     for (const auto &token : tokens)
     {
         print_token(token, std::cout);
+        print_location(token, std::cout);
     }
 }

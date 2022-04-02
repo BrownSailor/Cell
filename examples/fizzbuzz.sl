@@ -6,12 +6,12 @@ main(argc: int, argv: *str): int
             print "Fizz"
         } | i % 5 == 0 {
             print "Buzz"
-        } | i % 3 == 0 and i % 5 == 0 {
+        } | i % 3 == 0 & i % 5 == 0 {
             print "FizzBuzz"
         } | {
             print i
         }
     }
     
-    ret 0
+    return 0
 }

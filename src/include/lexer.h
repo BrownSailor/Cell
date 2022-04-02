@@ -26,6 +26,7 @@ struct Token
         TOK_RETURN,
 
         // Unary operators
+        TOK_BANG,
         TOK_TILDA,
         TOK_ARR,
 
