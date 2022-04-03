@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include <unordered_map>
+#include <assert.h>
 
 /*
  * Token 
@@ -37,9 +38,8 @@ struct Token
         TOK_STAR,
         TOK_SLASH,
         TOK_PERCENT,
-        TOK_BOR,
-        TOK_BAND,
-        TOK_BXOR,
+        TOK_LOR,
+        TOK_LAND,
         TOK_SHL,
         TOK_SHR,
 

@@ -100,7 +100,9 @@ Node *parse_term(std::list<Token> &tokens)
 
     while (tokens.front().type == Token::TOK_STAR ||
            tokens.front().type == Token::TOK_SLASH ||
-           tokens.front().type == Token::TOK_PERCENT)
+           tokens.front().type == Token::TOK_PERCENT ||
+           tokens.front().type == Token::TOK_SHL || 
+           tokens.front().type == Token::TOK_SHR)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
@@ -112,12 +114,12 @@ Node *parse_term(std::list<Token> &tokens)
 }
 
 /*
- * parse_expr
- *    Purpose: parses a expression 
+ * parse_add_sub
+ *    Purpose: parses an addition or subtraction expression 
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_expr(std::list<Token> &tokens)
+Node *parse_add_sub(std::list<Token> &tokens)
 {
     Node *node = parse_term(tokens);
 
@@ -128,6 +130,94 @@ Node *parse_expr(std::list<Token> &tokens)
         tokens.pop_front();
 
         node = binary(node, op, parse_term(tokens));
+    }
+
+    return node;
+}
+
+/*
+ * parse_lt_gt
+ *    Purpose: parses a comparitive expression 
+ * Parameters: tokens - the list of tokens to parse
+ *    Returns: a pointer to the new node
+ */
+Node *parse_lt_gt(std::list<Token> &tokens)
+{
+    Node *node = parse_add_sub(tokens);
+
+    while (tokens.front().type == Token::TOK_LT ||
+           tokens.front().type == Token::TOK_GT ||
+           tokens.front().type == Token::TOK_LTE ||
+           tokens.front().type == Token::TOK_GTE)
+    {
+        Node *op = new_node(tokens.front());
+        tokens.pop_front();
+
+        node = binary(node, op, parse_term(tokens));
+    }
+
+    return node;
+}
+
+/*
+ * parse_eq_neq
+ *    Purpose: parses an equivalence expression 
+ * Parameters: tokens - the list of tokens to parse
+ *    Returns: a pointer to the new node
+ */
+Node *parse_eq_neq(std::list<Token> &tokens)
+{
+    Node *node = parse_lt_gt(tokens);
+
+    while (tokens.front().type == Token::TOK_EQEQ ||
+           tokens.front().type == Token::TOK_NEQ)
+    {
+        Node *op = new_node(tokens.front());
+        tokens.pop_front();
+
+        node = binary(node, op, parse_term(tokens));
+    }
+
+    return node;
+}
+
+/*
+ * parse_and
+ *    Purpose: parses a logical and expression 
+ * Parameters: tokens - the list of tokens to parse
+ *    Returns: a pointer to the new node
+ */
+Node *parse_and(std::list<Token> &tokens)
+{
+    Node *node = parse_eq_neq(tokens);
+
+    while (tokens.front().type == Token::TOK_LAND)
+    {
+        Node *op = new_node(tokens.front());
+        tokens.pop_front();
+
+        node = binary(node, op, parse_eq_neq(tokens));
+    }
+
+    return node;
+}
+
+/*
+ * parse_expr
+ *    Purpose: parses a logical or expression 
+ * Parameters: tokens - the list of tokens to parse
+ *    Returns: a pointer to the new node
+ */
+Node *parse_expr(std::list<Token> &tokens)
+{
+    Node *node = parse_and(tokens);
+
+    if (tokens.front().type == Token::TOK_LOR)
+    {
+        Node *op = new_node(tokens.front());
+        tokens.pop_front();
+
+        node = binary(node, op, parse_and(tokens));
     }
 
     return node;
@@ -175,6 +265,7 @@ Node *parse_function(std::list<Token> &tokens)
     Node *node = new_node(tokens.front());
     tokens.pop_front();
 
+    // conditional expect on function params
     if (tokens.front().type == Token::TOK_LPAREN)
     {
         tokens.pop_front();
@@ -194,15 +285,18 @@ Node *parse_function(std::list<Token> &tokens)
         node->children.push_back(args);
     }
 
-    // expect a colon
-    if (tokens.front().type != Token::TOK_COL)
+    // conditional expect on function type
+    if (tokens.front().type == Token::TOK_COL)
     {
-        print_error("Expected `:`, found `" + tokens.front().data + "` instead.", tokens.front().row, tokens.front().col);
-    }
-    tokens.pop_front();
+        tokens.pop_front();
 
-    // expect type of function
-    node->children.push_back(parse_expr(tokens));
+        // expect type of function
+        if (tokens.front().type != Token::TOK_ID)
+        {
+            print_error("Expected unqualified id", tokens.front().row, tokens.front().col);
+        }
+        node->children.push_back(parse_expr(tokens));
+    }
 
     // conditional expect EOL
     if (tokens.front().type == Token::TOK_EOL)

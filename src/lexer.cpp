@@ -16,9 +16,8 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "*", Token::TOK_STAR },
     { "/", Token::TOK_SLASH },
     { "%", Token::TOK_PERCENT },
-    { "or", Token::TOK_BOR },
-    { "and", Token::TOK_BAND },
-    { "xor", Token::TOK_BXOR },
+    { "or", Token::TOK_LOR },
+    { "and", Token::TOK_LAND },
     { "<<", Token::TOK_SHL },
     { ">>", Token::TOK_SHR },
 
@@ -97,6 +96,102 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             col = col_end;
             continue;
         }
+        else if (c == '=')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col, file));
+                curr = "";
+            }
+
+            col = col_end;
+
+            if (line[i + 1] == '=')
+            {
+                tokens.push_back({ .type = Token::TOK_EQEQ, .data = "==", .row = row, .col = col, .file = file });
+                i++;
+                col_end += 2;
+            }
+            // TODO: add token for regular equal sign as an assignment operator
+        }
+        else if (c == '!')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col, file));
+                curr = "";
+            }
+
+            col = col_end;
+
+            if (line[i + 1] == '=')
+            {
+                tokens.push_back({ .type = Token::TOK_NEQ, .data = "!=", .row = row, .col = col, .file = file });
+                i++;
+                col_end += 2;
+            }
+            else
+            {
+                tokens.push_back({ .type = Token::TOK_BANG, .data = "!", .row = row, .col = col, .file = file });
+                col_end++;
+            }
+        }
+        else if (c == '<')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col, file));
+                curr = "";
+            }
+
+            col = col_end;
+
+            if (line[i + 1] == '=')
+            {
+                tokens.push_back({ .type = Token::TOK_LTE, .data = "<=", .row = row, .col = col, .file = file });
+                i++;
+                col_end += 2;
+            }
+            else if (line[i + 1] == '<')
+            {
+                tokens.push_back({ .type = Token::TOK_SHL, .data = "<<", .row = row, .col = col, .file = file });
+                i++;
+                col_end += 2;
+            }
+            else
+            {
+                tokens.push_back({ .type = Token::TOK_LT, .data = "<", .row = row, .col = col, .file = file });
+                col_end++;
+            }
+        }
+        else if (c == '>')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col, file));
+                curr = "";
+            }
+
+            col = col_end;
+
+            if (line[i + 1] == '=')
+            {
+                tokens.push_back({ .type = Token::TOK_GTE, .data = ">=", .row = row, .col = col, .file = file });
+                i++;
+                col_end += 2;
+            }
+            else if (line[i + 1] == '>')
+            {
+                tokens.push_back({ .type = Token::TOK_SHR, .data = ">>", .row = row, .col = col, .file = file });
+                i++;
+                col_end += 2;
+            }
+            else
+            {
+                tokens.push_back({ .type = Token::TOK_GT, .data = ">", .row = row, .col = col, .file = file });
+                col_end++;
+            }
+        }
         else if (c == '+')
         {
             if (curr != "")
@@ -172,19 +267,6 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
 
             col = col_end;
             tokens.push_back({ .type = Token::TOK_TILDA, .data = "~", .row = row, .col = col, .file = file });
-
-            col_end++;
-        }
-        else if (c == '!')
-        {
-            if (curr != "")
-            {
-                tokens.push_back(lex_word(curr, row, col, file));
-                curr = "";
-            }
-
-            col = col_end;
-            tokens.push_back({ .type = Token::TOK_BANG, .data = "!", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -408,16 +490,12 @@ void print_token(const Token &token, std::ostream &out)
             out << "TOKEN_PERCENT";
             break;
 
-        case Token::TOK_BOR:
-            out << "TOKEN_BOR";
+        case Token::TOK_LOR:
+            out << "TOKEN_LOR";
             break;
 
-        case Token::TOK_BAND:
-            out << "TOKEN_BAND";
-            break;
-
-        case Token::TOK_BXOR:
-            out << "TOKEN_BXOR";
+        case Token::TOK_LAND:
+            out << "TOKEN_LAND";
             break;
 
         case Token::TOK_SHL:

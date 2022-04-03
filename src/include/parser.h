@@ -20,6 +20,10 @@ Node *binary(Node *left, Node *op, Node *right);
 
 Node *parse_fact(std::list<Token> &tokens);
 Node *parse_term(std::list<Token> &tokens);
+Node *parse_add_sub(std::list<Token> &tokens);
+Node *parse_lt_gt(std::list<Token> &tokens);
+Node *parse_eq_neq(std::list<Token> &tokens);
+Node *parse_and(std::list<Token> &tokens);
 Node *parse_expr(std::list<Token> &tokens);
 Node *parse_statement(std::list<Token> &tokens);
 Node *parse_function(std::list<Token> &tokens);
