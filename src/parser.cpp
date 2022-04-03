@@ -226,6 +226,12 @@ Node *parse_function(std::list<Token> &tokens)
     // parse statements
     while (tokens.front().type != Token::TOK_RBRACE)
     {
+        // stop parsing function body when the first return statement is hit
+        if (tokens.front().type == Token::TOK_RETURN)
+        {
+            node->children.push_back(parse_statement(tokens));
+            break;
+        }
         node->children.push_back(parse_statement(tokens));
     }
 
@@ -257,37 +263,38 @@ Node *parse_program(std::list<Token> &tokens)
  * Parameters: num_tabs - the number of tabs to print
  *    Returns: none
  */
-void pretty_print_tabs(int num_tabs)
+void pretty_print_tabs(int num_tabs, std::ostream &out)
 {
     for (int i = 0; i < num_tabs - 1; i++)
     {
-        std::cout << "    ";
+        out << "    ";
     }
-    std::cout << "   \u2502\n";
+    out << "   \u2502\n";
 
     for (int i = 0; i < num_tabs - 1; i++)
     {
-        std::cout << "    ";
+        out << "    ";
     }
-    std::cout << "   \u2514";
+    out << "   \u2514";
 }
 
 /*
  * pretty_print_helper
  *    Purpose: pretty print a node and its children recursively
- * Parameters: node - the node to start printing from, num_tabs - the number of tabs to print
+ * Parameters: node - the node to start printing from, num_tabs - the number of tabs to print, out - the output stream
  *    Returns: none
+ *      Notes: the output stream is defaulted to std::cout
  */
-void pretty_print_helper(Node *node, int num_tabs)
+void pretty_print_helper(Node *node, int num_tabs, std::ostream &out)
 {
-    print_token(node->token);
+    print_token(node->token, out);
 
     num_tabs++;
     
     for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))
     {
-        pretty_print_tabs(num_tabs);
-        pretty_print_helper(*it, num_tabs);
+        pretty_print_tabs(num_tabs, out);
+        pretty_print_helper(*it, num_tabs, out);
     }
     num_tabs--;
 }
@@ -295,14 +302,14 @@ void pretty_print_helper(Node *node, int num_tabs)
 /*
  * pretty_print
  *    Purpose: pretty print a tree using the helper function
- * Parameters: node - the node to start printing the tree from
+ * Parameters: node - the node to start printing the tree from, out - the output stream
  *    Returns: none
+ *      Notes: the output stream is defaulted to std::cout
  */
-void pretty_print(Node *node)
+void pretty_print(Node *node, std::ostream &out)
 {
-    int num_tabs = 0;
-    pretty_print_helper(node, num_tabs);
-    std::cout << "\n";
+    pretty_print_helper(node, 0, out);
+    out << "\n";
 }
 
 /*
@@ -313,6 +320,6 @@ void pretty_print(Node *node)
  */
 void print_error(std::string message, int row, int col)
 {
-    std::cerr << std::to_string(row) << ":" << std::to_string(col) << ":" << " ERROR: " << message << std::endl;
+    std::cerr << std::to_string(row) << ":" << std::to_string(col) << ":" << " error: " << message << std::endl;
     exit(EXIT_FAILURE);
 }

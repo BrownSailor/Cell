@@ -68,15 +68,17 @@ struct Token
     std::string data = "";
     int row = 0;
     int col = 0;
+    std::string file = "";
 };
 
 extern std::unordered_map<std::string, Token::Type> INTRINSICS;
 
-Token lex_word(const std::string &word, int row, int col);
-void lex_line(const std::string &line, std::list<Token> &tokens, int row);
+Token lex_word(const std::string &word, int row, int col, const std::string &file);
+void lex_line(const std::string &line, std::list<Token> &tokens, int row, const std::string &file);
 std::list<Token> lex(const std::string &input);
 
 void print_token(const Token &token, std::ostream &out=std::cout);
-void print_lex(const std::list<Token> &tokens);
+void print_location(const Token &token, std::ostream &out=std::cout);
+void print_lex(const std::list<Token> &tokens, std::ostream &out=std::cout);
 
 #endif

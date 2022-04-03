@@ -1,5 +1,11 @@
 #include "include/assembler.h"
 
+/*
+ * assemble_unary
+ *    Purpose: writes assembly for a unary operation
+ * Parameters: node of the unary operation
+ *    Returns: a string of assembly code
+ */
 std::string assemble_unary(Node *root)
 {
     std::string expr = "";
@@ -25,6 +31,12 @@ std::string assemble_unary(Node *root)
     return expr;
 }
 
+/*
+ * assemble_binary
+ *    Purpose: writes assembly for a binary operation
+ * Parameters: node of the binary operation
+ *    Returns: a string of assembly code
+ */
 std::string assemble_binary(Node *root)
 {
     std::string expr = "";
@@ -101,6 +113,12 @@ std::string assemble_binary(Node *root)
     return expr;
 }
 
+/*
+ * assemble_expr
+ *    Purpose: writes assembly for an expression
+ * Parameters: node of the expression
+ *    Returns: a string of assembly code
+ */
 std::string assemble_expr(Node *root)
 {
     std::string expr = "";
@@ -138,6 +156,12 @@ std::string assemble_expr(Node *root)
     return expr;
 }
 
+/*
+ * assemble_statement
+ *    Purpose: writes assembly for a statement
+ * Parameters: node of the statement
+ *    Returns: a string of assembly code
+ */
 std::string assemble_statement(Node *root)
 {
     std::string statement = "";
@@ -150,6 +174,12 @@ std::string assemble_statement(Node *root)
     return statement;
 }
 
+/*
+ * assemble_function
+ *    Purpose: writes assembly for a function
+ * Parameters: node of the function
+ *    Returns: a string of assembly code
+ */
 std::string assemble_function(Node *root)
 {
     std::string code = "";
@@ -175,6 +205,12 @@ std::string assemble_function(Node *root)
     return code;
 }
 
+/*
+ * assemble_nasm
+ *    Purpose: writes nasm 64-bit assembly for a program
+ * Parameters: node of the program
+ *    Returns: a string of assembly code
+ */
 void assemble_nasm(std::string filename, Node *root)
 {
     std::ofstream out;

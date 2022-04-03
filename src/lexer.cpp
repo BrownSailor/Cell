@@ -46,25 +46,25 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
 /*
  * lex_word
  *    Purpose: returns the token associated with the current word
- * Parameters: word - the current word to be lexed, row - the current row number, col - the current column number
+ * Parameters: word - the current word to be lexed, row - the current row number, col - the current column number, file - current file being lexed
  *    Returns: the token associated with the current word
  */
-Token lex_word(const std::string &word, int row, int col)
+Token lex_word(const std::string &word, int row, int col, const std::string &file)
 {
     if (INTRINSICS.count(word))
     {
-        return { .type = INTRINSICS[word], .data = word, .row = row, .col = col };
+        return { .type = INTRINSICS[word], .data = word, .row = row, .col = col, .file = file };
     }
     else
     { 
         try
         { 
             std::stoi(word);
-            return { .type = Token::TOK_NUM, .data = word, .row = row, .col = col };
+            return { .type = Token::TOK_NUM, .data = word, .row = row, .col = col, .file = file };
         }
         catch (const std::exception &e)
         { 
-            return { .type = Token::TOK_ID, .data = word, .row = row, .col = col };
+            return { .type = Token::TOK_ID, .data = word, .row = row, .col = col, .file = file };
         }
     }
 }
@@ -72,10 +72,10 @@ Token lex_word(const std::string &word, int row, int col)
 /*
  * lex_line
  *    Purpose: lexes the current line and adds the tokens to the list of tokens
- * Parameters: line - the current line to be lexed, tokens - the list of tokens, row - the current row number
+ * Parameters: line - the current line to be lexed, tokens - the list of tokens, row - the current row number, file - current file being lexed
  *    Returns: none
  */
-void lex_line(const std::string &line, std::list<Token> &tokens, int row)
+void lex_line(const std::string &line, std::list<Token> &tokens, int row, const std::string &file)
 {
     std::string curr = "";
     int col = 1;
@@ -90,7 +90,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
 
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
@@ -101,12 +101,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_PLUS, .data = "+", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_PLUS, .data = "+", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -114,12 +114,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_MINUS, .data = "-", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_MINUS, .data = "-", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -127,12 +127,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_STAR, .data = "*", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_STAR, .data = "*", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -140,12 +140,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_SLASH, .data = "/", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_SLASH, .data = "/", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -153,12 +153,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_PERCENT, .data = "%", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_PERCENT, .data = "%", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -166,12 +166,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_TILDA, .data = "~", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_TILDA, .data = "~", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -179,12 +179,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_BANG, .data = "!", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_BANG, .data = "!", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -192,12 +192,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_COL, .data = ":", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_COL, .data = ":", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -205,12 +205,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_LBRACE, .data = "{", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_LBRACE, .data = "{", .row = row, .col = col, .file = file });
             
             col_end++;
         }
@@ -218,12 +218,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_RBRACE, .data = "}", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_RBRACE, .data = "}", .row = row, .col = col, .file = file });
             
             col_end++;
         }
@@ -231,12 +231,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_LPAREN, .data = "(", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_LPAREN, .data = "(", .row = row, .col = col, .file = file });
             
             col_end++;
         }
@@ -244,12 +244,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_RPAREN, .data = ")", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_RPAREN, .data = ")", .row = row, .col = col, .file = file });
             
             col_end++;
         }
@@ -257,7 +257,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
@@ -265,13 +265,13 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
 
             if (line[i + 1] == ']')
             {
-                tokens.push_back({ .type = Token::TOK_ARR, .data = "[]", .row = row, .col = col });
+                tokens.push_back({ .type = Token::TOK_ARR, .data = "[]", .row = row, .col = col, .file = file });
                 i++;
                 col_end += 2;
             }
             else
             {
-                tokens.push_back({ .type = Token::TOK_LBRACK, .data = "[", .row = row, .col = col });
+                tokens.push_back({ .type = Token::TOK_LBRACK, .data = "[", .row = row, .col = col, .file = file });
                 col_end++;
             }
         }
@@ -279,12 +279,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_RBRACK, .data = "]", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_RBRACK, .data = "]", .row = row, .col = col, .file = file });
             
             col_end++;
         }
@@ -292,12 +292,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
         {
             if (curr != "")
             {
-                tokens.push_back(lex_word(curr, row, col));
+                tokens.push_back(lex_word(curr, row, col, file));
                 curr = "";
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_COM, .data = ",", .row = row, .col = col });
+            tokens.push_back({ .type = Token::TOK_COM, .data = ",", .row = row, .col = col, .file = file });
 
             col_end++;
         }
@@ -310,7 +310,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row)
 
     if (curr != "")
     {
-        tokens.push_back(lex_word(curr, row, col));
+        tokens.push_back(lex_word(curr, row, col, file));
         curr = "";
     }
 }
@@ -334,14 +334,14 @@ std::list<Token> lex(const std::string &input)
     {
         if (line.size() && line.find_first_not_of(" \t\n\v\f\r") != std::string::npos)
         {
-            lex_line(line, tokens, row);
-            tokens.push_back({ Token::TOK_EOL, "", .row = row, .col = (int)(line.size()) + 1 });
+            lex_line(line, tokens, row, input);
+            tokens.push_back({ Token::TOK_EOL, "", .row = row, .col = (int)(line.size()) + 1, .file = input });
         }
 
         row++;  
     }
 
-    tokens.push_back({ Token::TOK_EOF, "", .row = row, .col = 1 });
+    tokens.push_back({ Token::TOK_EOF, "", .row = row, .col = 1, .file = input });
     return tokens;
 }
 
@@ -506,23 +506,25 @@ void print_token(const Token &token, std::ostream &out)
  *    Purpose: prints the location of the token to the output stream
  * Parameters: token - the token to be printed, out - the output stream
  *    Returns: none
+ *      Notes: the output stream is defaulted to be std::cout
  */
 void print_location(const Token &token, std::ostream &out)
 {
-    out << token.row << ":" << token.col << ":\t";
+    out << token.file << ":" << token.row << ":" << token.col << ":\t";
 }
 
 /*
  * print_lex
  *    Purpose: prints each token in the list of tokens
- * Parameters: tokens - the list of tokens
+ * Parameters: tokens - the list of tokens, out - the output stream
  *    Returns: none
+ *     Notes: the output stream is defaulted to be std::cout
  */
-void print_lex(const std::list<Token> &tokens)
+void print_lex(const std::list<Token> &tokens, std::ostream &out)
 {
     for (const auto &token : tokens)
     {
-        print_location(token, std::cout);
-        print_token(token, std::cout);
+        print_location(token, out);
+        print_token(token, out);
     }
 }
