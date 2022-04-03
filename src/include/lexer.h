@@ -21,6 +21,7 @@ struct Token
         // Non built-ins
         TOK_ID,
         TOK_NUM,
+        TOK_LIST,
 
         // Intrinsic keywords
         TOK_RETURN,

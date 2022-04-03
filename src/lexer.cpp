@@ -365,6 +365,10 @@ void print_token(const Token &token, std::ostream &out)
             out << "TOKEN_NUM";
             break;
 
+        case Token::TOK_LIST:
+            out << "TOKEN_LIST";
+            break;
+
         // Intrinsic keywords
         case Token::TOK_RETURN:
             out << "TOKEN_RETURN";
@@ -494,7 +498,7 @@ void print_token(const Token &token, std::ostream &out)
             out << "Unknown token: ";
     }
 
-    out << ": " << token.data;
+    out << ": " << token.data << "\n";
 }
 
 /*
@@ -505,7 +509,7 @@ void print_token(const Token &token, std::ostream &out)
  */
 void print_location(const Token &token, std::ostream &out)
 {
-    out << "\t" << token.row << ":" << token.col << "\n";
+    out << token.row << ":" << token.col << ":\t";
 }
 
 /*
@@ -518,7 +522,7 @@ void print_lex(const std::list<Token> &tokens)
 {
     for (const auto &token : tokens)
     {
-        print_token(token, std::cout);
         print_location(token, std::cout);
+        print_token(token, std::cout);
     }
 }

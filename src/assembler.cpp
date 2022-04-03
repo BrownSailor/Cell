@@ -1,30 +1,137 @@
 #include "include/assembler.h"
 
+std::string assemble_unary(Node *root)
+{
+    std::string expr = "";
+    auto it = root->children.begin();
+
+    if (root->token.type == Token::TOK_MINUS)
+    {
+        expr += assemble_expr(*it);
+        expr += "\tneg rax\n";
+    }
+    else if (root->token.type == Token::TOK_TILDA)
+    {
+        expr += assemble_expr(*it);
+        expr += "\tnot rax\n";
+    }
+    else if (root->token.type == Token::TOK_BANG)
+    {
+        expr += assemble_expr(*it);
+        expr += "\tcmp rax, 0\n";
+        expr += "\tsete al\n";
+    }
+
+    return expr;
+}
+
+std::string assemble_binary(Node *root)
+{
+    std::string expr = "";
+    auto it = root->children.begin();
+
+    // root contains the token of the operation and has left and right children
+    if (root->token.type == Token::TOK_PLUS)
+    {
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\tpush rax\n";
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\tpop rcx\n";
+        expr += "\tadd rax, rcx\n";
+    }
+    else if (root->token.type == Token::TOK_MINUS)
+    {
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\tpush rax\n";
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\tpop rcx\n";
+        expr += "\txchg rax, rcx\n";
+        expr += "\tsub rax, rcx\n";
+    }
+    else if (root->token.type == Token::TOK_STAR)
+    {
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\tpush rax\n";
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\tpop rcx\n";
+        expr += "\tmul rcx\n";
+    }
+    else if (root->token.type == Token::TOK_SLASH)
+    {
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\txor rdx, rdx\n";
+        expr += "\tpush rax\n";
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\tpop rcx\n";
+        expr += "\txchg rax, rcx\n";
+        expr += "\tdiv rcx\n";
+    }
+    else if (root->token.type == Token::TOK_PERCENT)
+    {
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\txor rdx, rdx\n";
+        expr += "\tpush rax\n";
+        expr += assemble_expr(*it);
+        std::advance(it, 1);
+
+        expr += "\tpop rcx\n";
+        expr += "\txchg rax, rcx\n";
+        expr += "\tdiv rcx\n";
+        expr += "\txchg rax, rdx\n";
+    }
+
+    return expr;
+}
+
 std::string assemble_expr(Node *root)
 {
     std::string expr = "";
 
-    for (auto it = root->children.begin(); it != root->children.end(); it++)
+    if (root->token.type == Token::TOK_NUM)
     {
-        if ((*it)->token.type == Token::TOK_MINUS)
+        expr += "\tmov rax, " + root->token.data + "\n";
+    }
+    else if (root->token.type == Token::TOK_PLUS || 
+             root->token.type == Token::TOK_STAR || 
+             root->token.type == Token::TOK_SLASH || 
+             root->token.type == Token::TOK_PERCENT)
+    {
+        expr += assemble_binary(root);
+    }
+    else if (root->token.type == Token::TOK_MINUS && root->children.size() == 2)
+    {
+        expr += assemble_binary(root);
+    }
+    else if (root->token.type == Token::TOK_TILDA || 
+            root->token.type == Token::TOK_BANG || 
+            root->token.type == Token::TOK_MINUS || 
+            root->token.type == Token::TOK_ARR)
+    {
+        expr += assemble_unary(root);
+    }
+    else
+    {
+        for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
         {
             expr += assemble_expr(*it);
-            expr += "\tneg rax\n";
-        }
-        else if ((*it)->token.type == Token::TOK_TILDA)
-        {
-            expr += assemble_expr(*it);
-            expr += "\tnot rax\n";
-        }
-        else if ((*it)->token.type == Token::TOK_BANG)
-        {
-            expr += assemble_expr(*it);
-            expr += "\tcmp rax, 0\n";
-            expr += "\tsete al\n";
-        }
-        else
-        {
-            expr += "\tmov rax, " + (*it)->token.data + "\n";
         }
     }
 
@@ -52,7 +159,16 @@ std::string assemble_function(Node *root)
     code += "_" + root->token.data + ":\n";
 
     // TODO: do something for function type instead of just dropping it
-    root->children.pop_front();
+    if (root->children.front()->token.type == Token::TOK_ID)
+    {
+        root->children.pop_front();
+    }
+    
+    // TODO: do something for function params
+    if (root->children.front()->token.type == Token::TOK_LIST)
+    {
+        root->children.pop_front();
+    }
 
     code += assemble_statement(root);
     
