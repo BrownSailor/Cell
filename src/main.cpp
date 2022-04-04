@@ -1,4 +1,5 @@
 #include "include/compiler.h"
+#include "include/types.h"
 
 int main(int argc, char **argv)
 {
@@ -8,7 +9,7 @@ int main(int argc, char **argv)
     // print_lex(tokens);
 
     Node *root = parse_program(tokens);
-    // pretty_print(root);
+    pretty_print(root);
 
     compile_and_link(argv[1], root);
 

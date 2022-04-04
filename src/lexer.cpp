@@ -4,42 +4,13 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
 {
     // Intrinsic keywords
     { "return", Token::TOK_RETURN },
-
-    // Unary operators
-    { "!", Token::TOK_BANG },
-    { "~", Token::TOK_TILDA },
-    { "[]", Token::TOK_ARR },
-
-    // Binary operators
-    { "+", Token::TOK_PLUS },
-    { "-", Token::TOK_MINUS },
-    { "*", Token::TOK_STAR },
-    { "/", Token::TOK_SLASH },
-    { "%", Token::TOK_PERCENT },
+    { "int", Token::TOK_INT },
+    { "char", Token::TOK_CHAR },
+    { "bool", Token::TOK_BOOL },
+    { "str", Token::TOK_STR },
+    { "not", Token::TOK_BANG },
     { "or", Token::TOK_LOR },
     { "and", Token::TOK_LAND },
-    { "<<", Token::TOK_SHL },
-    { ">>", Token::TOK_SHR },
-
-    // Boolean operations
-    { "==", Token::TOK_EQEQ },
-    { "!=", Token::TOK_NEQ },
-    { "<", Token::TOK_LT },
-    { ">", Token::TOK_GT },
-    { "<=", Token::TOK_LTE },
-    { ">=", Token::TOK_GTE },
-
-    // Single character tokens
-    { "{", Token::TOK_LBRACE },
-    { "}", Token::TOK_RBRACE },
-    { "(", Token::TOK_LPAREN },
-    { ")", Token::TOK_RPAREN },
-    { "[", Token::TOK_LBRACK },
-    { "]", Token::TOK_RBRACK },
-    { ":", Token::TOK_COL },
-    { ",", Token::TOK_COM },
-    { "", Token::TOK_EOL },
-    { "", Token::TOK_EOF }
 };
 
 /*
@@ -96,6 +67,39 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             col = col_end;
             continue;
         }
+        else if (c == '&')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col, file));
+            }
+
+            col = col_end;
+
+            if (line[i + 1] == '&')
+            {
+                tokens.push_back({ .type = Token::TOK_LAND, .data = "&&", .row = row, .col = col, .file = file });
+                i++;
+                col_end++;
+            }
+        }
+        else if (c == '|')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col, file));
+            }
+
+            col = col_end;
+
+            if (line[i + 1] == '|')
+            {
+                tokens.push_back({ .type = Token::TOK_LOR, .data = "||", .row = row, .col = col, .file = file });
+                i++;
+                col_end++;
+            }
+            // TODO: add support for else/ternary operator
+        }
         else if (c == '=')
         {
             if (curr != "")
@@ -112,7 +116,11 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
                 i++;
                 col_end += 2;
             }
-            // TODO: add token for regular equal sign as an assignment operator
+            else
+            {
+                tokens.push_back({ .type = Token::TOK_EQ, .data = "=", .row = row, .col = col, .file = file });
+                col_end++;
+            }
         }
         else if (c == '!')
         {
@@ -434,7 +442,7 @@ std::list<Token> lex(const std::string &input)
  *    Returns: none
  *      Notes: the output stream is defaulted to be std::cout
  */
-void print_token(const Token &token, std::ostream &out)
+void print_token(const Token &token, std::ostream &out, bool new_line)
 {
     switch (token.type)
     {
@@ -451,9 +459,33 @@ void print_token(const Token &token, std::ostream &out)
             out << "TOKEN_LIST";
             break;
 
+        case Token::TOK_FUNC:
+            out << "TOKEN_FUNCTION";
+            break;
+        
+        case Token::TOK_PROG:
+            out << "TOKEN_PROGRAM";
+            break;
+
         // Intrinsic keywords
         case Token::TOK_RETURN:
             out << "TOKEN_RETURN";
+            break;
+
+        case Token::TOK_INT:
+            out << "TOKEN_INT";
+            break;
+
+        case Token::TOK_CHAR:
+            out << "TOKEN_CHAR";
+            break;
+
+        case Token::TOK_BOOL:
+            out << "TOKEN_BOOL";
+            break;
+
+        case Token::TOK_STR:
+            out << "TOKEN_STR";
             break;
 
         case Token::TOK_BANG:
@@ -560,6 +592,10 @@ void print_token(const Token &token, std::ostream &out)
             out << "TOKEN_COL";
             break;
 
+        case Token::TOK_EQ:
+            out << "TOKEN_EQ";
+            break;
+
         case Token::TOK_COM:
             out << "TOKEN_COM";
             break;
@@ -576,7 +612,11 @@ void print_token(const Token &token, std::ostream &out)
             out << "Unknown token: ";
     }
 
-    out << ": " << token.data << "\n";
+    out << ": " << token.data;
+    if (new_line)
+    {
+        out << "\n";
+    }
 }
 
 /*
@@ -588,7 +628,7 @@ void print_token(const Token &token, std::ostream &out)
  */
 void print_location(const Token &token, std::ostream &out)
 {
-    out << token.file << ":" << token.row << ":" << token.col << ":\t";
+    out << token.file << ":" << token.row << ":" << token.col;
 }
 
 /*
@@ -603,6 +643,7 @@ void print_lex(const std::list<Token> &tokens, std::ostream &out)
     for (const auto &token : tokens)
     {
         print_location(token, out);
+        out << ":\t";
         print_token(token, out);
     }
 }

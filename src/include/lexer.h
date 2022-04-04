@@ -23,9 +23,15 @@ struct Token
         TOK_ID,
         TOK_NUM,
         TOK_LIST,
+        TOK_FUNC,
+        TOK_PROG,
 
         // Intrinsic keywords
         TOK_RETURN,
+        TOK_INT,
+        TOK_CHAR,
+        TOK_BOOL,
+        TOK_STR,
 
         // Unary operators
         TOK_BANG,
@@ -59,6 +65,7 @@ struct Token
         TOK_LBRACK,
         TOK_RBRACK,
         TOK_COL,
+        TOK_EQ,
         TOK_COM,
         TOK_EOL,
         TOK_EOF
@@ -77,7 +84,7 @@ Token lex_word(const std::string &word, int row, int col, const std::string &fil
 void lex_line(const std::string &line, std::list<Token> &tokens, int row, const std::string &file);
 std::list<Token> lex(const std::string &input);
 
-void print_token(const Token &token, std::ostream &out=std::cout);
+void print_token(const Token &token, std::ostream &out=std::cout, bool new_line=true);
 void print_location(const Token &token, std::ostream &out=std::cout);
 void print_lex(const std::list<Token> &tokens, std::ostream &out=std::cout);
 

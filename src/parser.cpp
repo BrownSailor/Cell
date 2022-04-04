@@ -50,15 +50,16 @@ Node *binary(Node *left, Node *op, Node *right)
  */
 Node *parse_fact(std::list<Token> &tokens)
 {
-    Node *node = nullptr;
+    Node *node = new Node();
 
     if (tokens.front().type == Token::TOK_LPAREN)
     {
         tokens.pop_front();
-        node = parse_expr(tokens);
+        node = parse_expr(tokens, node->scope);
         if (tokens.front().type != Token::TOK_RPAREN)
         {
-            print_error("Expected ')'", tokens.front().row, tokens.front().col);
+            print_error("expected ')'", tokens.front());
+            exit(EXIT_FAILURE);
         }
         tokens.pop_front();
     }
@@ -70,19 +71,14 @@ Node *parse_fact(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = unary(op, parse_expr(tokens));
+        node = unary(op, parse_fact(tokens));
     }
     else if (tokens.front().type == Token::TOK_ID ||
-             tokens.front().type == Token::TOK_NUM)
+             tokens.front().type == Token::TOK_NUM ||
+             INTRINSICS.count(tokens.front().data))
     {
         node = new_node(tokens.front());
         tokens.pop_front();
-
-        if (tokens.front().type == Token::TOK_COL)
-        {
-            tokens.pop_front();
-            node->children.push_back(parse_expr(tokens));
-        }
     }
 
     return node;
@@ -96,7 +92,8 @@ Node *parse_fact(std::list<Token> &tokens)
  */
 Node *parse_term(std::list<Token> &tokens)
 {
-    Node *node = parse_fact(tokens);
+    Node *node = new Node();
+    node = parse_fact(tokens);
 
     while (tokens.front().type == Token::TOK_STAR ||
            tokens.front().type == Token::TOK_SLASH ||
@@ -121,7 +118,8 @@ Node *parse_term(std::list<Token> &tokens)
  */
 Node *parse_add_sub(std::list<Token> &tokens)
 {
-    Node *node = parse_term(tokens);
+    Node *node = new Node();
+    node = parse_term(tokens);
 
     while (tokens.front().type == Token::TOK_PLUS ||
            tokens.front().type == Token::TOK_MINUS)
@@ -143,7 +141,8 @@ Node *parse_add_sub(std::list<Token> &tokens)
  */
 Node *parse_lt_gt(std::list<Token> &tokens)
 {
-    Node *node = parse_add_sub(tokens);
+    Node *node = new Node();
+    node = parse_add_sub(tokens);
 
     while (tokens.front().type == Token::TOK_LT ||
            tokens.front().type == Token::TOK_GT ||
@@ -167,7 +166,8 @@ Node *parse_lt_gt(std::list<Token> &tokens)
  */
 Node *parse_eq_neq(std::list<Token> &tokens)
 {
-    Node *node = parse_lt_gt(tokens);
+    Node *node = new Node();
+    node = parse_lt_gt(tokens);
 
     while (tokens.front().type == Token::TOK_EQEQ ||
            tokens.front().type == Token::TOK_NEQ)
@@ -189,7 +189,8 @@ Node *parse_eq_neq(std::list<Token> &tokens)
  */
 Node *parse_and(std::list<Token> &tokens)
 {
-    Node *node = parse_eq_neq(tokens);
+    Node *node = new Node();
+    node = parse_eq_neq(tokens);
 
     while (tokens.front().type == Token::TOK_LAND)
     {
@@ -203,14 +204,15 @@ Node *parse_and(std::list<Token> &tokens)
 }
 
 /*
- * parse_expr
+ * parse_or
  *    Purpose: parses a logical or expression 
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_expr(std::list<Token> &tokens)
+Node *parse_or(std::list<Token> &tokens)
 {
-    Node *node = parse_and(tokens);
+    Node *node = new Node();
+    node = parse_and(tokens);
 
     if (tokens.front().type == Token::TOK_LOR)
     {
@@ -224,25 +226,78 @@ Node *parse_expr(std::list<Token> &tokens)
 }
 
 /*
+ * parse_expr
+ *    Purpose: parses an expression 
+ * Parameters: tokens - the list of tokens to parse
+ *    Returns: a pointer to the new node
+ */
+Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Token> &scope)
+{
+    Node *node = new Node();
+    node = parse_or(tokens);
+
+    bool declared = false;
+    // variable declaration
+    if (tokens.front().type == Token::TOK_COL)
+    {
+        tokens.pop_front();
+        node->children.push_back(parse_or(tokens));
+
+        declared = true;
+
+        if (scope.count(node->token.data))
+        {
+            print_error("redefinition of `" + node->token.data + "`", node->token);
+            print_warning("note: previous definition is here", scope[node->token.data]);
+            exit(EXIT_FAILURE);
+        }
+        scope.insert({ node->token.data, node->token });
+    }
+
+    // variable initialization
+    if (tokens.front().type == Token::TOK_EQ)
+    {
+        tokens.pop_front();
+        node->children.push_back(parse_or(tokens));
+
+        if (!declared)
+        {
+            scope.insert({ node->token.data, node->token });
+        }
+    }
+
+    return node;
+}
+
+/*
  * parse_statement
  *    Purpose: parses a statement 
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_statement(std::list<Token> &tokens)
+Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, Token> &scope)
 {
-    // return keyword
-    if (tokens.front().type != Token::TOK_RETURN)
+    Node *node = new Node();
+
+    if (tokens.front().type != Token::TOK_NUM && tokens.front().type != Token::TOK_ID && !INTRINSICS.count(tokens.front().data))
     {
-        print_error("Expected `return`, found `" + tokens.front().data + "` instead.", tokens.front().row, tokens.front().col);
+        print_error("expected identifier", tokens.front());
+        exit(EXIT_FAILURE);
     }
 
-    Node *node = new_node(tokens.front());
-    tokens.pop_front();
+    if (tokens.front().type == Token::TOK_RETURN)
+    {
+        node = new_node(tokens.front());
+        tokens.pop_front();
+    }
+    else
+    {
+        node = parse_expr(tokens, scope);
+    }
 
     while (tokens.front().type != Token::TOK_EOL && tokens.front().type != Token::TOK_RBRACE)
     {
-        node->children.push_back(parse_expr(tokens));
+        node->children.push_back(parse_expr(tokens, scope));
     }
 
     if (tokens.front().type == Token::TOK_EOL)
@@ -262,7 +317,9 @@ Node *parse_statement(std::list<Token> &tokens)
 Node *parse_function(std::list<Token> &tokens)
 {
     // function name
-    Node *node = new_node(tokens.front());
+    Token func_name = tokens.front();
+    func_name.type = Token::TOK_FUNC;
+    Node *node = new_node(func_name);
     tokens.pop_front();
 
     // conditional expect on function params
@@ -278,7 +335,7 @@ Node *parse_function(std::list<Token> &tokens)
                 tokens.pop_front();
             }
 
-            args->children.push_back(parse_expr(tokens));
+            args->children.push_back(parse_expr(tokens, node->scope));
         }
         tokens.pop_front();
 
@@ -291,11 +348,12 @@ Node *parse_function(std::list<Token> &tokens)
         tokens.pop_front();
 
         // expect type of function
-        if (tokens.front().type != Token::TOK_ID)
+        if (tokens.front().type != Token::TOK_ID && !INTRINSICS.count(tokens.front().data))
         {
-            print_error("Expected unqualified id", tokens.front().row, tokens.front().col);
+            print_error("expected identifier", tokens.front());
+            exit(EXIT_FAILURE);
         }
-        node->children.push_back(parse_expr(tokens));
+        node->children.push_back(parse_expr(tokens, node->scope));
     }
 
     // conditional expect EOL
@@ -307,7 +365,8 @@ Node *parse_function(std::list<Token> &tokens)
     // expect open brace
     if (tokens.front().type != Token::TOK_LBRACE)
     {
-        print_error("Expected `{`, found `" + tokens.front().data + "` instead.", tokens.front().row, tokens.front().col);
+        print_error("expected `{`", tokens.front());
+        exit(EXIT_FAILURE);
     }
     tokens.pop_front();
 
@@ -323,15 +382,16 @@ Node *parse_function(std::list<Token> &tokens)
         // stop parsing function body when the first return statement is hit
         if (tokens.front().type == Token::TOK_RETURN)
         {
-            node->children.push_back(parse_statement(tokens));
+            node->children.push_back(parse_statement(tokens, node->scope));
             break;
         }
-        node->children.push_back(parse_statement(tokens));
+        node->children.push_back(parse_statement(tokens, node->scope));
     }
 
     if (tokens.front().type != Token::TOK_RBRACE)
     {
-        print_error("Expected `}`, found `" + tokens.front().data + "` instead.", tokens.front().row, tokens.front().col);
+        print_error("expected `}`", tokens.front());
+        exit(EXIT_FAILURE);
     }
     tokens.pop_front();
 
@@ -346,9 +406,22 @@ Node *parse_function(std::list<Token> &tokens)
  */
 Node *parse_program(std::list<Token> &tokens)
 {
-    Node *root = parse_function(tokens);
+    Node *node = new Node();
+    node->token.type = Token::TOK_PROG;
+    while (tokens.size())
+    {
+        while (tokens.front().type == Token::TOK_EOL || tokens.front().type == Token::TOK_EOF)
+        {
+            tokens.pop_front();
+        }
 
-    return root;
+        if (tokens.size())
+        {
+            node->children.push_back(parse_function(tokens));
+        }
+    }
+
+    return node;
 }
 
 /*
@@ -381,7 +454,20 @@ void pretty_print_tabs(int num_tabs, std::ostream &out)
  */
 void pretty_print_helper(Node *node, int num_tabs, std::ostream &out)
 {
-    print_token(node->token, out);
+    if (node->scope.size())
+    {
+        print_token(node->token, out, false);
+        out << ": [ ";
+        for (auto it = node->scope.begin(); it != node->scope.end(); std::advance(it, 1))
+        {
+            out << it->first << " ";
+        }
+        out << "]\n";
+    }
+    else
+    {
+        print_token(node->token, out);
+    }
 
     num_tabs++;
     
@@ -406,14 +492,20 @@ void pretty_print(Node *node, std::ostream &out)
     out << "\n";
 }
 
+void print_warning(std::string message, const Token &token)
+{
+    print_location(token, std::cerr);
+    std::cerr << ": " << message << "\n";
+}
+
 /*
  * print_error
  *    Purpose: print an error and exit compilation with a failure exit status
  * Parameters: message - the message to print, row - the row of the error, col - the column of the error
  *    Returns: none
  */
-void print_error(std::string message, int row, int col)
+void print_error(std::string message, const Token &token)
 {
-    std::cerr << std::to_string(row) << ":" << std::to_string(col) << ":" << " error: " << message << std::endl;
-    exit(EXIT_FAILURE);
+    print_location(token, std::cerr);
+    std::cerr << ": error: " << message << "\n";
 }

@@ -1,3 +1,3 @@
-main(argc: int, argv: []str): int {
-    return 1 << 6
+main(argc: int, argv: **char) {
+    return 0
 }
