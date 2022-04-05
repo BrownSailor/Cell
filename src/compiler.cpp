@@ -10,7 +10,7 @@
  */
 void compile_and_link(std::string filename, Node *root, std::ostream &out)
 {
-    std::string asm_command = "nasm -fmacho64 -o " + filename + ".o " + filename + ".asm";
+    std::string asm_command = "nasm -g -fmacho64 -o " + filename + ".o " + filename + ".asm";
     std::string lnk_command = "ld " + filename + ".o -o " + filename + " -macosx_version_min 11.0 -L /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem";
     // std::string rmf_command = "rm " + filename + ".asm " + filename + ".o";
 

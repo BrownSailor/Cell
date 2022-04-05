@@ -3,33 +3,30 @@
 // global jump address variable for short circuit assembling
 int jmp_addr = 0;
 
-// global variable address to shift base pointer to access variables
-int var_addr = 0;
-
 /*
  * assemble_unary
  *    Purpose: writes assembly for a unary operation
  * Parameters: node of the unary operation
  *    Returns: a string of assembly code
  */
-std::string assemble_unary(Node *root)
+std::string assemble_unary(Node *root, const std::unordered_map<std::string, Node *> &scope)
 {
     std::string expr = "";
     auto it = root->children.begin();
 
     if (root->token.type == Token::TOK_MINUS)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         expr += "\tneg\t\trax\n";
     }
     else if (root->token.type == Token::TOK_TILDA)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         expr += "\tnot\t\trax\n";
     }
     else if (root->token.type == Token::TOK_BANG)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         expr += "\tcmp\t\trax, 0\n";
         expr += "\tsete\tal\n";
     }
@@ -43,7 +40,7 @@ std::string assemble_unary(Node *root)
  * Parameters: node of the binary operation
  *    Returns: a string of assembly code
  */
-std::string assemble_binary(Node *root)
+std::string assemble_binary(Node *root, const std::unordered_map<std::string, Node *> &scope)
 {
     std::string expr = "";
     auto it = root->children.begin();
@@ -51,11 +48,11 @@ std::string assemble_binary(Node *root)
     // arith
     if (root->token.type == Token::TOK_PLUS)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpush\trax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -64,12 +61,12 @@ std::string assemble_binary(Node *root)
     else if (root->token.type == Token::TOK_MINUS)
     {
         std::advance(it, 1);
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
 
         expr += "\tpush\trax\n";
         std::advance(it, -1);
 
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 2);
 
         expr += "\tpop\t\trcx\n";
@@ -77,11 +74,11 @@ std::string assemble_binary(Node *root)
     }
     else if (root->token.type == Token::TOK_STAR)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpush\trax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -90,13 +87,13 @@ std::string assemble_binary(Node *root)
     else if (root->token.type == Token::TOK_SLASH)
     {
         std::advance(it, 1);
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
 
         expr += "\txor\t\trdx, rdx\n";
         expr += "\tpush\trax\n";
         std::advance(it, -1);
 
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 2);
 
         expr += "\tpop\t\trcx\n";
@@ -105,13 +102,13 @@ std::string assemble_binary(Node *root)
     else if (root->token.type == Token::TOK_PERCENT)
     {
         std::advance(it, 1);
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
 
         expr += "\txor\t\trdx, rdx\n";
         expr += "\tpush\trax\n";
         std::advance(it, -1);
 
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 2);
 
         expr += "\tpop\t\trcx\n";
@@ -121,12 +118,12 @@ std::string assemble_binary(Node *root)
     else if (root->token.type == Token::TOK_SHL)
     {
         std::advance(it, 1);
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
 
         expr += "\tpush\trax\n";
         std::advance(it, -1);
 
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 2);
 
         expr += "\tpop\t\trcx\n";
@@ -135,12 +132,12 @@ std::string assemble_binary(Node *root)
     else if (root->token.type == Token::TOK_SHR)
     {
         std::advance(it, 1);
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
 
         expr += "\tpush\trax\n";
         std::advance(it, -1);
 
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 2);
 
         expr += "\tpop\t\trcx\n";
@@ -150,11 +147,11 @@ std::string assemble_binary(Node *root)
     // boolean
     else if (root->token.type == Token::TOK_EQEQ)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpush\trax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -164,11 +161,11 @@ std::string assemble_binary(Node *root)
     }
     else if (root->token.type == Token::TOK_NEQ)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpush\trax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -180,11 +177,11 @@ std::string assemble_binary(Node *root)
     // for comparisons, first value goes into rcx and second goes into rax, so we swap the comparison
     else if (root->token.type == Token::TOK_LT)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpush\trax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -194,11 +191,11 @@ std::string assemble_binary(Node *root)
     }
     else if (root->token.type == Token::TOK_LTE)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpush\trax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -208,11 +205,11 @@ std::string assemble_binary(Node *root)
     }
     else if (root->token.type == Token::TOK_GT)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpush\trax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -222,11 +219,11 @@ std::string assemble_binary(Node *root)
     }
     else if (root->token.type == Token::TOK_GTE)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpush\trax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -236,7 +233,7 @@ std::string assemble_binary(Node *root)
     }
     else if (root->token.type == Token::TOK_LAND)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
         
         expr += "\tcmp\t\trax, 0\n";
@@ -245,7 +242,7 @@ std::string assemble_binary(Node *root)
         expr += "\tje jmp_addr_" + std::to_string(jmp_addr) + "\n\n";
 
         expr += "\tpush rax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -254,7 +251,7 @@ std::string assemble_binary(Node *root)
     }
     else if (root->token.type == Token::TOK_LOR)
     {
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tcmp\t\trax, 0\n";
@@ -264,7 +261,7 @@ std::string assemble_binary(Node *root)
         expr += "\tje\t\tjmp_addr_" + std::to_string(jmp_addr) + "\n\n";
 
         expr += "\tpush\trax\n";
-        expr += assemble_expr(*it);
+        expr += assemble_expr(*it, scope);
         std::advance(it, 1);
 
         expr += "\tpop\t\trcx\n";
@@ -281,11 +278,37 @@ std::string assemble_binary(Node *root)
  * Parameters: node of the expression
  *    Returns: a string of assembly code
  */
-std::string assemble_expr(Node *root)
+std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node *> &scope)
 {
     std::string expr = "";
 
-    if (root->token.type == Token::TOK_NUM)
+    // TODO: use type of variable to select the correct type of register, i.e. eax vs rax
+
+    if (root->token.type == Token::TOK_ID)
+    {
+        if (root->children.size() == 2)
+        {
+            // second child has the expression to parse
+            auto it = root->children.begin();
+            std::advance(it, 1);
+
+            expr += assemble_expr(*it, scope);
+            expr += "\tpush\trax\n";
+            expr += "\tmov\t\t[rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], eax\n";
+        }
+        else if (root->children.size() == 1)
+        {
+            auto it = root->children.begin();
+            expr += assemble_expr(*it, scope);
+            expr += "\tpush\trax\n";
+            expr += "\tmov\t\t[rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], eax\n";
+        }
+        else if (root->children.size() == 0)
+        {
+            expr += "\tmov\t\teax, [rbp-" + std::to_string(scope.at(root->token.data)->offset) + "]\n"; 
+        }
+    }
+    else if (root->token.type == Token::TOK_NUM)
     {
         expr += "\tmov\t\trax, " + root->token.data + "\n";
     }
@@ -304,24 +327,26 @@ std::string assemble_expr(Node *root)
              root->token.type == Token::TOK_LAND ||
              root->token.type == Token::TOK_LOR)
     {
-        expr += assemble_binary(root);
+        expr += assemble_binary(root, scope);
     }
-    else if (root->token.type == Token::TOK_MINUS && root->children.size() == 2)
+    else if ((root->token.type == Token::TOK_MINUS ||
+              root->token.type == Token::TOK_STAR) && 
+              root->children.size() == 2)
     {
-        expr += assemble_binary(root);
+        expr += assemble_binary(root, scope);
     }
     else if (root->token.type == Token::TOK_TILDA || 
              root->token.type == Token::TOK_BANG || 
              root->token.type == Token::TOK_MINUS || 
-             root->token.type == Token::TOK_ARR)
+             root->token.type == Token::TOK_STAR)
     {
-        expr += assemble_unary(root);
+        expr += assemble_unary(root, scope);
     }
     else
     {
         for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
         {
-            expr += assemble_expr(*it);
+            expr += assemble_expr(*it, scope);
         }
     }
 
@@ -334,12 +359,12 @@ std::string assemble_expr(Node *root)
  * Parameters: node of the statement
  *    Returns: a string of assembly code
  */
-std::string assemble_statement(Node *root)
+std::string assemble_statement(Node *root, const std::unordered_map<std::string, Node *> &scope)
 {
     std::string statement = "";
     for (Node *child : root->children)
     {
-        statement += assemble_expr(child);
+        statement += assemble_expr(child, scope);
     }
 
     return statement;
@@ -364,7 +389,7 @@ std::string assemble_function(Node *root)
     function += "\tmov\t\trbp, rsp\n";
 
     // TODO: do something for function type instead of just dropping it
-    if (root->children.front()->token.type == Token::TOK_ID)
+    if (INTRINSICS.count(root->children.front()->token.data))
     {
         root->children.pop_front();
     }
@@ -375,7 +400,7 @@ std::string assemble_function(Node *root)
         root->children.pop_front();
     }
 
-    function += assemble_statement(root);
+    function += assemble_statement(root, root->scope);
     
     // function epilogue
     function += "\tmov\t\trsp, rbp\n";

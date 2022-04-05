@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 #include <assert.h>
 
 /*
@@ -36,12 +37,11 @@ struct Token
         // Unary operators
         TOK_BANG,
         TOK_TILDA,
-        TOK_ARR,
 
         // Binary operators
         TOK_PLUS,
         TOK_MINUS,  // also unary
-        TOK_STAR,
+        TOK_STAR,   // also unary
         TOK_SLASH,
         TOK_PERCENT,
         TOK_LOR,

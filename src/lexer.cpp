@@ -353,17 +353,8 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
 
             col = col_end;
 
-            if (line[i + 1] == ']')
-            {
-                tokens.push_back({ .type = Token::TOK_ARR, .data = "[]", .row = row, .col = col, .file = file });
-                i++;
-                col_end += 2;
-            }
-            else
-            {
-                tokens.push_back({ .type = Token::TOK_LBRACK, .data = "[", .row = row, .col = col, .file = file });
-                col_end++;
-            }
+            tokens.push_back({ .type = Token::TOK_LBRACK, .data = "[", .row = row, .col = col, .file = file });
+            col_end++;
         }
         else if (c == ']')
         {
@@ -497,10 +488,6 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_TILDA";
             break;
 
-        case Token::TOK_ARR:
-            out << "TOKEN_ARR";
-            break;
-
         // Binary operators
         case Token::TOK_PLUS:
             out << "TOKEN_PLUS";
@@ -510,7 +497,7 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_MINUS";
             break;
 
-        case Token::TOK_STAR:
+        case Token::TOK_STAR:   // also unary
             out << "TOKEN_STAR";
             break;
 

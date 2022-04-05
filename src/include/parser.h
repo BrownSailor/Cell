@@ -6,13 +6,14 @@
 
 /*
  * Node
- * contains a token, list of children, and variable scoping to generate the Abstract Syntax Tree
+ * contains a token, list of children, and variable scope and offset to generate the Abstract Syntax Tree
  */
 struct Node
 {
     Token token;
     std::list<Node *> children;
-    std::unordered_map<std::string, Token> scope;
+    std::unordered_map<std::string, Node *> scope;
+    int offset = 0;
 };
 
 Node *newNode(Token token);
@@ -27,8 +28,8 @@ Node *parse_lt_gt(std::list<Token> &tokens);
 Node *parse_eq_neq(std::list<Token> &tokens);
 Node *parse_and(std::list<Token> &tokens);
 Node *parse_or(std::list<Token> &tokens);
-Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Token> &scope);
-Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, Token> &scope);
+Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
+Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
 Node *parse_function(std::list<Token> &tokens);
 Node *parse_program(std::list<Token> &tokens);
 

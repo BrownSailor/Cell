@@ -1,5 +1,18 @@
 #include "include/parser.h"
 
+int var_addr = 0;
+
+std::unordered_map<Token::Type, int> TYPES = 
+{
+    { Token::TOK_CHAR, 1 },
+    { Token::TOK_BOOL, 1 },
+
+    // TODO: add more primitive types and their respective sizes
+
+    { Token::TOK_INT,  4 },
+    { Token::TOK_STR,  8 }
+};
+
 /*
  * new_node
  *    Purpose: creates a new node with the given token
@@ -64,9 +77,9 @@ Node *parse_fact(std::list<Token> &tokens)
         tokens.pop_front();
     }
     else if (tokens.front().type == Token::TOK_TILDA || 
-        tokens.front().type == Token::TOK_ARR || 
-        tokens.front().type == Token::TOK_BANG || 
-        tokens.front().type == Token::TOK_MINUS)
+             tokens.front().type == Token::TOK_STAR || 
+             tokens.front().type == Token::TOK_BANG || 
+             tokens.front().type == Token::TOK_MINUS)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
@@ -231,27 +244,29 @@ Node *parse_or(std::list<Token> &tokens)
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Token> &scope)
+Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
     node = parse_or(tokens);
 
-    bool declared = false;
+    // TODO: figure out actual size of variable types and change offset by
+    //       the correct amount instead of just 8
+
     // variable declaration
     if (tokens.front().type == Token::TOK_COL)
     {
         tokens.pop_front();
         node->children.push_back(parse_or(tokens));
 
-        declared = true;
-
         if (scope.count(node->token.data))
         {
             print_error("redefinition of `" + node->token.data + "`", node->token);
-            print_warning("note: previous definition is here", scope[node->token.data]);
+            print_warning("note: previous definition is here", scope[node->token.data]->token);
             exit(EXIT_FAILURE);
         }
-        scope.insert({ node->token.data, node->token });
+        var_addr += 4;
+        node->offset = var_addr;
+        scope.insert({ node->token.data, node });
     }
 
     // variable initialization
@@ -260,9 +275,11 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Token
         tokens.pop_front();
         node->children.push_back(parse_or(tokens));
 
-        if (!declared)
+        if (!scope.count(node->token.data))
         {
-            scope.insert({ node->token.data, node->token });
+            var_addr += 4;
+            node->offset = var_addr;
+            scope.insert({ node->token.data, node });
         }
     }
 
@@ -275,11 +292,13 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Token
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, Token> &scope)
+Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
 
-    if (tokens.front().type != Token::TOK_NUM && tokens.front().type != Token::TOK_ID && !INTRINSICS.count(tokens.front().data))
+    if (tokens.front().type != Token::TOK_NUM && 
+        tokens.front().type != Token::TOK_ID && 
+        !INTRINSICS.count(tokens.front().data))
     {
         print_error("expected identifier", tokens.front());
         exit(EXIT_FAILURE);
@@ -348,7 +367,8 @@ Node *parse_function(std::list<Token> &tokens)
         tokens.pop_front();
 
         // expect type of function
-        if (tokens.front().type != Token::TOK_ID && !INTRINSICS.count(tokens.front().data))
+        if (tokens.front().type != Token::TOK_ID && 
+            !INTRINSICS.count(tokens.front().data))
         {
             print_error("expected identifier", tokens.front());
             exit(EXIT_FAILURE);
