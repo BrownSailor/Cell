@@ -33,6 +33,7 @@ struct Token
         TOK_CHAR,
         TOK_BOOL,
         TOK_STR,
+        TOK_VOID,
 
         // Unary operators
         TOK_BANG,

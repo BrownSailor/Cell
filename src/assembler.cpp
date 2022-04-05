@@ -296,11 +296,10 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
             expr += "\tpush\trax\n";
             expr += "\tmov\t\t[rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], eax\n";
         }
-        else if (root->children.size() == 1)
+        else if (root->children.size() == 1 && !TYPES.count(root->token.type))
         {
             auto it = root->children.begin();
             expr += assemble_expr(*it, scope);
-            expr += "\tpush\trax\n";
             expr += "\tmov\t\t[rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], eax\n";
         }
         else if (root->children.size() == 0)

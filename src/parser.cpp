@@ -27,6 +27,27 @@ Node *new_node(Token token)
     return node;
 }
 
+bool find_in_tree(Node *node, std::string value)
+{
+    if (node == nullptr)
+    {
+        return false;
+    }
+
+    if (node->token.data == value)
+    {
+        return true;
+    }
+
+    bool ans = false;
+    for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))
+    {
+        ans |= find_in_tree(*it, value);
+    }
+
+    return ans;
+}
+
 /*
  * unary
  *    Purpose: creates a new node representing a unary operation
@@ -49,8 +70,27 @@ Node *unary(Node *op, Node *node)
  */
 Node *binary(Node *left, Node *op, Node *right)
 {
-    op->children.push_back(left);
-    op->children.push_back(right);
+    // account for variable declaration and initialization within expression
+    if (op->token.type != Token::TOK_LAND && op->token.type != Token::TOK_LOR)
+    {
+        if (right->token.type == Token::TOK_ID && 
+            right->children.size() == 1 &&
+            !find_in_tree(left, right->token.data))
+        {
+            op->children.push_back(right);
+            op->children.push_back(left);
+        }
+        else
+        {
+            op->children.push_back(left);
+            op->children.push_back(right);
+        }
+    }
+    else
+    {
+        op->children.push_back(left);
+        op->children.push_back(right);
+    }
 
     return op;
 }
@@ -61,14 +101,14 @@ Node *binary(Node *left, Node *op, Node *right)
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_fact(std::list<Token> &tokens)
+Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
 
     if (tokens.front().type == Token::TOK_LPAREN)
     {
         tokens.pop_front();
-        node = parse_expr(tokens, node->scope);
+        node = parse_expr(tokens, scope);
         if (tokens.front().type != Token::TOK_RPAREN)
         {
             print_error("expected ')'", tokens.front());
@@ -84,7 +124,7 @@ Node *parse_fact(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = unary(op, parse_fact(tokens));
+        node = unary(op, parse_fact(tokens, scope));
     }
     else if (tokens.front().type == Token::TOK_ID ||
              tokens.front().type == Token::TOK_NUM ||
@@ -103,10 +143,10 @@ Node *parse_fact(std::list<Token> &tokens)
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_term(std::list<Token> &tokens)
+Node *parse_term(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
-    node = parse_fact(tokens);
+    node = parse_fact(tokens, scope);
 
     while (tokens.front().type == Token::TOK_STAR ||
            tokens.front().type == Token::TOK_SLASH ||
@@ -117,7 +157,7 @@ Node *parse_term(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_fact(tokens));
+        node = binary(node, op, parse_fact(tokens, scope));
     }
 
     return node;
@@ -129,10 +169,10 @@ Node *parse_term(std::list<Token> &tokens)
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_add_sub(std::list<Token> &tokens)
+Node *parse_add_sub(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
-    node = parse_term(tokens);
+    node = parse_term(tokens, scope);
 
     while (tokens.front().type == Token::TOK_PLUS ||
            tokens.front().type == Token::TOK_MINUS)
@@ -140,7 +180,7 @@ Node *parse_add_sub(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_term(tokens));
+        node = binary(node, op, parse_term(tokens, scope));
     }
 
     return node;
@@ -152,10 +192,10 @@ Node *parse_add_sub(std::list<Token> &tokens)
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_lt_gt(std::list<Token> &tokens)
+Node *parse_lt_gt(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
-    node = parse_add_sub(tokens);
+    node = parse_add_sub(tokens, scope);
 
     while (tokens.front().type == Token::TOK_LT ||
            tokens.front().type == Token::TOK_GT ||
@@ -165,7 +205,7 @@ Node *parse_lt_gt(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_term(tokens));
+        node = binary(node, op, parse_term(tokens, scope));
     }
 
     return node;
@@ -177,10 +217,10 @@ Node *parse_lt_gt(std::list<Token> &tokens)
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_eq_neq(std::list<Token> &tokens)
+Node *parse_eq_neq(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
-    node = parse_lt_gt(tokens);
+    node = parse_lt_gt(tokens, scope);
 
     while (tokens.front().type == Token::TOK_EQEQ ||
            tokens.front().type == Token::TOK_NEQ)
@@ -188,7 +228,7 @@ Node *parse_eq_neq(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_term(tokens));
+        node = binary(node, op, parse_term(tokens, scope));
     }
 
     return node;
@@ -200,17 +240,17 @@ Node *parse_eq_neq(std::list<Token> &tokens)
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_and(std::list<Token> &tokens)
+Node *parse_and(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
-    node = parse_eq_neq(tokens);
+    node = parse_eq_neq(tokens, scope);
 
     while (tokens.front().type == Token::TOK_LAND)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_eq_neq(tokens));
+        node = binary(node, op, parse_eq_neq(tokens, scope));
     }
 
     return node;
@@ -222,17 +262,17 @@ Node *parse_and(std::list<Token> &tokens)
  * Parameters: tokens - the list of tokens to parse
  *    Returns: a pointer to the new node
  */
-Node *parse_or(std::list<Token> &tokens)
+Node *parse_or(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
-    node = parse_and(tokens);
+    node = parse_and(tokens, scope);
 
     if (tokens.front().type == Token::TOK_LOR)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_and(tokens));
+        node = binary(node, op, parse_and(tokens, scope));
     }
 
     return node;
@@ -247,7 +287,7 @@ Node *parse_or(std::list<Token> &tokens)
 Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
 {
     Node *node = new Node();
-    node = parse_or(tokens);
+    node = parse_or(tokens, scope);
 
     // TODO: figure out actual size of variable types and change offset by
     //       the correct amount instead of just 8
@@ -256,7 +296,7 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
     if (tokens.front().type == Token::TOK_COL)
     {
         tokens.pop_front();
-        node->children.push_back(parse_or(tokens));
+        node->children.push_back(parse_or(tokens, scope));
 
         if (scope.count(node->token.data))
         {
@@ -273,7 +313,7 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
     if (tokens.front().type == Token::TOK_EQ)
     {
         tokens.pop_front();
-        node->children.push_back(parse_or(tokens));
+        node->children.push_back(parse_or(tokens, scope));
 
         if (!scope.count(node->token.data))
         {
@@ -406,6 +446,19 @@ Node *parse_function(std::list<Token> &tokens)
             break;
         }
         node->children.push_back(parse_statement(tokens, node->scope));
+    }
+
+    if (node->children.front()->token.type != Token::TOK_VOID && 
+        node->children.back()->token.type != Token::TOK_RETURN)
+    {
+        print_error("expected return statement for non-void function", tokens.front());
+        exit(EXIT_FAILURE);
+    }
+    else if (node->children.front()->token.type == Token::TOK_VOID && 
+             node->children.back()->token.type == Token::TOK_RETURN)
+    {
+        print_error("found return statement in void function", tokens.front());
+        exit(EXIT_FAILURE);
     }
 
     if (tokens.front().type != Token::TOK_RBRACE)

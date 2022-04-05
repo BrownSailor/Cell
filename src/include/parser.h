@@ -16,18 +16,20 @@ struct Node
     int offset = 0;
 };
 
+extern std::unordered_map<Token::Type, int> TYPES;
+
 Node *newNode(Token token);
 
 Node *unary(const Token &op, const Token &token);
 Node *binary(Node *left, Node *op, Node *right);
 
-Node *parse_fact(std::list<Token> &tokens);
-Node *parse_term(std::list<Token> &tokens);
-Node *parse_add_sub(std::list<Token> &tokens);
-Node *parse_lt_gt(std::list<Token> &tokens);
-Node *parse_eq_neq(std::list<Token> &tokens);
-Node *parse_and(std::list<Token> &tokens);
-Node *parse_or(std::list<Token> &tokens);
+Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
+Node *parse_term(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
+Node *parse_add_sub(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
+Node *parse_lt_gt(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
+Node *parse_eq_neq(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
+Node *parse_and(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
+Node *parse_or(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
 Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
 Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
 Node *parse_function(std::list<Token> &tokens);
