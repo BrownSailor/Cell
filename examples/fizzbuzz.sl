@@ -1,4 +1,4 @@
-main(argc: int, argv: []str): int 
+main(argc: int, argv: **char): int 
 {
     @ i: int = 1, i < 20, i++
     {

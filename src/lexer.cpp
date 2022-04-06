@@ -4,6 +4,7 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
 {
     // Intrinsic keywords
     { "return", Token::TOK_RETURN },
+    { "dump", Token::TOK_DUMP },
     { "int", Token::TOK_INT },
     { "char", Token::TOK_CHAR },
     { "bool", Token::TOK_BOOL },
@@ -463,6 +464,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_RETURN";
             break;
 
+        case Token::TOK_DUMP:
+            out << "TOKEN_DUMP";
+            break;
+
         case Token::TOK_INT:
             out << "TOKEN_INT";
             break;
@@ -477,6 +482,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
 
         case Token::TOK_STR:
             out << "TOKEN_STR";
+            break;
+        
+        case Token::TOK_VOID:
+            out << "TOKEN_VOID";
             break;
 
         case Token::TOK_BANG:

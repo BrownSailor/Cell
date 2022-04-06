@@ -29,6 +29,7 @@ struct Token
 
         // Intrinsic keywords
         TOK_RETURN,
+        TOK_DUMP,
         TOK_INT,
         TOK_CHAR,
         TOK_BOOL,

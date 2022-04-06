@@ -1,4 +1,5 @@
-main {
-    foo: int = 4
-    bar: int = foo - 2 + (2 + (foo = 3))
+main(argc: int, argv: **char): int {
+
+    dump argv
+    return 0
 }

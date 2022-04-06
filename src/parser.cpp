@@ -13,6 +13,18 @@ std::unordered_map<Token::Type, int> TYPES =
     { Token::TOK_STR,  8 }
 };
 
+int get_type(Node *node)
+{
+    if (node->token.type == Token::TOK_STAR)
+    {
+        return 8;
+    }
+    else
+    {
+        return TYPES[node->token.type];
+    }
+}
+
 /*
  * new_node
  *    Purpose: creates a new node with the given token
@@ -304,7 +316,8 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
             print_warning("note: previous definition is here", scope[node->token.data]->token);
             exit(EXIT_FAILURE);
         }
-        var_addr += 4;
+
+        var_addr += get_type(node->children.front());
         node->offset = var_addr;
         scope.insert({ node->token.data, node });
     }
@@ -343,16 +356,8 @@ Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, 
         print_error("expected identifier", tokens.front());
         exit(EXIT_FAILURE);
     }
-
-    if (tokens.front().type == Token::TOK_RETURN)
-    {
-        node = new_node(tokens.front());
-        tokens.pop_front();
-    }
-    else
-    {
-        node = parse_expr(tokens, scope);
-    }
+    
+    node = parse_expr(tokens, scope);
 
     while (tokens.front().type != Token::TOK_EOL && tokens.front().type != Token::TOK_RBRACE)
     {
@@ -382,11 +387,11 @@ Node *parse_function(std::list<Token> &tokens)
     tokens.pop_front();
 
     // conditional expect on function params
+    Node *args = new_node({ .type = Token::TOK_LIST });
+
     if (tokens.front().type == Token::TOK_LPAREN)
     {
         tokens.pop_front();
-        Node *args = new_node({ .type = Token::TOK_LIST });
-
         while (tokens.front().type != Token::TOK_RPAREN)
         {
             if (tokens.front().type == Token::TOK_COM)
@@ -397,9 +402,9 @@ Node *parse_function(std::list<Token> &tokens)
             args->children.push_back(parse_expr(tokens, node->scope));
         }
         tokens.pop_front();
-
-        node->children.push_back(args);
     }
+
+    node->children.push_back(args);
 
     // conditional expect on function type
     if (tokens.front().type == Token::TOK_COL)
@@ -414,6 +419,10 @@ Node *parse_function(std::list<Token> &tokens)
             exit(EXIT_FAILURE);
         }
         node->children.push_back(parse_expr(tokens, node->scope));
+    }
+    else
+    {
+        node->children.push_back(new_node({ .type = Token::TOK_VOID }));
     }
 
     // conditional expect EOL
@@ -448,16 +457,20 @@ Node *parse_function(std::list<Token> &tokens)
         node->children.push_back(parse_statement(tokens, node->scope));
     }
 
-    if (node->children.front()->token.type != Token::TOK_VOID && 
+    auto it = node->children.begin();
+    std::advance(it, 1);
+
+    if ((*it)->token.type != Token::TOK_VOID && 
         node->children.back()->token.type != Token::TOK_RETURN)
     {
         print_error("expected return statement for non-void function", tokens.front());
+        print_warning("note: function type declared here", (*it)->token);
         exit(EXIT_FAILURE);
     }
-    else if (node->children.front()->token.type == Token::TOK_VOID && 
+    else if ((*it)->token.type == Token::TOK_VOID && 
              node->children.back()->token.type == Token::TOK_RETURN)
     {
-        print_error("found return statement in void function", tokens.front());
+        print_error("found return statement in void function", node->children.back()->token);
         exit(EXIT_FAILURE);
     }
 
@@ -481,6 +494,9 @@ Node *parse_program(std::list<Token> &tokens)
 {
     Node *node = new Node();
     node->token.type = Token::TOK_PROG;
+
+    // TODO: add argc and argv to main function's scope
+
     while (tokens.size())
     {
         while (tokens.front().type == Token::TOK_EOL || tokens.front().type == Token::TOK_EOF)

@@ -284,7 +284,14 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
 
     // TODO: use type of variable to select the correct type of register, i.e. eax vs rax
 
-    if (root->token.type == Token::TOK_ID)
+    if (root->token.type == Token::TOK_DUMP)
+    {
+        expr += assemble_expr(root->children.front(), scope);
+        expr += "\tpush\trax\n";
+        expr += "\tpop\t\trdi\n";
+        expr += "\tcall\t_dump\n";
+    }
+    else if (root->token.type == Token::TOK_ID)
     {
         if (root->children.size() == 2)
         {
@@ -387,6 +394,13 @@ std::string assemble_function(Node *root)
     function += "\tpush\trbp\n";
     function += "\tmov\t\trbp, rsp\n";
 
+    // push argc and argv on the stack if we are assembling main
+    if (root->token.data == "main")
+    {
+        function += "\tmov\t\t[rbp-" + std::to_string(root->children.front()->children.front()->offset) + "], edi\n";
+        function += "\tmov\t\t[rbp-" + std::to_string(root->children.front()->children.back()->offset) + "], rsi\n";
+    }
+
     // TODO: do something for function type instead of just dropping it
     if (INTRINSICS.count(root->children.front()->token.data))
     {
@@ -411,8 +425,47 @@ std::string assemble_function(Node *root)
 
 std::string assemble_program(Node *root)
 {
-    std::string program = "default rel\n\nsection .text\n";
+    std::string program = "default rel\n\n";
+    program += ";; dump function written in C, compiled to nasm with -O3\n"
+        ";; dump takes a 64-bit unsigned integer from rdi and prints it to stdout\n"
+        "_dump:\n"
+        "\tsub     rsp, 40\n"
+        "\tmov     BYTE [rsp+31], 10\n"
+        "\ttest    rdi, rdi\n"
+        "\tje      .L4\n"
+        "\tmov     r8, -3689348814741910323\n"
+        "\tmov     esi, 30\n"
+".L3:\n"
+        "\tmov     rax, rdi\n"
+        "\tsub     rsi, 1\n"
+        "\tmul     r8\n"
+        "\tmov     rax, rdi\n"
+        "\tshr     rdx, 3\n"
+        "\tlea     rcx, [rdx+rdx*4]\n"
+        "\tadd     rcx, rcx\n"
+        "\tsub     rax, rcx\n"
+        "\tadd     eax, 48\n"
+        "\tmov     BYTE [rsp+1+rsi], al\n"
+        "\tmov     rax, rdi\n"
+        "\tmov     rdi, rdx\n"
+        "\tcmp     rax, 9\n"
+        "\tja      .L3\n"
+        "\tmov     edx, 32\n"
+        "\tsub     rdx, rsi\n"
+".L2:\n"
+        "\tadd     rsi, rsp\n"
+        "\tmov     edi, 1\n"
+        "\txor     eax, eax\n"
+        "\tmov     rax, 0x2000004\n"
+        "\tsyscall\n"
+        "\tadd     rsp, 40\n"
+        "\tret\n"
+".L4:\n"
+        "\tmov     edx, 2\n"
+        "\tmov     esi, 30\n"
+        "\tjmp     .L2\n\n";
 
+    program += "section .text\n";
     for (Node *child : root->children)
     {
         program += assemble_function(child);
