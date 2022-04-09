@@ -18,7 +18,7 @@ struct Node
 
 extern std::unordered_map<Token::Type, int> TYPES;
 
-Node *newNode(Token token);
+Node *new_node(Token token);
 
 Node *unary(const Token &op, const Token &token);
 Node *binary(Node *left, Node *op, Node *right);
@@ -32,6 +32,7 @@ Node *parse_and(std::list<Token> &tokens, std::unordered_map<std::string, Node *
 Node *parse_or(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
 Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
 Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
+Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope);
 Node *parse_function(std::list<Token> &tokens);
 Node *parse_program(std::list<Token> &tokens);
 

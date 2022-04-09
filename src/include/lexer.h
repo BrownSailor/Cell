@@ -69,6 +69,7 @@ struct Token
         TOK_COL,
         TOK_EQ,
         TOK_COM,
+        TOK_LOOP,
         TOK_EOL,
         TOK_EOF
     };

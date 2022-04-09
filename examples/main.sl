@@ -1,5 +1,7 @@
-main(argc: int, argv: **char): int {
-
-    dump argv
-    return 0
+main {
+    
+    var: int = 3
+    dump 34
+    dump var
+    dump (var < 34)
 }

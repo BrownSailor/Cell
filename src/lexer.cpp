@@ -68,6 +68,18 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             col = col_end;
             continue;
         }
+        else if (c == '@')
+        {
+            if (curr != "")
+            {
+                tokens.push_back(lex_word(curr, row, col, file));
+            }
+
+            col = col_end;
+
+            tokens.push_back({ .type = Token::TOK_LOOP, .data = "@", .row = row, .col = col, .file = file });
+            col_end++;
+        }
         else if (c == '&')
         {
             if (curr != "")
@@ -596,6 +608,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_COM";
             break;
 
+        case Token::TOK_LOOP:
+            out << "TOKEN_LOOP";
+            break;
+
         case Token::TOK_EOL:
             out << "TOKEN_EOL";
             break;
@@ -642,4 +658,6 @@ void print_lex(const std::list<Token> &tokens, std::ostream &out)
         out << ":\t";
         print_token(token, out);
     }
+
+    out << "\n";
 }

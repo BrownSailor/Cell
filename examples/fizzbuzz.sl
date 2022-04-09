@@ -6,7 +6,7 @@ main(argc: int, argv: **char): int
             print "Fizz"
         } | i % 5 == 0 {
             print "Buzz"
-        } | i % 3 == 0 & i % 5 == 0 {
+        } | i % 3 == 0 && i % 5 == 0 {
             print "FizzBuzz"
         } | {
             print i

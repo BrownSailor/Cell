@@ -1,3 +1,4 @@
+#include "include/visitor.h"
 #include "include/compiler.h"
 
 int main(int argc, char **argv)
@@ -8,7 +9,8 @@ int main(int argc, char **argv)
     // print_lex(tokens);
 
     Node *root = parse_program(tokens);
-    // pretty_print(root);
+    root = visit(root); 
+    pretty_print(root);
 
     compile_and_link(argv[1], root);
 
