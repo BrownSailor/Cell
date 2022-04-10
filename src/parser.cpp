@@ -122,27 +122,8 @@ Node *unary(Node *op, Node *node)
  */
 Node *binary(Node *left, Node *op, Node *right)
 {
-    // account for variable declaration and initialization within expression
-    if (op->token.type != Token::TOK_LAND && op->token.type != Token::TOK_LOR)
-    {
-        if (right->token.type == Token::TOK_ID && 
-            right->children.size() == 1 &&
-            !find_in_tree(left, right->token.data))
-        {
-            op->children.push_back(right);
-            op->children.push_back(left);
-        }
-        else
-        {
-            op->children.push_back(left);
-            op->children.push_back(right);
-        }
-    }
-    else
-    {
-        op->children.push_back(left);
-        op->children.push_back(right);
-    }
+    op->children.push_back(left);
+    op->children.push_back(right);
 
     return op;
 }
@@ -438,10 +419,10 @@ Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node 
     node->scope = scope;
     tokens.pop_front();
 
-    bool paren = false;
-    if (tokens.front().type == Token::TOK_LPAREN)
+    int paren = 0;
+    while (tokens.front().type == Token::TOK_LPAREN)
     {
-        paren = true;
+        paren++;
         tokens.pop_front();
     }
 
@@ -449,38 +430,26 @@ Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node 
     Node *list = new_node({ .type = Token::TOK_LIST });
 
     // initialization
-    if (tokens.front().type != Token::TOK_COM)
-    {
-        list->children.push_back(parse_expr(tokens, node->scope));
-    }
-    if (tokens.front().type != Token::TOK_COM)
-    {
-        print_error("expected `,`", tokens.front());
-        exit(EXIT_FAILURE);
-    }
+    list->children.push_back(parse_expr(tokens, node->scope));
 
-    // comma
-    tokens.pop_front();
+    // optional comma to separate condition
+    if (tokens.front().type == Token::TOK_COM)
+    {
+        tokens.pop_front();
+    }
 
     // condition
-    if (tokens.front().type != Token::TOK_COM)
+    if (tokens.front().type != Token::TOK_LBRACE &&
+        tokens.front().type != Token::TOK_RPAREN)
     {
         list->children.push_back(parse_expr(tokens, node->scope));
     }
-    // if no condition provided, insert true
-    else
+     
+    // optional comma to separate increment
+    if (tokens.front().type == Token::TOK_COM)
     {
-        list->children.push_back(new_node({ .type = Token::TOK_NUM, .data = "1" }));
+        tokens.pop_front();
     }
-
-    if (tokens.front().type != Token::TOK_COM)
-    {
-        print_error("expected `,`", tokens.front());
-        exit(EXIT_FAILURE);
-    }
-
-    // comma
-    tokens.pop_front();
 
     // increment
     if (tokens.front().type != Token::TOK_LBRACE &&
@@ -491,12 +460,15 @@ Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node 
 
     if (paren)
     {
-        if (tokens.front().type != Token::TOK_RPAREN)
+        while (paren--)
         {
-            print_error("expected `)`", tokens.front());
-            exit(EXIT_FAILURE);
+            if (tokens.front().type != Token::TOK_RPAREN)
+            {
+                print_error("expected `)`", tokens.front());
+                exit(EXIT_FAILURE);
+            }
+            tokens.pop_front();
         }
-        tokens.pop_front();
     }
 
     Token scope_check = check_scope(list, node->scope);
