@@ -342,28 +342,28 @@ std::string assemble_binary(Node *root, const std::unordered_map<std::string, No
         expr += assemble_expr(*it, scope);
         std::advance(it, 1);
         expr += "    cmp     al, 0\n";
-        expr += "    je      .j_" + std::to_string(jmp) + "\n";
+        expr += "    je      .J_" + std::to_string(jmp) + "\n";
 
         expr += assemble_expr(*it, scope);
         std::advance(it, 1);
         expr += "    cmp     al, 0\n";
         expr += "    mov     rax, 0\n";
         expr += "    setne   al\n";
-        expr += ".j_" + std::to_string(jmp++) + ":\n";
+        expr += ".J_" + std::to_string(jmp++) + ":\n";
     }
     else if (root->token.type == Token::TOK_LOR)
     {
         expr += assemble_expr(*it, scope);
         std::advance(it, 1);
         expr += "    cmp     al, 0\n";
-        expr += "    jne     .j_" + std::to_string(jmp) + "\n";
+        expr += "    jne     .J_" + std::to_string(jmp) + "\n";
 
         expr += assemble_expr(*it, scope);
         std::advance(it, 1);
         expr += "    cmp     al, 0\n";
         expr += "    mov     rax, 0\n";
         expr += "    setne   al\n";
-        expr += ".j_" + std::to_string(jmp++) + ":\n";
+        expr += ".J_" + std::to_string(jmp++) + ":\n";
     }
 
     return expr;
@@ -498,7 +498,39 @@ std::string assemble_if(Node *root)
     std::string iff = "";
 
     // parse condition
-    iff += assemble_expr(root->children.front(), root->scope);
+    auto it = root->children.begin();
+
+    if ((*it)->token.type == Token::TOK_NUM)
+    {
+        iff += "    mov     rax, " + (*it)->token.data + "\n";
+        iff += "    cmp     rax, 0\n";
+    }
+    else
+    {
+        iff += assemble_expr(*it, root->scope);
+        iff += "    cmp     rax, 0\n";
+        iff += "    je      .I" + std::to_string(root->block_id) + "\n";
+    }
+    std::advance(it, 1);
+
+    while (it != root->children.end())
+    {
+        if ((*it)->token.type == Token::TOK_LOOP)
+        {
+            iff += assemble_loop(*it);
+        }
+        else if ((*it)->token.type == Token::TOK_IF)
+        {
+            iff += assemble_if(*it);
+        }
+        else
+        {
+            iff += assemble_expr(*it, root->scope);
+        }
+        std::advance(it, 1);
+    }
+
+    iff += ".I" + std::to_string(root->block_id) + ":\n";
 
     return iff;
 }
@@ -606,6 +638,10 @@ std::string assemble_function(Node *root)
         if (child->token.type == Token::TOK_LOOP)
         {
             function += assemble_loop(child);
+        }
+        else if (child->token.type == Token::TOK_IF)
+        {
+            function += assemble_if(child);
         }
         else
         {
