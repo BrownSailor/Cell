@@ -1,8 +1,7 @@
 #include "include/parser.h"
 
 int var_addr = 0;
-int loop_id = 0;
-int iff_id = 0;
+int block_id = 0;
 
 std::unordered_map<Token::Type, int> TYPES = 
 {
@@ -419,7 +418,7 @@ Node *parse_if(std::list<Token> &tokens, std::unordered_map<std::string, Node *>
 {
     Node *node = new_node(tokens.front());
     node->scope = scope;
-    node->block_id = iff_id++;
+    node->block_id = block_id++;
     tokens.pop_front();
 
     int paren = 0;
@@ -430,7 +429,11 @@ Node *parse_if(std::list<Token> &tokens, std::unordered_map<std::string, Node *>
     }
 
     // parse condition
-    node->children.push_back(parse_expr(tokens, node->scope));
+    if (tokens.front().type != Token::TOK_LBRACE)
+    {
+        node->children.push_back(parse_expr(tokens, node->scope));
+    }
+
     if (paren)
     {
         while (paren--)
@@ -505,7 +508,7 @@ Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node 
 {
     Node *node = new_node(tokens.front());
     node->scope = scope;
-    node->block_id = loop_id++;
+    node->block_id = block_id++;
     tokens.pop_front();
 
     int paren = 0;
@@ -694,7 +697,7 @@ Node *parse_function(std::list<Token> &tokens)
         {
             node->children.push_back(parse_loop(tokens, node->scope));
         }
-        else if (tokens.front().type == Token::TOK_IF)
+        else if (tokens.front().type == Token::TOK_IF || tokens.front().type == Token::TOK_ELSE)
         {
             node->children.push_back(parse_if(tokens, node->scope));
         }

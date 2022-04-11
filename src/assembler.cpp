@@ -499,6 +499,10 @@ std::string assemble_if(Node *root)
 
     // parse condition
     auto it = root->children.begin();
+    bool last = (*it)->token.type == Token::TOK_EQEQ || (*it)->token.type == Token::TOK_NEQ ||
+                (*it)->token.type == Token::TOK_LT || (*it)->token.type == Token::TOK_LTE ||
+                (*it)->token.type == Token::TOK_GT || (*it)->token.type == Token::TOK_GTE ||
+                (*it)->token.type == Token::TOK_LAND || (*it)->token.type == Token::TOK_LOR;
 
     if ((*it)->token.type == Token::TOK_NUM)
     {
@@ -519,7 +523,7 @@ std::string assemble_if(Node *root)
         {
             iff += assemble_loop(*it);
         }
-        else if ((*it)->token.type == Token::TOK_IF)
+        else if ((*it)->token.type == Token::TOK_IF || (*it)->token.type == Token::TOK_ELSE)
         {
             iff += assemble_if(*it);
         }
@@ -528,6 +532,11 @@ std::string assemble_if(Node *root)
             iff += assemble_expr(*it, root->scope);
         }
         std::advance(it, 1);
+    }
+
+    if (last)
+    {
+        iff += "    jmp     .I" + std::to_string(root->block_id + 1) + "\n";
     }
 
     iff += ".I" + std::to_string(root->block_id) + ":\n";
@@ -570,6 +579,10 @@ std::string assemble_loop(Node *root)
         if ((*it)->token.type == Token::TOK_LOOP)
         {
             loop += assemble_loop(*it);
+        }
+        else if ((*it)->token.type == Token::TOK_IF || (*it)->token.type == Token::TOK_ELSE)
+        {
+            loop += assemble_if(*it);
         }
         else
         {
@@ -639,7 +652,7 @@ std::string assemble_function(Node *root)
         {
             function += assemble_loop(child);
         }
-        else if (child->token.type == Token::TOK_IF)
+        else if (child->token.type == Token::TOK_IF || child->token.type == Token::TOK_ELSE)
         {
             function += assemble_if(child);
         }
