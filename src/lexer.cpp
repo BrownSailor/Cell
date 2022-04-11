@@ -5,9 +5,11 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     // Intrinsic keywords
     { "return", Token::TOK_RETURN },
     { "dump", Token::TOK_DUMP },
-    { "int", Token::TOK_INT },
     { "char", Token::TOK_CHAR },
     { "bool", Token::TOK_BOOL },
+    { "short", Token::TOK_SHORT },
+    { "int", Token::TOK_INT },
+    { "long", Token::TOK_LONG },
     { "str", Token::TOK_STR },
     { "not", Token::TOK_BANG },
     { "or", Token::TOK_LOR },
@@ -30,7 +32,7 @@ Token lex_word(const std::string &word, int row, int col, const std::string &fil
     { 
         try
         { 
-            std::stoi(word);
+            std::stoull(word);
             return { .type = Token::TOK_NUM, .data = word, .row = row, .col = col, .file = file };
         }
         catch (const std::exception &e)
@@ -496,16 +498,24 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_DUMP";
             break;
 
-        case Token::TOK_INT:
-            out << "TOKEN_INT";
-            break;
-
         case Token::TOK_CHAR:
             out << "TOKEN_CHAR";
             break;
 
         case Token::TOK_BOOL:
             out << "TOKEN_BOOL";
+            break;
+
+        case Token::TOK_SHORT:
+            out << "TOKEN_SHORT";
+            break;
+
+        case Token::TOK_INT:
+            out << "TOKEN_INT";
+            break;
+
+        case Token::TOK_LONG:
+            out << "TOKEN_LONG";
             break;
 
         case Token::TOK_STR:

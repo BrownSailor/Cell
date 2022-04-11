@@ -10,7 +10,7 @@ int main(int argc, char **argv)
 
     Node *root = parse_program(tokens);
     root = visit(root); 
-    pretty_print(root);
+    // pretty_print(root);
 
     compile_and_link(argv[1], root);
 

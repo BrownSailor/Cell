@@ -5,13 +5,14 @@ int block_id = 0;
 
 std::unordered_map<Token::Type, int> TYPES = 
 {
-    { Token::TOK_CHAR, 1 },
-    { Token::TOK_BOOL, 1 },
+    { Token::TOK_CHAR,  1 },
+    { Token::TOK_BOOL,  1 },
 
     // TODO: add more primitive types and their respective sizes
-
-    { Token::TOK_INT,  4 },
-    { Token::TOK_STR,  8 }
+    { Token::TOK_SHORT, 2 },
+    { Token::TOK_INT,   4 },
+    { Token::TOK_LONG,  8 },
+    { Token::TOK_STR,   8 }
 };
 
 /*
@@ -323,9 +324,6 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
     Node *node = new Node();
     node = parse_or(tokens, scope);
 
-    // TODO: figure out actual size of variable types and change offset by
-    //       the correct amount instead of just 8
-
     // variable declaration
     if (tokens.front().type == Token::TOK_COL)
     {
@@ -352,6 +350,7 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
 
         if (!scope.count(node->token.data))
         {
+            // TODO: figure out actual size of variable types and change offset accordingly
             var_addr += 4;
             node->offset = var_addr;
             scope.insert({ node->token.data, node });
@@ -829,6 +828,12 @@ void pretty_print(Node *node, std::ostream &out)
     out << "\n";
 }
 
+/*
+ * print_warning
+ *    Purpose: print a warning message
+ * Parameters: message - the message to print, token - the token containing the error
+ *    Returns: none
+ */
 void print_warning(std::string message, const Token &token)
 {
     print_location(token, std::cerr);
@@ -838,7 +843,7 @@ void print_warning(std::string message, const Token &token)
 /*
  * print_error
  *    Purpose: print an error and exit compilation with a failure exit status
- * Parameters: message - the message to print, row - the row of the error, col - the column of the error
+ * Parameters: message - the message to print, token - the token containing the error
  *    Returns: none
  */
 void print_error(std::string message, const Token &token)
