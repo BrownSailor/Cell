@@ -14,6 +14,7 @@ struct Node
     std::list<Node *> children;
     std::unordered_map<std::string, Node *> scope;
     int offset = 0;
+    int block_id = 0;
 };
 
 extern std::unordered_map<Token::Type, int> TYPES;

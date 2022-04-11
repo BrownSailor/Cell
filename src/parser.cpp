@@ -1,6 +1,7 @@
 #include "include/parser.h"
 
 int var_addr = 0;
+int block_id = 0;
 
 std::unordered_map<Token::Type, int> TYPES = 
 {
@@ -408,6 +409,91 @@ Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, 
 }
 
 /*
+ * parse_if
+ *    Purpose: parses a loop
+ * Parameters: tokens - the list of tokens to parse, scope - the variables that are in scope of the if block
+ *    Returns: a pointer to the new node
+ */
+Node *parse_if(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+{
+    Node *node = new_node(tokens.front());
+    node->scope = scope;
+    tokens.pop_front();
+
+    int paren = 0;
+    while (tokens.front().type == Token::TOK_LPAREN)
+    {
+        paren++;
+        tokens.pop_front();
+    }
+
+    // parse condition
+    node->children.push_back(parse_expr(tokens, node->scope));
+    if (paren)
+    {
+        while (paren--)
+        {
+            if (tokens.front().type != Token::TOK_RPAREN)
+            {
+                print_error("expected `)`", tokens.front());
+                exit(EXIT_FAILURE);
+            }
+            tokens.pop_front();
+        }
+    }
+
+    Token scope_check = check_scope(node, node->scope);
+    if (scope_check.data != "")
+    {
+        print_error("unknown identifier `" + scope_check.data + "`", scope_check);
+        exit(EXIT_FAILURE);
+    }
+
+    if (tokens.front().type == Token::TOK_EOL)
+    {
+        tokens.pop_front();
+    }
+
+    if (tokens.front().type != Token::TOK_LBRACE)
+    {
+        print_token(tokens.front());
+        print_error("expected `{`", tokens.front());
+        exit(EXIT_FAILURE);
+    }
+    tokens.pop_front();
+
+    if (tokens.front().type == Token::TOK_EOL)
+    {
+        tokens.pop_front();
+    }
+
+    while (tokens.front().type != Token::TOK_RBRACE)
+    {
+        if (tokens.front().type == Token::TOK_LOOP)
+        {
+            node->children.push_back(parse_loop(tokens, node->scope));
+        }
+        else if (tokens.front().type == Token::TOK_IF)
+        {
+            node->children.push_back(parse_if(tokens, node->scope));
+        }
+        else
+        {
+            node->children.push_back(parse_statement(tokens, node->scope));
+        }
+    }
+
+    tokens.pop_front();
+
+    if (tokens.front().type == Token::TOK_EOL)
+    {
+        tokens.pop_front();
+    }
+
+    return node;
+}
+
+/*
  * parse_loop
  *    Purpose: parses a loop
  * Parameters: tokens - the list of tokens to parse, scope - the variables that are in scope of the loop
@@ -417,6 +503,7 @@ Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node 
 {
     Node *node = new_node(tokens.front());
     node->scope = scope;
+    node->block_id = block_id++;
     tokens.pop_front();
 
     int paren = 0;
@@ -499,7 +586,14 @@ Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node 
 
     while (tokens.front().type != Token::TOK_RBRACE)
     {
-        node->children.push_back(parse_statement(tokens, node->scope));
+        if (tokens.front().type == Token::TOK_LOOP)
+        {
+            node->children.push_back(parse_loop(tokens, node->scope));
+        }
+        else
+        {
+            node->children.push_back(parse_statement(tokens, node->scope));
+        }
     }
 
     tokens.pop_front();
@@ -597,6 +691,10 @@ Node *parse_function(std::list<Token> &tokens)
         else if (tokens.front().type == Token::TOK_LOOP)
         {
             node->children.push_back(parse_loop(tokens, node->scope));
+        }
+        else if (tokens.front().type == Token::TOK_IF)
+        {
+            node->children.push_back(parse_if(tokens, node->scope));
         }
         else
         {

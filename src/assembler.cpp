@@ -1,10 +1,7 @@
 #include "include/assembler.h"
 
 // global jump address variable for short circuit assembling
-int jmp_addr = 0;
-
-// global jump address variable for loop assembling
-int loop_jmp_addr = 0;
+int jmp = 0;
 
 int get_stack_alignment(Node *root)
 {
@@ -12,20 +9,19 @@ int get_stack_alignment(Node *root)
     {
         return 0;
     }
-    if (root->scope.size())
-    {
-        int curr = 0;
-        for (auto [k, v] : root->scope)
-        {
-            curr = std::max(curr, v->offset);
-        }
-        return curr;
-    }
 
     int stack_alignment = 0;
     for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
     {
         stack_alignment = std::max(stack_alignment, get_stack_alignment(*it));
+    }
+
+    if (root->scope.size())
+    {
+        for (auto [k, v] : root->scope)
+        {
+            stack_alignment = std::max(stack_alignment, v->offset);
+        }
     }
 
     return stack_alignment;
@@ -346,28 +342,28 @@ std::string assemble_binary(Node *root, const std::unordered_map<std::string, No
         expr += assemble_expr(*it, scope);
         std::advance(it, 1);
         expr += "    cmp     al, 0\n";
-        expr += "    je      .j_" + std::to_string(jmp_addr) + "\n";
+        expr += "    je      .j_" + std::to_string(jmp) + "\n";
 
         expr += assemble_expr(*it, scope);
         std::advance(it, 1);
         expr += "    cmp     al, 0\n";
         expr += "    mov     rax, 0\n";
         expr += "    setne   al\n";
-        expr += ".j_" + std::to_string(jmp_addr++) + ":\n";
+        expr += ".j_" + std::to_string(jmp++) + ":\n";
     }
     else if (root->token.type == Token::TOK_LOR)
     {
         expr += assemble_expr(*it, scope);
         std::advance(it, 1);
         expr += "    cmp     al, 0\n";
-        expr += "    jne     .j_" + std::to_string(jmp_addr) + "\n";
+        expr += "    jne     .j_" + std::to_string(jmp) + "\n";
 
         expr += assemble_expr(*it, scope);
         std::advance(it, 1);
         expr += "    cmp     al, 0\n";
         expr += "    mov     rax, 0\n";
         expr += "    setne   al\n";
-        expr += ".j_" + std::to_string(jmp_addr++) + ":\n";
+        expr += ".j_" + std::to_string(jmp++) + ":\n";
     }
 
     return expr;
@@ -497,6 +493,16 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
     return expr;
 }
 
+std::string assemble_if(Node *root)
+{
+    std::string iff = "";
+
+    // parse condition
+    iff += assemble_expr(root->children.front(), root->scope);
+
+    return iff;
+}
+
 /*
  * assemble_loop
  *    Purpose: writes assembly for a loop
@@ -507,7 +513,7 @@ std::string assemble_loop(Node *root)
 {
     std::string loop = "";
     auto list_it = root->children.front()->children.begin();
-    
+
     // init and cond given
     if (root->children.front()->children.size() == 3 ||
        (root->children.front()->children.size() == 2 &&
@@ -517,10 +523,11 @@ std::string assemble_loop(Node *root)
         std::advance(list_it, 1);
     }
 
-    loop += ".l_" + std::to_string(loop_jmp_addr++) + ":\n";
+    loop += ".L" + std::to_string(root->block_id) + "_s:\n";
+
     loop += assemble_expr(*list_it, root->scope);
     loop += "    cmp     rax, 0\n";
-    loop += "    je      .l_" + std::to_string(loop_jmp_addr) + "\n";
+    loop += "    je      .L" + std::to_string(root->block_id) + "_e\n";
     std::advance(list_it, 1);
     
     // parse body of loop
@@ -528,7 +535,14 @@ std::string assemble_loop(Node *root)
     std::advance(it, 1);
     while (it != root->children.end())
     {
-        loop += assemble_expr(*it, root->scope);
+        if ((*it)->token.type == Token::TOK_LOOP)
+        {
+            loop += assemble_loop(*it);
+        }
+        else
+        {
+            loop += assemble_expr(*it, root->scope);
+        }
         std::advance(it, 1);
     }
 
@@ -540,9 +554,8 @@ std::string assemble_loop(Node *root)
         loop += assemble_expr(*list_it, root->scope);
         std::advance(list_it, 1);
     }
-    loop += "    jmp     .l_" + std::to_string(loop_jmp_addr - 1) + "\n";
-    loop += ".l_" + std::to_string(loop_jmp_addr) + ":\n";
-    loop_jmp_addr++;
+    loop += "    jmp     .L" + std::to_string(root->block_id) + "_s\n";
+    loop += ".L" + std::to_string(root->block_id) + "_e:\n";
 
     return loop;
 }
