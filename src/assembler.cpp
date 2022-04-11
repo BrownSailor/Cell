@@ -493,16 +493,12 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
     return expr;
 }
 
-std::string assemble_if(Node *root)
+std::string assemble_if(Node *root, bool last)
 {
     std::string iff = "";
 
     // parse condition
     auto it = root->children.begin();
-    bool last = (*it)->token.type == Token::TOK_EQEQ || (*it)->token.type == Token::TOK_NEQ ||
-                (*it)->token.type == Token::TOK_LT || (*it)->token.type == Token::TOK_LTE ||
-                (*it)->token.type == Token::TOK_GT || (*it)->token.type == Token::TOK_GTE ||
-                (*it)->token.type == Token::TOK_LAND || (*it)->token.type == Token::TOK_LOR;
 
     if ((*it)->token.type == Token::TOK_NUM)
     {
@@ -646,19 +642,28 @@ std::string assemble_function(Node *root)
         root->children.pop_front();
     }
 
-    for (Node *child : root->children)
+    for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
     {
-        if (child->token.type == Token::TOK_LOOP)
+        if ((*it)->token.type == Token::TOK_LOOP)
         {
-            function += assemble_loop(child);
+            function += assemble_loop(*it);
         }
-        else if (child->token.type == Token::TOK_IF || child->token.type == Token::TOK_ELSE)
+        else if ((*it)->token.type == Token::TOK_IF || (*it)->token.type == Token::TOK_ELSE)
         {
-            function += assemble_if(child);
+            std::advance(it, 1);
+            if (it == root->children.end() || (*it)->token.type == Token::TOK_IF || (*it)->token.type == Token::TOK_ELSE)
+            {
+                std::advance(it, -1);
+                function += assemble_if(*it, true);
+            }
+            else
+            {
+                function += assemble_if(*it);
+            }
         }
         else
         {
-            function += assemble_expr(child, root->scope);
+            function += assemble_expr(*it, root->scope);
         }
     }
     

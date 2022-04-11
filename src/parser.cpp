@@ -595,6 +595,10 @@ Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node 
         {
             node->children.push_back(parse_loop(tokens, node->scope));
         }
+        else if (tokens.front().type == Token::TOK_IF || tokens.front().type == Token::TOK_ELSE)
+        {
+            node->children.push_back(parse_if(tokens, node->scope));
+        }
         else
         {
             node->children.push_back(parse_statement(tokens, node->scope));
