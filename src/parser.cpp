@@ -240,7 +240,7 @@ Node *parse_lt_gt(std::list<Token> &tokens, std::unordered_map<std::string, Node
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_term(tokens, scope));
+        node = binary(node, op, parse_add_sub(tokens, scope));
     }
 
     return node;
@@ -263,7 +263,7 @@ Node *parse_eq_neq(std::list<Token> &tokens, std::unordered_map<std::string, Nod
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_term(tokens, scope));
+        node = binary(node, op, parse_lt_gt(tokens, scope));
     }
 
     return node;

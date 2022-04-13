@@ -2,7 +2,7 @@
 
 // global jump address variable for short circuit assembling
 int jmp = 0;
-
+int ret = 0;
 
 std::unordered_map<Token::Type, std::string> WORDS = 
 {
@@ -11,6 +11,7 @@ std::unordered_map<Token::Type, std::string> WORDS =
     { Token::TOK_SHORT, "WORD" },
     { Token::TOK_INT, "DWORD" },
     { Token::TOK_LONG, "QWORD" },
+    { Token::TOK_NUM, "DWORD" },
 };
 
 int get_stack_alignment(Node *root)
@@ -82,207 +83,90 @@ std::string assemble_binary(Node *root, const std::unordered_map<std::string, No
     // arith
     if (root->token.type == Token::TOK_PLUS)
     {
-        if ((root->children.front()->token.type == Token::TOK_NUM ||
-             root->children.front()->token.type == Token::TOK_ID))
-        {
-            expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-            std::advance(it, 1);
-        }
-        else
-        {
-            expr += assemble_expr(*it, scope);
-            std::advance(it, 1);
-        }
+        expr += assemble_expr(*it, scope);
+        std::advance(it, 1);
 
-        if (root->children.back()->token.type == Token::TOK_NUM ||
-            root->children.back()->token.type == Token::TOK_ID)
-        {
-            expr += "    add     rax, " + assemble_expr(*it, scope) + "\n";
-        }
-        else
-        {
-            expr += "    push    rax\n";
-            expr += assemble_expr(*it, scope);
-            expr += "    mov     rcx, rax\n";
-            expr += "    pop     rax\n";
-            expr += "    add     rax, rcx\n";
-        }
+        expr += "    push    rax\n";
+        expr += assemble_expr(*it, scope);
+
+        expr += "    mov     rcx, rax\n";
+        expr += "    pop     rax\n";
+        expr += "    add     rax, rcx\n";
     }
     else if (root->token.type == Token::TOK_MINUS)
     {
-        if ((root->children.front()->token.type == Token::TOK_NUM ||
-             root->children.front()->token.type == Token::TOK_ID))
-        {
-            expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-            std::advance(it, 1);
-        }
-        else
-        {
-            expr += assemble_expr(*it, scope);
-            std::advance(it, 1);
-        }
+        expr += assemble_expr(*it, scope);
+        std::advance(it, 1);
 
-        if (root->children.back()->token.type == Token::TOK_NUM ||
-            root->children.back()->token.type == Token::TOK_ID)
-        {
-            expr += "    sub     rax, " + assemble_expr(*it, scope) + "\n";
-        }
-        else
-        {
-            expr += "    push    rax\n";
-            expr += assemble_expr(*it, scope);
-            expr += "    mov     rcx, rax\n";
-            expr += "    pop     rax\n";
-            expr += "    sub     rax, rcx\n";
-        }
+        expr += "    push    rax\n";
+        expr += assemble_expr(*it, scope);
+
+        expr += "    mov     rcx, rax\n";
+        expr += "    pop     rax\n";
+        expr += "    sub     rax, rcx\n";
     }
     else if (root->token.type == Token::TOK_STAR)
     {
-        if ((root->children.front()->token.type == Token::TOK_NUM ||
-             root->children.front()->token.type == Token::TOK_ID))
-        {
-            expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-            std::advance(it, 1);
-        }
-        else
-        {
-            expr += assemble_expr(*it, scope);
-            std::advance(it, 1);
-        }
+        expr += assemble_expr(*it, scope);
+        std::advance(it, 1);
 
-        if (root->children.back()->token.type == Token::TOK_NUM ||
-            root->children.back()->token.type == Token::TOK_ID)
-        {
-            expr += "    mul     " + assemble_expr(*it, scope) + "\n";
-        }
-        else
-        {
-            expr += "    push    rax\n";
-            expr += assemble_expr(*it, scope);
-            expr += "    mov     rcx, rax\n";
-            expr += "    pop     rax\n";
-            expr += "    mul     rcx\n";
-        }
+        expr += "    push    rax\n";
+        expr += assemble_expr(*it, scope);
+
+        expr += "    mov     rcx, rax\n";
+        expr += "    pop     rax\n";
+        expr += "    mul     rcx\n";
     }
     else if (root->token.type == Token::TOK_SLASH)
     {
-        if ((root->children.front()->token.type == Token::TOK_NUM ||
-             root->children.front()->token.type == Token::TOK_ID))
-        {
-            expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-            std::advance(it, 1);
-        }
-        else
-        {
-            expr += assemble_expr(*it, scope);
-            std::advance(it, 1);
-        }
+        expr += "    xor     rdx, rdx\n";
+        expr += assemble_expr(*it, scope);
+        std::advance(it, 1);
 
-        if (root->children.back()->token.type == Token::TOK_NUM ||
-            root->children.back()->token.type == Token::TOK_ID)
-        {
-            expr += "    xor     rdx, rdx\n";
-            expr += "    mov     rcx, " + assemble_expr(*it, scope) + "\n";
-            expr += "    div     rcx\n";
-        }
-        else
-        {
-            expr += "    push    rax\n";
-            expr += assemble_expr(*it, scope);
-            expr += "    mov     rcx, rax\n";
-            expr += "    pop     rax\n";
-            expr += "    xor     rdx, rdx\n";
-            expr += "    div     rcx\n";
-        }
+        expr += "    push    rax\n";
+        expr += assemble_expr(*it, scope);
+
+        expr += "    mov     rcx, rax\n";
+        expr += "    pop     rax\n";
+        expr += "    div     rcx\n";
     }
     else if (root->token.type == Token::TOK_PERCENT)
     {
-        if ((root->children.front()->token.type == Token::TOK_NUM ||
-             root->children.front()->token.type == Token::TOK_ID))
-        {
-            expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-            std::advance(it, 1);
-        }
-        else
-        {
-            expr += assemble_expr(*it, scope);
-            std::advance(it, 1);
-        }
+        expr += "    xor     rdx, rdx\n";
+        expr += assemble_expr(*it, scope);
+        std::advance(it, 1);
 
-        if (root->children.back()->token.type == Token::TOK_NUM ||
-            root->children.back()->token.type == Token::TOK_ID)
-        {
-            expr += "    xor     rdx, rdx\n";
-            expr += "    mov     rcx, " + assemble_expr(*it, scope) + "\n";
-            expr += "    div     rcx\n";
-            expr += "    mov     rax, rdx\n";
-        }
-        else
-        {
-            expr += "    push    rax\n";
-            expr += assemble_expr(*it, scope);
-            expr += "    mov     rcx, rax\n";
-            expr += "    pop     rax\n";
-            expr += "    xor     rdx, rdx\n";
-            expr += "    div     rcx\n";
-            expr += "    mov     rax, rdx\n";
-        }
+        expr += "    push    rax\n";
+        expr += assemble_expr(*it, scope);
+
+        expr += "    mov     rcx, rax\n";
+        expr += "    pop     rax\n";
+        expr += "    div     rcx\n";
+        expr += "    mov     rax, rdx\n";
     }
     else if (root->token.type == Token::TOK_SHL)
     {
-        if ((root->children.front()->token.type == Token::TOK_NUM ||
-             root->children.front()->token.type == Token::TOK_ID))
-        {
-            expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-            std::advance(it, 1);
-        }
-        else
-        {
-            expr += assemble_expr(*it, scope);
-            std::advance(it, 1);
-        }
+        expr += assemble_expr(*it, scope);
+        std::advance(it, 1);
 
-        if (root->children.back()->token.type == Token::TOK_NUM ||
-            root->children.back()->token.type == Token::TOK_ID)
-        {
-            expr += "    shl     " + assemble_expr(*it, scope) + "\n";
-        }
-        else
-        {
-            expr += "    push    rax\n";
-            expr += assemble_expr(*it, scope);
-            expr += "    mov     rcx, rax\n";
-            expr += "    pop     rax\n";
-            expr += "    shl     rax, cl\n";
-        }
+        expr += "    push    rax\n";
+        expr += assemble_expr(*it, scope);
+
+        expr += "    mov     rcx, rax\n";
+        expr += "    pop     rax\n";
+        expr += "    shl     rax, cl\n";
     }
     else if (root->token.type == Token::TOK_SHR)
     {
-        if ((root->children.front()->token.type == Token::TOK_NUM ||
-             root->children.front()->token.type == Token::TOK_ID))
-        {
-            expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-            std::advance(it, 1);
-        }
-        else
-        {
-            expr += assemble_expr(*it, scope);
-            std::advance(it, 1);
-        }
+        expr += assemble_expr(*it, scope);
+        std::advance(it, 1);
 
-        if (root->children.back()->token.type == Token::TOK_NUM ||
-            root->children.back()->token.type == Token::TOK_ID)
-        {
-            expr += "    shr     " + assemble_expr(*it, scope) + "\n";
-        }
-        else
-        {
-            expr += "    push    rax\n";
-            expr += assemble_expr(*it, scope);
-            expr += "    mov     rcx, rax\n";
-            expr += "    pop     rax\n";
-            expr += "    shr     rax, cl\n";
-        }
+        expr += "    push    rax\n";
+        expr += assemble_expr(*it, scope);
+
+        expr += "    mov     rcx, rax\n";
+        expr += "    pop     rax\n";
+        expr += "    shr     rax, cl\n";
     }
 
     // boolean
@@ -293,31 +177,16 @@ std::string assemble_binary(Node *root, const std::unordered_map<std::string, No
              root->token.type == Token::TOK_GT ||
              root->token.type == Token::TOK_GTE)
     {
-        if ((root->children.front()->token.type == Token::TOK_NUM ||
-             root->children.front()->token.type == Token::TOK_ID))
-        {
-            expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-            std::advance(it, 1);
-        }
-        else
-        {
-            expr += assemble_expr(*it, scope);
-            std::advance(it, 1);
-        }
+        expr += assemble_expr(*it, scope);
+        std::advance(it, 1);
 
-        if (root->children.back()->token.type == Token::TOK_NUM ||
-            root->children.back()->token.type == Token::TOK_ID)
-        {
-            expr += "    cmp     rax, " + assemble_expr(*it, scope) + "\n";
-        }
-        else
-        {
-            expr += "    push    rax\n";
-            expr += assemble_expr(*it, scope);
-            expr += "    mov     rcx, rax\n";
-            expr += "    pop     rax\n";
-            expr += "    cmp     rax, rcx\n";
-        }
+        expr += "    push    rax\n";
+        expr += assemble_expr(*it, scope);
+
+        expr += "    mov     rcx, rax\n";
+        expr += "    pop     rax\n";
+        expr += "    cmp     rax, rcx\n";
+
         expr += "    mov     rax, 0\n";
 
         if (root->token.type == Token::TOK_EQEQ)
@@ -393,24 +262,14 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
 
     if (root->token.type == Token::TOK_DUMP)
     {
-        if (root->children.front()->token.type == Token::TOK_NUM)
-        {
-            expr += "    mov     rdi, " + assemble_expr(root->children.front(), scope) + "\n";
-        }
-        else if (root->children.front()->token.type == Token::TOK_ID)
-        {
-            expr += "    mov     rdi, " + assemble_expr(root->children.front(), scope) + "\n";
-        }
-        else
-        {
-            expr += assemble_expr(root->children.front(), scope);
-            expr += "    mov     rdi, rax\n";
-        }
+        expr += assemble_expr(root->children.front(), scope);
+        expr += "    mov     rdi, rax\n";
         expr += "    call    _dump\n";
     }
     else if (root->token.type == Token::TOK_RETURN)
     {
-        expr += "    mov     rax, " + assemble_expr(root->children.front(), scope) + "\n";
+        expr += assemble_expr(root->children.front(), scope);
+        expr += "    jmp     .R_" + std::to_string(ret) + "\n";
     }
     else if (root->token.type == Token::TOK_ID)
     {
@@ -420,53 +279,30 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
             auto it = root->children.begin();
             std::advance(it, 1);
 
-            // if ((*it)->token.type == Token::TOK_NUM)
-            // {
-            //     std::string word = WORDS[root->children.front()->token.type];
-            //     expr += "    mov     " + word + " [rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], ";
-            //     expr += assemble_expr(*it, scope) + "\n";
-            // }
-            // else
-            // {
-                std::string word = WORDS[root->children.front()->token.type];
-                expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-                expr += "    mov     " + word + " [rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], rax\n";
-            // }
+            std::string word = WORDS[root->children.front()->token.type];
+            std::string rax = word == "QWORD" ? "rax" : word == "DWORD" ? "eax" : word == "WORD" ? "ax" : "al";
+            expr += assemble_expr(*it, scope);
+            expr += "    mov     " + word + " [rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], " + rax + "\n";
         }
         else if (root->children.size() == 1 && !TYPES.count(root->token.type))
         {
             auto it = root->children.begin();
-            if ((*it)->token.type == Token::TOK_NUM)
-            {
-                std::string word = WORDS[scope.at(root->token.data)->children.front()->token.type];
-                expr += "    mov     " + word + " [rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], ";
-                expr += assemble_expr(*it, scope) + "\n";
-            }
-            else
-            {
-                if ((*it)->token.type == Token::TOK_ID)
-                {
-                    expr += "    mov     rax, " + assemble_expr(*it, scope) + "\n";
-                }
-                else
-                {
-                    expr += assemble_expr(*it, scope);
-                }
+            expr += assemble_expr(*it, scope);
 
-                std::string word = WORDS[scope.at(root->token.data)->children.front()->token.type];
-                expr += "    mov     " + word + " [rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], rax\n";
-            }
+            std::string word = WORDS[scope.at(root->token.data)->children.front()->token.type];
+            std::string rax = word == "QWORD" ? "rax" : word == "DWORD" ? "eax" : word == "WORD" ? "ax" : "al";
+            expr += "    mov     " + word + " [rbp-" + std::to_string(scope.at(root->token.data)->offset) + "], " + rax + "\n";
         }
         else if (root->children.size() == 0)
         {
             std::string word = WORDS[scope.at(root->token.data)->children.front()->token.type];
-            expr += word + " [rbp-" + std::to_string(scope.at(root->token.data)->offset) + "]"; 
+            std::string rax = word == "QWORD" ? "rax" : word == "DWORD" ? "eax" : word == "WORD" ? "ax" : "al";
+            expr += "    mov     " + rax + ", " + word + " [rbp-" + std::to_string(scope.at(root->token.data)->offset) + "]\n"; 
         }
     }
     else if (root->token.type == Token::TOK_NUM)
     {
-        // expr += "    mov     rax, " + root->token.data + "\n";
-        expr += root->token.data;
+        expr += "    mov     rax, " + root->token.data + "\n";
     }
     else if (root->token.type == Token::TOK_PLUS || 
              root->token.type == Token::TOK_STAR || 
@@ -581,7 +417,7 @@ std::string assemble_loop(Node *root)
     if ((*list_it)->token.type == Token::TOK_ID ||
         (*list_it)->token.type == Token::TOK_NUM)
     {
-        loop += "    mov     rax, " + assemble_expr(*list_it, root->scope) + "\n";
+        loop += assemble_expr(*list_it, root->scope);
     }
     else
     {
@@ -692,6 +528,7 @@ std::string assemble_function(Node *root)
     }
     
     // function epilogue
+    function += ".R_" + std::to_string(ret++) + ":\n";
     function += "    mov     rsp, rbp\n";
     function += "    pop     rbp\n";
     function += "    ret\n";
