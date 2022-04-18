@@ -4,7 +4,7 @@
 ```cpp
 // hello world
 
-main(argc: int, argv: []str): int 
+main(argc: int, argv: **char): int 
 {
     print "Hello, World!\n"
     
@@ -14,7 +14,7 @@ main(argc: int, argv: []str): int
 ```cpp
 // fizzbuzz
 
-main(argc: int, argv: []str): int 
+main(argc: int, argv: **char): int 
 {
     @ i: int = 1, i < 20, i++
     {
