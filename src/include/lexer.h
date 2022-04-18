@@ -20,6 +20,7 @@ struct Token
 {
     enum Type
     {
+        TOK_NONE,
         // Non built-ins
         TOK_ID,
         TOK_NUM,

@@ -9,7 +9,7 @@ int main(int argc, char **argv)
     // print_lex(tokens);
 
     Node *root = parse_program(tokens);
-    root = visit(root); 
+    root = visit_expr(root); 
     pretty_print(root);
 
     compile_and_link(argv[1], root);

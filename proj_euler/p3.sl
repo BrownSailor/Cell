@@ -1,7 +1,7 @@
 main(argc: int, argv: **char): int {
 
     num: long = 600851475143
-    ans: long = 1
+    ans: long = 2
 
     @ num > ans {
         ? num % ans == 0 {

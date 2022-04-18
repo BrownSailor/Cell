@@ -3,6 +3,7 @@
 
 #include "parser.h"
 
-Node *visit(Node *root);
+Node *visit_expr(Node *root);
+Node *visit_type(Node *root);
 
 #endif

@@ -13,8 +13,7 @@ struct Node
     Token token;
     std::list<Node *> children;
     std::unordered_map<std::string, Node *> scope;
-    int offset = 0;
-    int block_id = 0;
+    Token::Type expr_type = Token::TOK_NONE;
 };
 
 extern std::unordered_map<Token::Type, int> TYPES;

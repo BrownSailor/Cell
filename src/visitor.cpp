@@ -1,17 +1,47 @@
 #include "include/visitor.h"
 
-Node *visit(Node *root)
+/*
+ * visit_expr
+ *    Purpose: visit each node in the tree and simplify possible expressions
+ * Parameters: root - the root of the tree to visit
+ *    Returns: the simplified expression tree
+ */
+Node *visit_expr(Node *root)
 {
     for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
     {
-        *it = visit(*it);
+        *it = visit_expr(*it);
     }
 
     if (root == nullptr)
     {
         return nullptr;
     }
-    if ((root->token.type == Token::TOK_PLUS ||
+    else if ((root->token.type == Token::TOK_MINUS ||
+              root->token.type == Token::TOK_TILDA ||
+              root->token.type == Token::TOK_BANG) && 
+              root->children.front()->token.type == Token::TOK_NUM &&
+              root->children.size() == 1)
+    {
+        int a = std::stoi(root->children.front()->token.data);
+        if (root->token.type == Token::TOK_MINUS)
+        {
+            a = -a;
+        }
+        else if (root->token.type == Token::TOK_TILDA)
+        {
+            a = ~a;
+        }
+        else if (root->token.type == Token::TOK_BANG)
+        {
+            a = !a;
+        }
+
+        Node *new_root = new_node({ .type = Token::TOK_NUM, .data = std::to_string(a) });
+
+        return new_root;
+    }
+    else if ((root->token.type == Token::TOK_PLUS ||
         root->token.type == Token::TOK_MINUS ||
         root->token.type == Token::TOK_STAR ||
         root->token.type == Token::TOK_SLASH ||
@@ -100,3 +130,14 @@ Node *visit(Node *root)
 
     return root;
 }
+
+/*
+ * visit_type
+ *    Purpose: visit each node in the tree and assign a type to each expression
+ * Parameters: root - the root of the tree to visit
+ *    Returns: the expression tree with types assigned
+ */
+// Node *visit_type(Node *root)
+// {
+
+// }

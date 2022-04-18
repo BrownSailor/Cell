@@ -1,5 +1,5 @@
 # slang
-### a compiled, statically-typed programming language just for fun
+### a compiled, statically-typed programming language with easy to type syntax and high performance
 
 ```cpp
 // hello world
