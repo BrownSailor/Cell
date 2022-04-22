@@ -42,6 +42,8 @@ struct Token
         // Unary operators
         TOK_BANG,
         TOK_TILDA,
+        TOK_INC,
+        TOK_DEC,
 
         // Binary operators
         TOK_PLUS,

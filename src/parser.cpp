@@ -121,7 +121,9 @@ Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node 
     else if (tokens.front().type == Token::TOK_TILDA || 
              tokens.front().type == Token::TOK_STAR || 
              tokens.front().type == Token::TOK_BANG || 
-             tokens.front().type == Token::TOK_MINUS)
+             tokens.front().type == Token::TOK_MINUS ||
+             tokens.front().type == Token::TOK_INC ||
+             tokens.front().type == Token::TOK_DEC)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
@@ -152,6 +154,13 @@ Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node 
             }
         }
         tokens.pop_front();
+
+        if (tokens.front().type == Token::TOK_INC ||
+            tokens.front().type == Token::TOK_DEC)
+        {
+            node->children.push_back(new_node(tokens.front()));
+            tokens.pop_front();
+        }
     }
 
     return node;

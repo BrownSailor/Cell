@@ -153,6 +153,11 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
                 expr += assemble_type(root->children.front());
                 expr += " " + root->token.data;
             }
+            else if (root->children.front()->token.type == Token::TOK_INC ||
+                     root->children.front()->token.type == Token::TOK_DEC)
+            {
+                expr += root->token.data + root->children.front()->token.data + ";\n";
+            }
             else
             {
                 expr += root->token.data + " = " + assemble_expr(root->children.back(), scope) + ";\n";
@@ -174,7 +179,9 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
     else if (root->children.size() == 1 &&
             (root->token.type == Token::TOK_MINUS ||
              root->token.type == Token::TOK_TILDA ||
-             root->token.type == Token::TOK_BANG))
+             root->token.type == Token::TOK_BANG ||
+             root->token.type == Token::TOK_INC ||
+             root->token.type == Token::TOK_DEC))
     {
         expr += assemble_unary(root, scope);
     }
@@ -245,7 +252,7 @@ std::string assemble_if(Node *root)
         std::advance(it, 1);
     }
 
-    iff += "}\n";
+    iff += ";\n}\n";
     return iff;
 }
 
@@ -301,7 +308,7 @@ std::string assemble_loop(Node *root)
         loop += assemble_expr(*list_it, root->scope);
         std::advance(list_it, 1);
     }
-    loop += "}\n";
+    loop += ";\n}\n";
     
     return loop;
 }
@@ -387,8 +394,5 @@ void assemble(std::string filename, Node *root)
     std::ofstream out;
     out.open(filename);
 
-    std::string x = assemble_program(root);
-    std::cout << x << "\n";
-    // out << x;
     out << assemble_program(root);
 }

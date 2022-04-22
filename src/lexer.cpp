@@ -240,9 +240,18 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_PLUS, .data = "+", .row = row, .col = col, .file = file });
 
-            col_end++;
+            if (line[i + 1] == '+')
+            {
+                tokens.push_back({ .type = Token::TOK_INC, .data = "++", .row = row, .col = col, .file = file });
+                i++;
+                col_end += 2;
+            }
+            else
+            {
+                tokens.push_back({ .type = Token::TOK_PLUS, .data = "+", .row = row, .col = col, .file = file });
+                col_end++;
+            }
         }
         else if (c == '-')
         {
@@ -253,9 +262,18 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_MINUS, .data = "-", .row = row, .col = col, .file = file });
-
-            col_end++;
+            
+            if (line[i + 1] == '-')
+            {
+                tokens.push_back({ .type = Token::TOK_DEC, .data = "--", .row = row, .col = col, .file = file });
+                i++;
+                col_end += 2;
+            }
+            else
+            {
+                tokens.push_back({ .type = Token::TOK_MINUS, .data = "-", .row = row, .col = col, .file = file });
+                col_end++;
+            }
         }
         else if (c == '*')
         {
@@ -533,6 +551,14 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
         // Unary operators
         case Token::TOK_TILDA:
             out << "TOKEN_TILDA";
+            break;
+
+        case Token::TOK_INC:
+            out << "TOKEN_INC";
+            break;
+
+        case Token::TOK_DEC:
+            out << "TOKEN_DEC";
             break;
 
         // Binary operators

@@ -32,5 +32,3 @@ main(argc: int, argv: **char): int
     return 0
 }
 ```
-
-Using the RBX register on my computer throws a segmentation fault. Not sure why.
