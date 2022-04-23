@@ -19,7 +19,7 @@ main(argc: int, argv: **char): int {
         }
     }
 
-    dump max
+    print max
 
     return 0
 }

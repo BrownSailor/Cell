@@ -11,7 +11,7 @@ main(argc: int, argv: **char): int {
         t1 = tmp
     }
 
-    dump sum
+    print sum
 
     return 0
 }

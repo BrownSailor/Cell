@@ -11,7 +11,7 @@ main(argc: int, argv: **char): int {
         }
     }
 
-    dump ans
+    print ans
 
     return 0
 }

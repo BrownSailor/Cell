@@ -79,6 +79,15 @@ Node *unary(Node *op, Node *node)
 {
     op->children.push_back(node);
 
+    if (op->token.type == Token::TOK_BANG)
+    {
+        op->expr_type = Token::TOK_BOOL;
+    }
+    else
+    {
+        op->expr_type = op->children.front()->expr_type;
+    }
+
     return op;
 }
 
@@ -93,6 +102,8 @@ Node *binary(Node *left, Node *op, Node *right)
 {
     op->children.push_back(left);
     op->children.push_back(right);
+
+    op->expr_type = std::max(left->expr_type, right->expr_type);
 
     return op;
 }
@@ -140,7 +151,11 @@ Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node 
         {
             int64_t x = std::stoll(tokens.front().data);
 
-            if (x >= -(1LL << 15) && x < (1LL << 15))
+            if (x >= -(1LL << 7) && x < (1LL << 7))
+            {
+                node->expr_type = Token::TOK_BYTE;
+            }
+            else if (x >= -(1LL << 15) && x < (1LL << 15))
             {
                 node->expr_type = Token::TOK_SHORT;
             }
@@ -151,6 +166,13 @@ Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node 
             else
             {
                 node->expr_type = Token::TOK_LONG;
+            }
+        }
+        else if (tokens.front().type == Token::TOK_ID)
+        {
+            if (scope.count(tokens.front().data))
+            {
+                node->expr_type = scope[tokens.front().data]->expr_type;
             }
         }
         tokens.pop_front();
@@ -187,11 +209,19 @@ Node *parse_term(std::list<Token> &tokens, std::unordered_map<std::string, Node 
         tokens.pop_front();
 
         node = binary(node, op, parse_fact(tokens, scope));
-    }
 
-    if (node->children.size() == 2)
-    {
-        node->expr_type = std::max(node->children.front()->expr_type, node->children.back()->expr_type);
+        if (node->children.front()->token.type == Token::TOK_ID)
+        {
+            node->children.front()->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
+        }
+        if (node->children.back()->token.type == Token::TOK_ID)
+        {
+            node->children.back()->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
+        }
     }
 
     return node;
@@ -215,11 +245,19 @@ Node *parse_add_sub(std::list<Token> &tokens, std::unordered_map<std::string, No
         tokens.pop_front();
 
         node = binary(node, op, parse_term(tokens, scope));
-    }
 
-    if (node->children.size() == 2)
-    {
-        node->expr_type = std::max(node->children.front()->expr_type, node->children.back()->expr_type);
+        if (node->children.front()->token.type == Token::TOK_ID)
+        {
+            node->children.front()->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
+        }
+        if (node->children.back()->token.type == Token::TOK_ID)
+        {
+            node->children.back()->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
+        }
     }
 
     return node;
@@ -245,9 +283,22 @@ Node *parse_lt_gt(std::list<Token> &tokens, std::unordered_map<std::string, Node
         tokens.pop_front();
 
         node = binary(node, op, parse_add_sub(tokens, scope));
-    }
 
-    node->expr_type = Token::TOK_BOOL;
+        if (node->children.front()->token.type == Token::TOK_ID)
+        {
+            node->children.front()->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
+        }
+        if (node->children.back()->token.type == Token::TOK_ID)
+        {
+            node->children.back()->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
+        }
+
+        node->expr_type = Token::TOK_BOOL;
+    }
 
     return node;
 }
@@ -270,9 +321,22 @@ Node *parse_eq_neq(std::list<Token> &tokens, std::unordered_map<std::string, Nod
         tokens.pop_front();
 
         node = binary(node, op, parse_lt_gt(tokens, scope));
-    }
 
-    node->expr_type = Token::TOK_BOOL;
+        if (node->children.front()->token.type == Token::TOK_ID)
+        {
+            node->children.front()->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
+        }
+        if (node->children.back()->token.type == Token::TOK_ID)
+        {
+            node->children.back()->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
+        }
+
+        node->expr_type = Token::TOK_BOOL;
+    }
 
     return node;
 }
@@ -294,9 +358,22 @@ Node *parse_and(std::list<Token> &tokens, std::unordered_map<std::string, Node *
         tokens.pop_front();
 
         node = binary(node, op, parse_eq_neq(tokens, scope));
-    }
 
-    node->expr_type = Token::TOK_BOOL;
+        if (node->children.front()->token.type == Token::TOK_ID)
+        {
+            node->children.front()->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
+        }
+        if (node->children.back()->token.type == Token::TOK_ID)
+        {
+            node->children.back()->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
+        }
+
+        node->expr_type = Token::TOK_BOOL;
+    }
 
     return node;
 }
@@ -318,9 +395,22 @@ Node *parse_or(std::list<Token> &tokens, std::unordered_map<std::string, Node *>
         tokens.pop_front();
 
         node = binary(node, op, parse_and(tokens, scope));
-    }
+        
+        if (node->children.front()->token.type == Token::TOK_ID)
+        {
+            node->children.front()->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->expr_type = node->expr_type;
+            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
+        }
+        if (node->children.back()->token.type == Token::TOK_ID)
+        {
+            node->children.back()->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->expr_type = node->expr_type;
+            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
+        }
 
-    node->expr_type = Token::TOK_BOOL;
+        node->expr_type = Token::TOK_BOOL;
+    }
 
     return node;
 }
@@ -341,9 +431,9 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
         tokens.pop_front();
         node->children.push_back(parse_expr(tokens, scope));
     }
-    else if (tokens.front().type == Token::TOK_DUMP)
+    else if (tokens.front().type == Token::TOK_PRINT)
     {
-        node = new_node({ .type = Token::TOK_DUMP });
+        node = new_node({ .type = Token::TOK_PRINT });
         tokens.pop_front();
         node->children.push_back(parse_expr(tokens, scope));
     }
@@ -365,7 +455,6 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
             }
 
             scope.insert({ node->token.data, node });
-
             node->expr_type = node->children.front()->token.type;
         }
 
@@ -378,6 +467,8 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
             if (!scope.count(node->token.data))
             {
                 // TODO: figure out actual size of variable types
+                node->expr_type = node->children.front()->expr_type;
+                node->children.push_front(new_node({ .type = node->expr_type }));
                 scope.insert({ node->token.data, node });
             }
 
@@ -690,7 +781,9 @@ Node *parse_function(std::list<Token> &tokens)
     else
     {
         node->children.push_back(new_node({ .type = Token::TOK_VOID }));
+        node->children.back()->expr_type = Token::TOK_VOID;
     }
+    node->expr_type = node->children.back()->expr_type;
 
     // conditional expect EOL
     if (tokens.front().type == Token::TOK_EOL)
@@ -815,20 +908,14 @@ void pretty_print_tabs(int num_tabs, std::ostream &out)
  */
 void pretty_print_helper(Node *node, int num_tabs, std::ostream &out)
 {
-    if (node->scope.size())
+    print_token(node->token, out, false);
+    if (node->expr_type != Token::TOK_NONE)
     {
-        print_token(node->token, out, false);
         out << ": [ ";
-        for (auto it = node->scope.begin(); it != node->scope.end(); std::advance(it, 1))
-        {
-            out << it->first << " ";
-        }
-        out << "]\n";
+        out << token_id_to_str(node->expr_type);
+        out << " ]";
     }
-    else
-    {
-        print_token(node->token, out);
-    }
+    out << "\n";
 
     num_tabs++;
     

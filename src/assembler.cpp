@@ -62,26 +62,31 @@ std::string assemble_binary(Node *root, const std::unordered_map<std::string, No
 std::string assemble_type(Node *root)
 {
     std::string type = "";
-    
-    if (INTRINSICS.count(root->token.data))
+
+    /* Converting the type of the variable to the corresponding C type. */
+    if (root->token.type == Token::TOK_BYTE || root->token.type == Token::TOK_BOOL)
     {
-        if (root->token.type == Token::TOK_CHAR || root->token.type == Token::TOK_BOOL)
-        {
-            type += "int8_t";
-        }
-        else if (root->token.type == Token::TOK_SHORT)
-        {
-            type += "int16_t";
-        }
-        else if (root->token.type == Token::TOK_INT)
-        {
-            type += "int32_t";
-        }
-        else if (root->token.type == Token::TOK_LONG)
-        {
-            type += "int64_t";
-        }
-        // type += root->token.data;
+        type += "int8_t";
+    }
+    else if (root->token.type == Token::TOK_CHAR)
+    {
+        type += "char";
+    }
+    else if (root->token.type == Token::TOK_SHORT)
+    {
+        type += "int16_t";
+    }
+    else if (root->token.type == Token::TOK_INT)
+    {
+        type += "int32_t";
+    }
+    else if (root->token.type == Token::TOK_LONG)
+    {
+        type += "int64_t";
+    }
+    else if (root->token.type == Token::TOK_VOID)
+    {
+        type += "void";
     }
     else if (root->token.type == Token::TOK_STAR)
     {
@@ -124,23 +129,34 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
     {
         expr += "return " + assemble_expr(root->children.front(), scope) + ";\n";
     }
-    else if (root->token.type == Token::TOK_DUMP)
+    else if (root->token.type == Token::TOK_PRINT)
     {
-        if (root->expr_type == Token::TOK_LONG)
+        if (root->children.front()->expr_type == Token::TOK_LONG)
         {
-            expr += "printf(\"%ld\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            expr += "printf(\"%lld\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
         }
-        else if (root->expr_type == Token::TOK_INT)
+        else if (root->children.front()->expr_type == Token::TOK_INT)
         {
             expr += "printf(\"%d\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
         }
-        else if (root->expr_type == Token::TOK_SHORT)
+        else if (root->children.front()->expr_type == Token::TOK_SHORT)
         {
             expr += "printf(\"%hd\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
         }
-        else
+        else if (root->children.front()->expr_type == Token::TOK_CHAR)
         {
-            expr += "printf(\"%d\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            expr += "printf(\"%c\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+        }
+        else if (root->children.front()->expr_type == Token::TOK_STAR)
+        {
+            if (root->children.front()->children.front()->expr_type == Token::TOK_CHAR)
+            {
+                expr += "printf(\"%s\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else
+            {
+                expr += "printf(\"%p\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
         }
     }
     else if (root->token.type == Token::TOK_ID)
@@ -329,6 +345,11 @@ std::string assemble_function(Node *root)
     // TODO: add type checking for inferred void return type
     std::string type = assemble_type(*x);
     std::string name = root->token.data;
+
+    if (name == "main")
+    {
+        type = "int32_t";
+    }
     std::string args = "";
 
     if (root->children.front()->token.type == Token::TOK_LIST)

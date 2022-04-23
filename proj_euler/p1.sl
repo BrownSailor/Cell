@@ -5,7 +5,7 @@ main(argc: int, argv: **char): int {
         sum = (i % 3 == 0 || i % 5 == 0) * i + sum
     }
 
-    dump sum
+    print sum
 
     return 0
 }

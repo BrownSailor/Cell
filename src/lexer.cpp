@@ -4,7 +4,8 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
 {
     // Intrinsic keywords
     { "return", Token::TOK_RETURN },
-    { "dump", Token::TOK_DUMP },
+    { "print", Token::TOK_PRINT },
+    { "byte", Token::TOK_BYTE },
     { "char", Token::TOK_CHAR },
     { "bool", Token::TOK_BOOL },
     { "short", Token::TOK_SHORT },
@@ -475,6 +476,165 @@ std::list<Token> lex(const std::string &input)
     return tokens;
 }
 
+std::string token_id_to_str(const Token::Type &type)
+{
+    switch (type)
+    {
+        // Non built-ins
+        case Token::TOK_ID:
+            return "TOKEN_ID";
+
+        case Token::TOK_NUM:
+            return "TOKEN_NUM";
+
+        case Token::TOK_LIST:
+            return "TOKEN_LIST";
+
+        case Token::TOK_FUNC:
+            return "TOKEN_FUNCTION";
+        
+        case Token::TOK_PROG:
+            return "TOKEN_PROGRAM";
+
+        // Intrinsic keywords
+        case Token::TOK_RETURN:
+            return "TOKEN_RETURN";
+
+        case Token::TOK_PRINT:
+            return "TOKEN_PRINT";
+        
+        case Token::TOK_BYTE:
+            return "TOKEN_BYTE";
+
+        case Token::TOK_CHAR:
+            return "TOKEN_CHAR";
+
+        case Token::TOK_BOOL:
+            return "TOKEN_BOOL";
+
+        case Token::TOK_SHORT:
+            return "TOKEN_SHORT";
+
+        case Token::TOK_INT:
+            return "TOKEN_INT";
+
+        case Token::TOK_LONG:
+            return "TOKEN_LONG";
+
+        case Token::TOK_STR:
+            return "TOKEN_STR";
+        
+        case Token::TOK_VOID:
+            return "TOKEN_VOID";
+
+        case Token::TOK_BANG:
+            return "TOKEN_BANG";
+
+        // Unary operators
+        case Token::TOK_TILDA:
+            return "TOKEN_TILDA";
+
+        case Token::TOK_INC:
+            return "TOKEN_INC";
+
+        case Token::TOK_DEC:
+            return "TOKEN_DEC";
+
+        // Binary operators
+        case Token::TOK_PLUS:
+            return "TOKEN_PLUS";
+
+        case Token::TOK_MINUS:  // also unary
+            return "TOKEN_MINUS";
+
+        case Token::TOK_STAR:   // also unary
+            return "TOKEN_STAR";
+
+        case Token::TOK_SLASH:
+            return "TOKEN_SLASH";
+
+        case Token::TOK_PERCENT:
+            return "TOKEN_PERCENT";
+
+        case Token::TOK_LOR:
+            return "TOKEN_LOR";
+
+        case Token::TOK_LAND:
+            return "TOKEN_LAND";
+
+        case Token::TOK_SHL:
+            return "TOKEN_SHL";
+
+        case Token::TOK_SHR:
+            return "TOKEN_SHR";
+
+        // Boolean operations
+        case Token::TOK_EQEQ:
+            return "TOKEN_EQEQ";
+
+        case Token::TOK_NEQ:
+            return "TOKEN_NEQ";
+
+        case Token::TOK_LT:
+            return "TOKEN_LT";
+
+        case Token::TOK_GT:
+            return "TOKEN_GT";
+
+        case Token::TOK_LTE:
+            return "TOKEN_LTE";
+
+        case Token::TOK_GTE:
+            return "TOKEN_GTE";
+
+        // Single character tokens
+        case Token::TOK_LBRACE:
+            return "TOKEN_LBRACE";
+
+        case Token::TOK_RBRACE:
+            return "TOKEN_RBRACE";
+
+        case Token::TOK_LPAREN:
+            return "TOKEN_LPAREN";
+
+        case Token::TOK_RPAREN:
+            return "TOKEN_RPAREN";
+
+        case Token::TOK_LBRACK:
+            return "TOKEN_LBRACK";
+
+        case Token::TOK_RBRACK:
+            return "TOKEN_RBRACK";
+
+        case Token::TOK_COL:
+            return "TOKEN_COL";
+
+        case Token::TOK_EQ:
+            return "TOKEN_EQ";
+
+        case Token::TOK_COM:
+            return "TOKEN_COM";
+
+        case Token::TOK_LOOP:
+            return "TOKEN_LOOP";
+
+        case Token::TOK_IF:
+            return "TOKEN_IF";
+
+        case Token::TOK_ELSE:
+            return "TOKEN_ELSE";
+
+        case Token::TOK_EOL:
+            return "TOKEN_EOL";
+
+        case Token::TOK_EOF:
+            return "TOKEN_EOF";
+        
+        default:
+            return "";
+    }
+}
+
 /*
  * print_token
  *    Purpose: prints the token to the output stream
@@ -512,10 +672,14 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_RETURN";
             break;
 
-        case Token::TOK_DUMP:
-            out << "TOKEN_DUMP";
+        case Token::TOK_PRINT:
+            out << "TOKEN_PRINT";
             break;
 
+        case Token::TOK_BYTE:
+            out << "TOKEN_BYTE";
+            break;
+            
         case Token::TOK_CHAR:
             out << "TOKEN_CHAR";
             break;

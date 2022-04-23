@@ -1,9 +1,7 @@
 main(argc: int, argv: **char): int {
-    x: int = 0
-
-    @ i: int = 0, i < 5, i++ {
-        dump i
-    }
+    
+    curr: *char = 0
+    print curr
 
     return 0
 }

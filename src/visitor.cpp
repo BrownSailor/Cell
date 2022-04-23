@@ -139,5 +139,19 @@ Node *visit_expr(Node *root)
  */
 // Node *visit_type(Node *root)
 // {
+//     for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
+//     {
+//         *it = visit_expr(*it);
+//     }
 
+//     if (root == nullptr)
+//     {
+//         return nullptr;
+//     }
+//     else if (root->token.type == Token::TOK_ID)
+//     {
+//         if (root->scope)
+//     }
+
+//     return root;
 // }

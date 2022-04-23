@@ -11,7 +11,7 @@ main(argc: int, argv: **char): int {
 
     squareSum = squareSum * squareSum
 
-    dump squareSum - sumSquare
+    print squareSum - sumSquare
 
     return 0
 }
