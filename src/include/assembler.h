@@ -4,6 +4,7 @@
 #include "parser.h"
 
 std::string assemble_unary(Node *root, const std::unordered_map<std::string, Node *> &scope);
+std::string assemble_inc_dec(Node *root, const std::unordered_map<std::string, Node *> &scope);
 std::string assemble_binary(Node *root, const std::unordered_map<std::string, Node *> &scope);
 std::string assemble_type(Node *root);
 std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node *> &scope);

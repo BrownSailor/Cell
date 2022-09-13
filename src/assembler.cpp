@@ -124,41 +124,43 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
     {
         if (!root->children.front()->is_arr && !root->children.front()->is_idx)
         {
+            std::string param = assemble_expr(root->children.front(), scope);
+
             if (root->children.front()->expr_type == Token::TOK_LONG ||
                 root->children.front()->token.type == Token::TOK_LONG ||
                 root->children.front()->token.type == Token::TOK_NUM)
             {
-                expr += "printf(\"%lld\", " + assemble_expr(root->children.front(), scope) + ");\n";
+                expr += "printf(\"%lld\", " + param + ");\n";
             }
             else if (root->children.front()->expr_type == Token::TOK_INT ||
                      root->children.front()->token.type == Token::TOK_INT)
             {
-                expr += "printf(\"%d\", " + assemble_expr(root->children.front(), scope) + ");\n";
+                expr += "printf(\"%d\", " + param + ");\n";
             }
             else if (root->children.front()->expr_type == Token::TOK_SHORT ||
                      root->children.front()->token.type == Token::TOK_SHORT)
             {
-                expr += "printf(\"%d\", " + assemble_expr(root->children.front(), scope) + ");\n";
+                expr += "printf(\"%d\", " + param + ");\n";
             }
             else if (root->children.front()->expr_type == Token::TOK_CHAR ||
                      root->children.front()->token.type == Token::TOK_CHAR)
             {
-                expr += "printf(\"%c\", " + assemble_expr(root->children.front(), scope) + ");\n";
+                expr += "printf(\"%c\", " + param + ");\n";
             }
             else if (root->children.front()->expr_type == Token::TOK_BYTE ||
                      root->children.front()->token.type == Token::TOK_BYTE)
             {
-                expr += "printf(\"%d\", " + assemble_expr(root->children.front(), scope) + ");\n";
+                expr += "printf(\"%d\", " + param + ");\n";
             }
             else if (root->children.front()->expr_type == Token::TOK_STR ||
                      root->children.front()->token.type == Token::TOK_STR)
             {
-                expr += "printf(\"%s\", " + assemble_expr(root->children.front(), scope) + ");\n";
+                expr += "printf(\"%s\", " + param + ");\n";
             }
             else if (root->children.front()->expr_type == Token::TOK_BOOL ||
                      root->children.front()->token.type == Token::TOK_BOOL)
             {
-                expr += "printf(\"%d\", " + assemble_expr(root->children.front(), scope) + ");\n";
+                expr += "printf(\"%d\", " + param + ");\n";
             }
         }
         else if (root->children.front()->is_arr)
@@ -256,11 +258,6 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
                 expr += assemble_type(root->children.front());
                 expr += " " + root->token.data;
             }
-            else if (root->children.front()->token.type == Token::TOK_INC ||
-                     root->children.front()->token.type == Token::TOK_DEC)
-            {
-                expr += root->token.data + root->children.front()->token.data + ";\n";
-            }
             else
             {
                 expr += root->token.data + " = " + assemble_expr(root->children.back(), scope) + ";\n";
@@ -297,7 +294,7 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
              root->token.type == Token::TOK_INC ||
              root->token.type == Token::TOK_DEC))
     {
-        expr += assemble_unary(root, scope);
+        expr += assemble_unary(root, scope) + ";\n";
     }
     else if (root->children.size() == 2 && 
             (root->token.type == Token::TOK_PLUS ||
@@ -416,22 +413,14 @@ std::string assemble_loop(Node *root)
         std::advance(it, 1);
     }
 
-    bool un = false;
     if (root->children.front()->children.size() == 3 ||
        (root->children.front()->children.size() == 2 &&
         list_it != root->children.front()->children.end()))
     {
-        if ((*list_it)->token.type == Token::TOK_INC ||
-            (*list_it)->token.type == Token::TOK_DEC)
-        {
-            un = true;
-        }
-
         loop += assemble_expr(*list_it, root->scope);
         std::advance(list_it, 1);
     }
 
-    if (un) loop += ";\n";
     loop += "}\n";
     
     return loop;
