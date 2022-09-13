@@ -1,4 +1,4 @@
-main(argc: int, argv: **char): int {
+main(argc: int, argv: [str]): int {
 
     curr: int = 1
     n = 10001

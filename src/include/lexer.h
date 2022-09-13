@@ -24,6 +24,7 @@ struct Token
         // Non built-ins
         TOK_ID,
         TOK_NUM,
+        TOK_IDX,
         TOK_LIST,
         TOK_FUNC,
         TOK_PROG,
@@ -31,6 +32,7 @@ struct Token
         // Intrinsic keywords
         TOK_RETURN,
         TOK_PRINT,
+        TOK_PRINTLN,
         TOK_BYTE,
         TOK_CHAR,
         TOK_BOOL,
@@ -38,6 +40,7 @@ struct Token
         TOK_INT,
         TOK_LONG,
         TOK_STR,
+        TOK_ARR,
         TOK_VOID,
 
         // Unary operators

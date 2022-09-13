@@ -4,6 +4,6 @@
 #include "parser.h"
 
 Node *visit_expr(Node *root);
-Node *visit_type(Node *root);
+Node *visit_array(Node *root);
 
 #endif

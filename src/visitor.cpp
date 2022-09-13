@@ -61,8 +61,8 @@ Node *visit_expr(Node *root)
     {
         Node *new_root = new_node({ .type = Token::TOK_NUM });
 
-        int a = std::stoi(root->children.front()->token.data);
-        int b = std::stoi(root->children.back()->token.data);
+        long long a = std::stoi(root->children.front()->token.data);
+        long long b = std::stoi(root->children.back()->token.data);
 
         if (root->token.type == Token::TOK_PLUS)
         {
@@ -137,21 +137,38 @@ Node *visit_expr(Node *root)
  * Parameters: root - the root of the tree to visit
  *    Returns: the expression tree with types assigned
  */
-// Node *visit_type(Node *root)
-// {
-//     for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
-//     {
-//         *it = visit_expr(*it);
-//     }
+Node *visit_array(Node *root)
+{
+    if (root == nullptr)
+    {
+        return root;
+    }
 
-//     if (root == nullptr)
-//     {
-//         return nullptr;
-//     }
-//     else if (root->token.type == Token::TOK_ID)
-//     {
-//         if (root->scope)
-//     }
+    if (root->is_idx &&
+       (root->token.type == Token::TOK_NUM || 
+       (root->token.type >= Token::TOK_BYTE &&
+        root->token.type <= Token::TOK_LONG) ||
+       (root->expr_type >= Token::TOK_BYTE &&
+        root->expr_type <= Token::TOK_LONG)))
+    {
+        root->expr_type = Token::TOK_IDX;
+        return root;
+    }
+    else if (root->is_idx)
+    {
+        root->expr_type = Token::TOK_ARR;
+        root->is_idx = false;
+    }
 
-//     return root;
-// }
+    for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
+    {
+        *it = visit_array(*it);
+        if ((*it)->expr_type == Token::TOK_IDX ||
+            (*it)->expr_type == Token::TOK_ARR)
+        {
+            root->is_arr = true;
+        }
+    }
+
+    return root;
+}

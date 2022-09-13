@@ -1,4 +1,4 @@
-main(argc: int, argv: **char): int {
+main(argc: int, argv: [str]): int {
 
     num: long = 600851475143
     ans: long = 2

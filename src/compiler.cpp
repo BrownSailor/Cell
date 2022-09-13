@@ -10,8 +10,8 @@
  */
 void compile_and_link(std::string filename, Node *root, std::ostream &out)
 {
-    std::string asm_command = "gcc -O3 -S " + filename + ".c";
-    std::string lnk_command = "gcc -O3 -o " + filename + " " + filename + ".c";
+    std::string asm_command = "gcc -S " + filename + ".c -w";
+    std::string lnk_command = "gcc -o " + filename + " " + filename + ".c -w";
     std::string rmf_command = "rm " + filename + ".c";
 
     out << "[INFO] Generating " << filename << ".s\n";

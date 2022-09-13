@@ -1,4 +1,4 @@
-main(argc: int, argv: **char): int {
+main(argc: int, argv: [str]): int {
 
     sumSquare: long = 0
     squareSum: long = 0

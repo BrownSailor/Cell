@@ -1,4 +1,4 @@
-main(argc: int, argv: **char): int {
+main(argc: int, argv: [str]): int {
 
     max: int = 0
     @ i: int = 100, i < 1000, i = i + 1 {

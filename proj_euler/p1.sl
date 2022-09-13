@@ -1,4 +1,4 @@
-main(argc: int, argv: **char): int {
+main(argc: int, argv: [str]): int {
 
     sum: int = 0
     @ i: int = 0, i < 1000, i = i + 1 {

@@ -1,7 +1,8 @@
-main(argc: int, argv: **char): int {
-    
-    curr: *char = 0
-    print curr
+main {
 
-    return 0
+    i: int = 0
+    @ i < 3, i++
+    {
+        println i
+    }
 }

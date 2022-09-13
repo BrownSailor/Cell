@@ -129,8 +129,7 @@ Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node 
         }
         tokens.pop_front();
     }
-    else if (tokens.front().type == Token::TOK_TILDA || 
-             tokens.front().type == Token::TOK_STAR || 
+    else if (tokens.front().type == Token::TOK_TILDA ||
              tokens.front().type == Token::TOK_BANG || 
              tokens.front().type == Token::TOK_MINUS ||
              tokens.front().type == Token::TOK_INC ||
@@ -143,6 +142,8 @@ Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node 
     }
     else if (tokens.front().type == Token::TOK_ID ||
              tokens.front().type == Token::TOK_NUM ||
+             tokens.front().type == Token::TOK_STR ||
+             tokens.front().type == Token::TOK_LBRACK ||
              INTRINSICS.count(tokens.front().data))
     {
         node = new_node(tokens.front());
@@ -173,14 +174,43 @@ Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node 
             if (scope.count(tokens.front().data))
             {
                 node->expr_type = scope[tokens.front().data]->expr_type;
+                node->is_arr = scope[tokens.front().data]->is_arr;
             }
         }
+        else if (tokens.front().type == Token::TOK_LBRACK)
+        {
+            tokens.pop_front();
+            node = parse_expr(tokens, scope);
+            // node->is_arr = true;
+            node->expr_type = Token::TOK_ARR;
+
+            if (tokens.front().type != Token::TOK_RBRACK)
+            {
+                print_error("expected ']'", tokens.front());
+                exit(EXIT_FAILURE);
+            }
+        }
+
         tokens.pop_front();
 
         if (tokens.front().type == Token::TOK_INC ||
             tokens.front().type == Token::TOK_DEC)
         {
             node->children.push_back(new_node(tokens.front()));
+            tokens.pop_front();
+        }
+        else if (tokens.front().type == Token::TOK_LBRACK)
+        {
+            tokens.pop_front();
+            node->children.push_back(parse_expr(tokens, scope));
+            node->children.front()->is_idx = true;
+
+            if (tokens.front().type != Token::TOK_RBRACK)
+            {
+                print_error("expected ']'", tokens.front());
+                exit(EXIT_FAILURE);
+            }
+
             tokens.pop_front();
         }
     }
@@ -357,6 +387,11 @@ Node *parse_and(std::list<Token> &tokens, std::unordered_map<std::string, Node *
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
+        if (tokens.front().type == Token::TOK_EOL)
+        {
+            tokens.pop_front();
+        }
+
         node = binary(node, op, parse_eq_neq(tokens, scope));
 
         if (node->children.front()->token.type == Token::TOK_ID)
@@ -393,6 +428,11 @@ Node *parse_or(std::list<Token> &tokens, std::unordered_map<std::string, Node *>
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
+
+        if (tokens.front().type == Token::TOK_EOL)
+        {
+            tokens.pop_front();
+        }
 
         node = binary(node, op, parse_and(tokens, scope));
         
@@ -437,9 +477,21 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
         tokens.pop_front();
         node->children.push_back(parse_expr(tokens, scope));
     }
+    else if (tokens.front().type == Token::TOK_PRINTLN)
+    {
+        node = new_node({ .type = Token::TOK_PRINTLN });
+        tokens.pop_front();
+        node->children.push_back(parse_expr(tokens, scope));
+    }
     else
     {
         node = parse_or(tokens, scope);
+
+        if (tokens.front().type == Token::TOK_LBRACK)
+        {
+            node->children.push_back(parse_fact(tokens, scope));
+            node->is_arr = !node->children.front()->is_idx;
+        }
 
         // variable declaration
         if (tokens.front().type == Token::TOK_COL)
@@ -454,8 +506,9 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
                 exit(EXIT_FAILURE);
             }
 
-            scope.insert({ node->token.data, node });
             node->expr_type = node->children.front()->token.type;
+            node->is_arr = node->children.front()->expr_type == Token::TOK_ARR;
+            scope.insert({ node->token.data, node });
         }
 
         // variable initialization
@@ -646,7 +699,8 @@ Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node 
 
     // condition
     if (tokens.front().type != Token::TOK_LBRACE &&
-        tokens.front().type != Token::TOK_RPAREN)
+        tokens.front().type != Token::TOK_RPAREN &&
+        tokens.front().type != Token::TOK_EOL)
     {
         list->children.push_back(parse_expr(tokens, node->scope));
     }
@@ -659,22 +713,20 @@ Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node 
 
     // increment
     if (tokens.front().type != Token::TOK_LBRACE &&
-        tokens.front().type != Token::TOK_RPAREN)
+        tokens.front().type != Token::TOK_RPAREN &&
+        tokens.front().type != Token::TOK_EOL)
     {
         list->children.push_back(parse_expr(tokens, node->scope));
     }
 
-    if (paren)
+    while (paren--)
     {
-        while (paren--)
+        if (tokens.front().type != Token::TOK_RPAREN)
         {
-            if (tokens.front().type != Token::TOK_RPAREN)
-            {
-                print_error("expected `)`", tokens.front());
-                exit(EXIT_FAILURE);
-            }
-            tokens.pop_front();
+            print_error("expected `)`", tokens.front());
+            exit(EXIT_FAILURE);
         }
+        tokens.pop_front();
     }
 
     Token scope_check = check_scope(list, node->scope);
@@ -755,7 +807,6 @@ Node *parse_function(std::list<Token> &tokens)
             {
                 tokens.pop_front();
             }
-
             args->children.push_back(parse_expr(tokens, node->scope));
         }
         tokens.pop_front();
@@ -915,8 +966,12 @@ void pretty_print_helper(Node *node, int num_tabs, std::ostream &out)
         out << token_id_to_str(node->expr_type);
         out << " ]";
     }
-    out << "\n";
+    if (node->is_arr)
+    {
+        out << " *";
+    }
 
+    out << "\n";
     num_tabs++;
     
     for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))

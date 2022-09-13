@@ -14,6 +14,8 @@ struct Node
     std::list<Node *> children;
     std::unordered_map<std::string, Node *> scope;
     Token::Type expr_type = Token::TOK_NONE;
+    bool is_arr = false;
+    bool is_idx = false;
 };
 
 extern std::unordered_map<Token::Type, int> TYPES;

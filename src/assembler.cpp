@@ -84,32 +84,23 @@ std::string assemble_type(Node *root)
     {
         type += "int64_t";
     }
+    else if (root->token.type == Token::TOK_STR)
+    {
+        type += "char*";
+    }
     else if (root->token.type == Token::TOK_VOID)
     {
         type += "void";
     }
-    else if (root->token.type == Token::TOK_STAR)
+    else if (root->token.type == Token::TOK_ARR)
     {
-        int num_ptr = 0;
-        Node *curr = root;
-        while (curr->children.size())
-        {
-            num_ptr++;
-            curr = curr->children.front();
-        }
-
-        if (INTRINSICS.count(curr->token.data))
-        {
-            type += curr->token.data;
-            for (int i = 0; i < num_ptr; i++)
-            {
-                type += "*";
-            }
-        }
-        else
-        {
-            print_error("Unknown type `" + curr->token.data + "`", curr->token);
-        }
+        type += assemble_type(root->children.front());
+        type += "*";
+    }
+    else
+    {
+        print_error("Unknown type `" + root->token.data + "`", root->token);
+        exit(EXIT_FAILURE);
     }
 
     return type;
@@ -131,31 +122,117 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
     }
     else if (root->token.type == Token::TOK_PRINT)
     {
-        if (root->children.front()->expr_type == Token::TOK_LONG)
+        if (!root->children.front()->is_arr && !root->children.front()->is_idx)
         {
-            expr += "printf(\"%lld\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            if (root->children.front()->expr_type == Token::TOK_LONG ||
+                root->children.front()->token.type == Token::TOK_LONG ||
+                root->children.front()->token.type == Token::TOK_NUM)
+            {
+                expr += "printf(\"%lld\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_INT ||
+                     root->children.front()->token.type == Token::TOK_INT)
+            {
+                expr += "printf(\"%d\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_SHORT ||
+                     root->children.front()->token.type == Token::TOK_SHORT)
+            {
+                expr += "printf(\"%d\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_CHAR ||
+                     root->children.front()->token.type == Token::TOK_CHAR)
+            {
+                expr += "printf(\"%c\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_BYTE ||
+                     root->children.front()->token.type == Token::TOK_BYTE)
+            {
+                expr += "printf(\"%d\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_STR ||
+                     root->children.front()->token.type == Token::TOK_STR)
+            {
+                expr += "printf(\"%s\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_BOOL ||
+                     root->children.front()->token.type == Token::TOK_BOOL)
+            {
+                expr += "printf(\"%d\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
         }
-        else if (root->children.front()->expr_type == Token::TOK_INT)
+        else if (root->children.front()->is_arr)
         {
-            expr += "printf(\"%d\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            if (root->children.front()->expr_type == Token::TOK_CHAR ||
+                root->children.front()->token.type == Token::TOK_CHAR)
+            {
+                expr += "printf(\"%s\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
         }
-        else if (root->children.front()->expr_type == Token::TOK_SHORT)
+        else if (root->children.front()->children.front()->is_idx)
         {
-            expr += "printf(\"%hd\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            if (root->children.front()->expr_type == Token::TOK_CHAR ||
+                root->children.front()->token.type == Token::TOK_CHAR)
+            {
+                expr += "printf(\"%c\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
         }
-        else if (root->children.front()->expr_type == Token::TOK_CHAR)
+    }
+    else if (root->token.type == Token::TOK_PRINTLN)
+    {
+        if (!root->children.front()->is_arr && !root->children.front()->is_idx)
         {
-            expr += "printf(\"%c\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
-        }
-        else if (root->children.front()->expr_type == Token::TOK_STAR)
-        {
-            if (root->children.front()->children.front()->expr_type == Token::TOK_CHAR)
+            if (root->children.front()->expr_type == Token::TOK_LONG ||
+                root->children.front()->token.type == Token::TOK_LONG ||
+                root->children.front()->token.type == Token::TOK_NUM)
+            {
+                expr += "printf(\"%lld\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_INT ||
+                     root->children.front()->token.type == Token::TOK_INT)
+            {
+                expr += "printf(\"%d\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_SHORT ||
+                     root->children.front()->token.type == Token::TOK_SHORT)
+            {
+                expr += "printf(\"%d\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_CHAR ||
+                     root->children.front()->token.type == Token::TOK_CHAR)
+            {
+                expr += "printf(\"%c\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_BYTE ||
+                     root->children.front()->token.type == Token::TOK_BYTE)
+            {
+                expr += "printf(\"%d\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_STR ||
+                     root->children.front()->token.type == Token::TOK_STR)
             {
                 expr += "printf(\"%s\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
             }
-            else
+            else if (root->children.front()->expr_type == Token::TOK_BOOL ||
+                     root->children.front()->token.type == Token::TOK_BOOL)
             {
-                expr += "printf(\"%p\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+                expr += "printf(\"%d\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+        }
+        else if (root->children.front()->is_arr)
+        {
+            if (root->children.front()->expr_type == Token::TOK_CHAR ||
+                root->children.front()->token.type == Token::TOK_CHAR)
+            {
+                expr += "printf(\"%s\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
+            }
+        }
+        else if (root->children.front()->children.front()->is_idx)
+        {
+            if (root->children.front()->expr_type == Token::TOK_CHAR ||
+                root->children.front()->token.type == Token::TOK_CHAR)
+            {
+                expr += "printf(\"%c\\n\", " + assemble_expr(root->children.front(), scope) + ");\n";
             }
         }
     }
@@ -163,8 +240,18 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
     {
         if (root->children.size() == 1)
         {
-            if (INTRINSICS.count(root->children.front()->token.data) ||
-                root->children.front()->token.type == Token::TOK_STAR)
+            if (root->children.front()->expr_type == Token::TOK_IDX)
+            {
+                expr += root->token.data + "["; 
+                expr += assemble_expr(root->children.front(), scope);
+                expr += "]";
+            }
+            else if (root->children.front()->expr_type == Token::TOK_ARR)
+            {
+                expr += assemble_type(root->children.front()) + "* ";
+                expr += root->token.data;
+            }
+            else if (INTRINSICS.count(root->children.front()->token.data))
             {
                 expr += assemble_type(root->children.front());
                 expr += " " + root->token.data;
@@ -181,7 +268,14 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
         }
         else if (root->children.size() == 2)
         {
-            expr += assemble_type(root->children.front()) + " " + root->token.data + " = " + assemble_expr(root->children.back(), scope) + ";\n";
+            if (root->is_arr)
+            {
+                expr += assemble_type(root->children.front()) + "* " + root->token.data + " = " + assemble_expr(root->children.back(), scope) + ";\n";
+            }
+            else
+            {
+                expr += assemble_type(root->children.front()) + " " + root->token.data + " = " + assemble_expr(root->children.back(), scope) + ";\n";
+            }
         }
         else
         {
@@ -191,6 +285,10 @@ std::string assemble_expr(Node *root, const std::unordered_map<std::string, Node
     else if (root->token.type == Token::TOK_NUM)
     {
         expr += root->token.data;
+    }
+    else if (root->token.type == Token::TOK_STR)
+    {
+        expr += "\"" + root->token.data + "\"";
     }
     else if (root->children.size() == 1 &&
             (root->token.type == Token::TOK_MINUS ||
@@ -268,7 +366,8 @@ std::string assemble_if(Node *root)
         std::advance(it, 1);
     }
 
-    iff += ";\n}\n";
+    // iff += ";\n}\n";
+    iff += "}\n";
     return iff;
 }
 
@@ -317,14 +416,23 @@ std::string assemble_loop(Node *root)
         std::advance(it, 1);
     }
 
+    bool un = false;
     if (root->children.front()->children.size() == 3 ||
        (root->children.front()->children.size() == 2 &&
         list_it != root->children.front()->children.end()))
     {
+        if ((*list_it)->token.type == Token::TOK_INC ||
+            (*list_it)->token.type == Token::TOK_DEC)
+        {
+            un = true;
+        }
+
         loop += assemble_expr(*list_it, root->scope);
         std::advance(list_it, 1);
     }
-    loop += ";\n}\n";
+
+    if (un) loop += ";\n";
+    loop += "}\n";
     
     return loop;
 }

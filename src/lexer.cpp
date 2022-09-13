@@ -5,6 +5,7 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     // Intrinsic keywords
     { "return", Token::TOK_RETURN },
     { "print", Token::TOK_PRINT },
+    { "println", Token::TOK_PRINTLN },
     { "byte", Token::TOK_BYTE },
     { "char", Token::TOK_CHAR },
     { "bool", Token::TOK_BOOL },
@@ -70,6 +71,24 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
 
             col = col_end;
             continue;
+        }
+        else if (c == '"')
+        {
+            c = line[++i];
+            col_end++;
+
+            while (c != '"')
+            {
+                curr += c;
+                c = line[++i];
+                col_end++;
+            }
+
+            tokens.push_back({ .type = Token::TOK_STR, .data = curr, .row = row, .col = col, .file = file });
+            curr = "";
+            col = col_end;
+
+            col_end++;
         }
         else if (c == '?')
         {
@@ -486,6 +505,9 @@ std::string token_id_to_str(const Token::Type &type)
 
         case Token::TOK_NUM:
             return "TOKEN_NUM";
+        
+        case Token::TOK_IDX:
+            return "TOKEN_IDX";
 
         case Token::TOK_LIST:
             return "TOKEN_LIST";
@@ -502,6 +524,9 @@ std::string token_id_to_str(const Token::Type &type)
 
         case Token::TOK_PRINT:
             return "TOKEN_PRINT";
+
+        case Token::TOK_PRINTLN:
+            return "TOKEN_PRINTLN";
         
         case Token::TOK_BYTE:
             return "TOKEN_BYTE";
@@ -523,6 +548,9 @@ std::string token_id_to_str(const Token::Type &type)
 
         case Token::TOK_STR:
             return "TOKEN_STR";
+        
+        case Token::TOK_ARR:
+            return "TOKEN_ARR";
         
         case Token::TOK_VOID:
             return "TOKEN_VOID";
@@ -547,7 +575,7 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::TOK_MINUS:  // also unary
             return "TOKEN_MINUS";
 
-        case Token::TOK_STAR:   // also unary
+        case Token::TOK_STAR:
             return "TOKEN_STAR";
 
         case Token::TOK_SLASH:
@@ -655,6 +683,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_NUM";
             break;
 
+        case Token::TOK_IDX:
+            out << "TOKEN_IDX";
+            break;
+
         case Token::TOK_LIST:
             out << "TOKEN_LIST";
             break;
@@ -674,6 +706,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
 
         case Token::TOK_PRINT:
             out << "TOKEN_PRINT";
+            break;
+
+        case Token::TOK_PRINTLN:
+            out << "TOKEN_PRINTLN";
             break;
 
         case Token::TOK_BYTE:
@@ -702,6 +738,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
 
         case Token::TOK_STR:
             out << "TOKEN_STR";
+            break;
+        
+        case Token::TOK_ARR:
+            out << "TOKEN_ARR";
             break;
         
         case Token::TOK_VOID:
@@ -734,7 +774,7 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_MINUS";
             break;
 
-        case Token::TOK_STAR:   // also unary
+        case Token::TOK_STAR:
             out << "TOKEN_STAR";
             break;
 
