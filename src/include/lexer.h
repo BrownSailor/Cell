@@ -9,7 +9,6 @@
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
-#include <assert.h>
 
 /*
  * Token 
@@ -25,23 +24,24 @@ struct Token
         TOK_ID,
         TOK_NUM,
         TOK_IDX,
+        TOK_CHAR,
+        TOK_STR,
         TOK_LIST,
         TOK_FUNC,
         TOK_PROG,
 
         // Intrinsic keywords
-        TOK_RETURN,
-        TOK_PRINT,
-        TOK_PRINTLN,
-        TOK_BYTE,
-        TOK_CHAR,
-        TOK_BOOL,
-        TOK_SHORT,
-        TOK_INT,
-        TOK_LONG,
-        TOK_STR,
-        TOK_ARR,
-        TOK_VOID,
+        KEY_RETURN,
+        KEY_PRINT,
+        KEY_PRINTLN,
+        KEY_BYTE,
+        KEY_CHAR,
+        KEY_BOOL,
+        KEY_SHORT,
+        KEY_INT,
+        KEY_LONG,
+        KEY_ARR,
+        KEY_VOID,
 
         // Unary operators
         TOK_BANG,

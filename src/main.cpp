@@ -1,19 +1,20 @@
-#include "include/visitor.h"
-#include "include/compiler.h"
+#include "include/assembler.h"
 
 int main(int argc, char **argv)
 {
     (void)(argc);
 
     std::list<Token> tokens = lex(argv[2]);
-    // print_lex(tokens);
+    std::cout << "\n=== TOKENS ===\n\n";
+    print_lex(tokens);
 
+    std::cout << "\n=== TREE ===\n\n";
     Node *root = parse_program(tokens);
-    root = visit_expr(root);
-    root = visit_array(root);
     pretty_print(root);
 
-    compile_and_link(argv[1], root);
+    std::cout << "\n=== CODE ===\n\n";
+    print_assembled(root);
+    assemble("main.c", root);
 
     return 0;
 }

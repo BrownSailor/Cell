@@ -3,19 +3,15 @@
 std::unordered_map<std::string, Token::Type> INTRINSICS = 
 {
     // Intrinsic keywords
-    { "return", Token::TOK_RETURN },
-    { "print", Token::TOK_PRINT },
-    { "println", Token::TOK_PRINTLN },
-    { "byte", Token::TOK_BYTE },
-    { "char", Token::TOK_CHAR },
-    { "bool", Token::TOK_BOOL },
-    { "short", Token::TOK_SHORT },
-    { "int", Token::TOK_INT },
-    { "long", Token::TOK_LONG },
-    { "str", Token::TOK_STR },
-    { "not", Token::TOK_BANG },
-    { "or", Token::TOK_LOR },
-    { "and", Token::TOK_LAND },
+    { "return", Token::KEY_RETURN },
+    { "print", Token::KEY_PRINT },
+    { "println", Token::KEY_PRINTLN },
+    { "byte", Token::KEY_BYTE },
+    { "char", Token::KEY_CHAR },
+    { "bool", Token::KEY_BOOL },
+    { "short", Token::KEY_SHORT },
+    { "int", Token::KEY_INT },
+    { "long", Token::KEY_LONG },
 };
 
 /*
@@ -71,6 +67,21 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
 
             col = col_end;
             continue;
+        }
+        else if (c == '\'')
+        {
+            c = line[++i];
+            col_end++;
+
+            curr += c;
+            c = line[++i];
+            col_end++;
+
+            tokens.push_back({ .type = Token::TOK_CHAR, .data = curr, .row = row, .col = col, .file = file });
+            curr = "";
+            col = col_end;
+
+            col_end++;
         }
         else if (c == '"')
         {
@@ -491,7 +502,7 @@ std::list<Token> lex(const std::string &input)
         row++;  
     }
 
-    tokens.push_back({ Token::TOK_EOF, "", .row = row, .col = 1, .file = input });
+    // tokens.push_back({ Token::TOK_EOF, "", .row = row, .col = 1, .file = input });
     return tokens;
 }
 
@@ -509,6 +520,12 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::TOK_IDX:
             return "TOKEN_IDX";
 
+        case Token::TOK_CHAR:
+            return "TOKEN_CHAR";
+
+        case Token::TOK_STR:
+            return "TOKEN_STR";
+
         case Token::TOK_LIST:
             return "TOKEN_LIST";
 
@@ -519,40 +536,37 @@ std::string token_id_to_str(const Token::Type &type)
             return "TOKEN_PROGRAM";
 
         // Intrinsic keywords
-        case Token::TOK_RETURN:
-            return "TOKEN_RETURN";
+        case Token::KEY_RETURN:
+            return "KEY_RETURN";
 
-        case Token::TOK_PRINT:
-            return "TOKEN_PRINT";
+        case Token::KEY_PRINT:
+            return "KEY_PRINT";
 
-        case Token::TOK_PRINTLN:
-            return "TOKEN_PRINTLN";
+        case Token::KEY_PRINTLN:
+            return "KEY_PRINTLN";
         
-        case Token::TOK_BYTE:
-            return "TOKEN_BYTE";
+        case Token::KEY_BYTE:
+            return "KEY_BYTE";
 
-        case Token::TOK_CHAR:
-            return "TOKEN_CHAR";
+        case Token::KEY_CHAR:
+            return "KEY_CHAR";
 
-        case Token::TOK_BOOL:
-            return "TOKEN_BOOL";
+        case Token::KEY_BOOL:
+            return "KEY_BOOL";
 
-        case Token::TOK_SHORT:
-            return "TOKEN_SHORT";
+        case Token::KEY_SHORT:
+            return "KEY_SHORT";
 
-        case Token::TOK_INT:
-            return "TOKEN_INT";
+        case Token::KEY_INT:
+            return "KEY_INT";
 
-        case Token::TOK_LONG:
-            return "TOKEN_LONG";
-
-        case Token::TOK_STR:
-            return "TOKEN_STR";
+        case Token::KEY_LONG:
+            return "KEY_LONG";
         
-        case Token::TOK_ARR:
-            return "TOKEN_ARR";
+        case Token::KEY_ARR:
+            return "KEY_ARR";
         
-        case Token::TOK_VOID:
+        case Token::KEY_VOID:
             return "TOKEN_VOID";
 
         case Token::TOK_BANG:
@@ -693,6 +707,14 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_IDX";
             break;
 
+        case Token::TOK_CHAR:
+            out << "TOKEN_CHAR";
+            break;
+
+        case Token::TOK_STR:
+            out << "TOKEN_STR";
+            break;
+
         case Token::TOK_LIST:
             out << "TOKEN_LIST";
             break;
@@ -706,52 +728,48 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             break;
 
         // Intrinsic keywords
-        case Token::TOK_RETURN:
-            out << "TOKEN_RETURN";
+        case Token::KEY_RETURN:
+            out << "KEY_RETURN";
             break;
 
-        case Token::TOK_PRINT:
-            out << "TOKEN_PRINT";
+        case Token::KEY_PRINT:
+            out << "KEY_PRINT";
             break;
 
-        case Token::TOK_PRINTLN:
-            out << "TOKEN_PRINTLN";
+        case Token::KEY_PRINTLN:
+            out << "KEY_PRINTLN";
             break;
 
-        case Token::TOK_BYTE:
-            out << "TOKEN_BYTE";
+        case Token::KEY_BYTE:
+            out << "KEY_BYTE";
             break;
             
-        case Token::TOK_CHAR:
-            out << "TOKEN_CHAR";
+        case Token::KEY_CHAR:
+            out << "KEY_CHAR";
             break;
 
-        case Token::TOK_BOOL:
-            out << "TOKEN_BOOL";
+        case Token::KEY_BOOL:
+            out << "KEY_BOOL";
             break;
 
-        case Token::TOK_SHORT:
-            out << "TOKEN_SHORT";
+        case Token::KEY_SHORT:
+            out << "KEY_SHORT";
             break;
 
-        case Token::TOK_INT:
-            out << "TOKEN_INT";
+        case Token::KEY_INT:
+            out << "KEY_INT";
             break;
 
-        case Token::TOK_LONG:
-            out << "TOKEN_LONG";
-            break;
-
-        case Token::TOK_STR:
-            out << "TOKEN_STR";
+        case Token::KEY_LONG:
+            out << "KEY_LONG";
             break;
         
-        case Token::TOK_ARR:
-            out << "TOKEN_ARR";
+        case Token::KEY_ARR:
+            out << "KEY_ARR";
             break;
         
-        case Token::TOK_VOID:
-            out << "TOKEN_VOID";
+        case Token::KEY_VOID:
+            out << "KEY_VOID";
             break;
 
         case Token::TOK_BANG:

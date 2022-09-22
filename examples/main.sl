@@ -1,11 +1,6 @@
-main(argc: int, argv: [str]): int 
-{
-    c: [char] = "hello!"
+main(argc: int, argv: str): int {
 
-    @ i = 0, i < 6, i++
-    {
-        print c[i]
-    }
+    x: int = 34
 
-    return 0
+    return x
 }

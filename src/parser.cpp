@@ -1,246 +1,106 @@
 #include "include/parser.h"
 
-/*
- * new_node
- *    Purpose: creates a new node with the given token
- * Parameters: token - the token to be stored in the node
- *    Returns: a pointer to the new node
- */
+int eat_open_parens(std::list<Token> &tokens)
+{
+    int parens = 0;
+    while (tokens.front().type == Token::TOK_LPAREN)
+    {
+        parens++;
+        tokens.pop_front();
+    }
+
+    return parens;
+}
+
+void eat_close_parens(std::list<Token> &tokens, int parens)
+{
+    while (tokens.front().type == Token::TOK_RPAREN)
+    {
+        parens--;
+        tokens.pop_front();
+    }
+
+    if (parens)
+    {
+        print_error("expected `)`", tokens.front());
+        exit(EXIT_FAILURE);
+    }
+}
+
 Node *new_node(Token token)
 {
-    Node *node = new Node();
+    Node *node = new Node;
     node->token = token;
 
     return node;
 }
 
-/*
- * find_in_tree
- *    Purpose: searches a tree for a token with a certain string data
- * Parameters: node - tree to search, value - data to search for
- *    Returns: true if the value exists in the tree, false otherwise
- */
-bool find_in_tree(Node *node, std::string value)
-{
-    if (node == nullptr)
-    {
-        return false;
-    }
-
-    if (node->token.data == value)
-    {
-        return true;
-    }
-
-    bool ans = false;
-    for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))
-    {
-        ans |= find_in_tree(*it, value);
-    }
-
-    return ans;
-}
-
-Token check_scope(Node *node, const std::unordered_map<std::string, Node *> &scope)
-{
-    if (node == nullptr)
-    {
-        return {};
-    }
-
-    if (node->token.type == Token::TOK_ID &&
-        !scope.count(node->token.data))
-    {
-        return node->token;
-    }
-
-    Token ans = {};
-    for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))
-    {
-        Token check = check_scope(*it, scope);
-
-        if (check.data != "")
-        {
-            ans = check;
-            return ans;
-        }
-    }
-
-    return ans;
-}
-
-/*
- * unary
- *    Purpose: creates a new node representing a unary operation
- * Parameters: op - the node containing the unary operation, token - the token to apply the op to
- *    Returns: a pointer to the new node
- */
 Node *unary(Node *op, Node *node)
 {
     op->children.push_back(node);
-
-    if (op->token.type == Token::TOK_BANG)
-    {
-        op->expr_type = Token::TOK_BOOL;
-    }
-    else
-    {
-        op->expr_type = op->children.front()->expr_type;
-    }
-
     return op;
 }
 
-/*
- * binary
- *    Purpose: creates a new node representing a binary operation
- * Parameters: left - the node containing the left operand, op - the node containing the binary operation, 
- *             right - the node containing the right operand
- *    Returns: a pointer to the new node
- */
 Node *binary(Node *left, Node *op, Node *right)
 {
     op->children.push_back(left);
     op->children.push_back(right);
 
-    op->expr_type = std::max(left->expr_type, right->expr_type);
-
     return op;
 }
 
-/*
- * parse_fact
- *    Purpose: parses a factor 
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_fact(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_fact(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node();
+    Node *node = new Node;
 
-    if (tokens.front().type == Token::TOK_LPAREN)
+    switch (tokens.front().type)
     {
-        tokens.pop_front();
-        node = parse_expr(tokens, scope);
-        if (tokens.front().type != Token::TOK_RPAREN)
+        case Token::TOK_LPAREN:
         {
-            print_error("expected ')'", tokens.front());
-            exit(EXIT_FAILURE);
-        }
-        tokens.pop_front();
-    }
-    else if (tokens.front().type == Token::TOK_TILDA ||
-             tokens.front().type == Token::TOK_BANG || 
-             tokens.front().type == Token::TOK_MINUS ||
-             tokens.front().type == Token::TOK_INC ||
-             tokens.front().type == Token::TOK_DEC)
-    {
-        Node *op = new_node(tokens.front());
-        tokens.pop_front();
-
-        node = unary(op, parse_fact(tokens, scope));
-    }
-    else if (tokens.front().type == Token::TOK_ID ||
-             tokens.front().type == Token::TOK_NUM ||
-             tokens.front().type == Token::TOK_STR ||
-             tokens.front().type == Token::TOK_LBRACK ||
-             INTRINSICS.count(tokens.front().data))
-    {
-        node = new_node(tokens.front());
-
-        if (tokens.front().type == Token::TOK_NUM)
-        {
-            int64_t x = std::stoll(tokens.front().data);
-
-            if (x >= -(1LL << 7) && x < (1LL << 7))
-            {
-                node->expr_type = Token::TOK_BYTE;
-            }
-            else if (x >= -(1LL << 15) && x < (1LL << 15))
-            {
-                node->expr_type = Token::TOK_SHORT;
-            }
-            else if (x >= -(1LL << 31) && x < (1LL << 31))
-            {
-                node->expr_type = Token::TOK_INT;
-            }
-            else
-            {
-                node->expr_type = Token::TOK_LONG;
-            }
-        }
-        else if (tokens.front().type == Token::TOK_ID)
-        {
-            if (scope.count(tokens.front().data))
-            {
-                node->expr_type = scope[tokens.front().data]->expr_type;
-                node->is_arr = scope[tokens.front().data]->is_arr;
-            }
-        }
-        else if (tokens.front().type == Token::TOK_LBRACK)
-        {
-            tokens.pop_front();
+            int p = eat_open_parens(tokens);
             node = parse_expr(tokens, scope);
-            // node->is_arr = true;
-            node->expr_type = Token::TOK_ARR;
-
-            if (tokens.front().type != Token::TOK_RBRACK)
-            {
-                print_error("expected ']'", tokens.front());
-                exit(EXIT_FAILURE);
-            }
+            eat_close_parens(tokens, p);
+            break;
         }
-
-        tokens.pop_front();
-
-        if (tokens.front().type == Token::TOK_INC ||
-            tokens.front().type == Token::TOK_DEC)
+        
+        case Token::TOK_TILDA:
+        case Token::TOK_BANG:
+        case Token::TOK_MINUS:
         {
-            Node *tmp = new_node(tokens.front());
-            tmp->children.push_back(node);
-            node = tmp;
-
-            if (tokens.front().type == Token::TOK_INC)
-            {
-                node->token.type = Token::TOK_POST_INC;
-            }
-            else
-            {
-                node->token.type = Token::TOK_POST_DEC;
-            }
-
-            node->expr_type = tmp->children.front()->expr_type;
-
+            Node *op = new_node(tokens.front());
             tokens.pop_front();
+            node = unary(op, parse_expr(tokens, scope));
+            break;
         }
-        else if (tokens.front().type == Token::TOK_LBRACK)
+        
+        case Token::TOK_ID:
+        case Token::TOK_NUM:
+        case Token::TOK_CHAR:
+        case Token::TOK_STR:
+        case Token::KEY_RETURN:
+        case Token::KEY_PRINT:
+        case Token::KEY_PRINTLN:
+        case Token::KEY_BYTE:
+        case Token::KEY_CHAR:
+        case Token::KEY_BOOL:
+        case Token::KEY_SHORT:
+        case Token::KEY_INT:
+        case Token::KEY_LONG:
         {
+            node = new_node(tokens.front());
             tokens.pop_front();
-            node->children.push_back(parse_expr(tokens, scope));
-            node->children.front()->is_idx = true;
-
-            if (tokens.front().type != Token::TOK_RBRACK)
-            {
-                print_error("expected ']'", tokens.front());
-                exit(EXIT_FAILURE);
-            }
-
-            tokens.pop_front();
+            break;
         }
+
+        default: break;
     }
 
     return node;
 }
 
-/*
- * parse_term
- *    Purpose: parses a term 
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_term(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_term(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node();
+    Node *node = new Node;
     node = parse_fact(tokens, scope);
 
     while (tokens.front().type == Token::TOK_STAR ||
@@ -253,33 +113,14 @@ Node *parse_term(std::list<Token> &tokens, std::unordered_map<std::string, Node 
         tokens.pop_front();
 
         node = binary(node, op, parse_fact(tokens, scope));
-
-        if (node->children.front()->token.type == Token::TOK_ID)
-        {
-            node->children.front()->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
-        }
-        if (node->children.back()->token.type == Token::TOK_ID)
-        {
-            node->children.back()->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
-        }
     }
 
     return node;
 }
 
-/*
- * parse_add_sub
- *    Purpose: parses an addition or subtraction expression 
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_add_sub(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_add_sub(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node();
+    Node *node = new Node;
     node = parse_term(tokens, scope);
 
     while (tokens.front().type == Token::TOK_PLUS ||
@@ -289,33 +130,14 @@ Node *parse_add_sub(std::list<Token> &tokens, std::unordered_map<std::string, No
         tokens.pop_front();
 
         node = binary(node, op, parse_term(tokens, scope));
-
-        if (node->children.front()->token.type == Token::TOK_ID)
-        {
-            node->children.front()->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
-        }
-        if (node->children.back()->token.type == Token::TOK_ID)
-        {
-            node->children.back()->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
-        }
     }
 
     return node;
 }
 
-/*
- * parse_lt_gt
- *    Purpose: parses a comparitive expression 
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_lt_gt(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_lt_gt(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node();
+    Node *node = new Node;
     node = parse_add_sub(tokens, scope);
 
     while (tokens.front().type == Token::TOK_LT ||
@@ -327,35 +149,14 @@ Node *parse_lt_gt(std::list<Token> &tokens, std::unordered_map<std::string, Node
         tokens.pop_front();
 
         node = binary(node, op, parse_add_sub(tokens, scope));
-
-        if (node->children.front()->token.type == Token::TOK_ID)
-        {
-            node->children.front()->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
-        }
-        if (node->children.back()->token.type == Token::TOK_ID)
-        {
-            node->children.back()->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
-        }
-
-        node->expr_type = Token::TOK_BOOL;
     }
 
     return node;
 }
 
-/*
- * parse_eq_neq
- *    Purpose: parses an equivalence expression 
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_eq_neq(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_eq_neq(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node();
+    Node *node = new Node;
     node = parse_lt_gt(tokens, scope);
 
     while (tokens.front().type == Token::TOK_EQEQ ||
@@ -365,35 +166,14 @@ Node *parse_eq_neq(std::list<Token> &tokens, std::unordered_map<std::string, Nod
         tokens.pop_front();
 
         node = binary(node, op, parse_lt_gt(tokens, scope));
-
-        if (node->children.front()->token.type == Token::TOK_ID)
-        {
-            node->children.front()->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
-        }
-        if (node->children.back()->token.type == Token::TOK_ID)
-        {
-            node->children.back()->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
-        }
-
-        node->expr_type = Token::TOK_BOOL;
     }
 
     return node;
 }
 
-/*
- * parse_and
- *    Purpose: parses a logical and expression 
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_and(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_and(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node();
+    Node *node = new Node;
     node = parse_eq_neq(tokens, scope);
 
     while (tokens.front().type == Token::TOK_LAND)
@@ -401,148 +181,74 @@ Node *parse_and(std::list<Token> &tokens, std::unordered_map<std::string, Node *
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        if (tokens.front().type == Token::TOK_EOL)
-        {
-            tokens.pop_front();
-        }
-
         node = binary(node, op, parse_eq_neq(tokens, scope));
-
-        if (node->children.front()->token.type == Token::TOK_ID)
-        {
-            node->children.front()->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
-        }
-        if (node->children.back()->token.type == Token::TOK_ID)
-        {
-            node->children.back()->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
-        }
-
-        node->expr_type = Token::TOK_BOOL;
     }
 
     return node;
 }
 
-/*
- * parse_or
- *    Purpose: parses a logical or expression 
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_or(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_or(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node();
+    Node *node = new Node;
     node = parse_and(tokens, scope);
 
-    if (tokens.front().type == Token::TOK_LOR)
+    while (tokens.front().type == Token::TOK_LOR)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        if (tokens.front().type == Token::TOK_EOL)
-        {
-            tokens.pop_front();
-        }
-
         node = binary(node, op, parse_and(tokens, scope));
-        
-        if (node->children.front()->token.type == Token::TOK_ID)
-        {
-            node->children.front()->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->expr_type = node->expr_type;
-            scope[node->children.front()->token.data]->children.front()->token.type = node->expr_type;
-        }
-        if (node->children.back()->token.type == Token::TOK_ID)
-        {
-            node->children.back()->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->expr_type = node->expr_type;
-            scope[node->children.back()->token.data]->children.front()->token.type = node->expr_type;
-        }
-
-        node->expr_type = Token::TOK_BOOL;
     }
 
     return node;
 }
 
-/*
- * parse_expr
- *    Purpose: parses an expression 
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_expr(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node();
+    Node *node = new Node;
 
-    if (tokens.front().type == Token::TOK_RETURN)
+    switch (tokens.front().type)
     {
-        node = new_node({ .type = Token::TOK_RETURN });
-        tokens.pop_front();
-        node->children.push_back(parse_expr(tokens, scope));
-    }
-    else if (tokens.front().type == Token::TOK_PRINT)
-    {
-        node = new_node({ .type = Token::TOK_PRINT });
-        tokens.pop_front();
-        node->children.push_back(parse_expr(tokens, scope));
-    }
-    else if (tokens.front().type == Token::TOK_PRINTLN)
-    {
-        node = new_node({ .type = Token::TOK_PRINTLN });
-        tokens.pop_front();
-        node->children.push_back(parse_expr(tokens, scope));
-    }
-    else
-    {
-        node = parse_or(tokens, scope);
-
-        if (tokens.front().type == Token::TOK_LBRACK)
+        case Token::KEY_RETURN:
+        case Token::KEY_PRINT:
+        case Token::KEY_PRINTLN:
         {
-            node->children.push_back(parse_fact(tokens, scope));
+            node = new_node(tokens.front());
+            tokens.pop_front();
+            node->children.push_back(parse_expr(tokens, scope));
+            break;
         }
 
-        // variable declaration
-        if (tokens.front().type == Token::TOK_COL)
+        default:
         {
-            tokens.pop_front();
-            node->children.push_back(parse_or(tokens, scope));
+            node = parse_or(tokens, scope);
 
-            if (scope.count(node->token.data))
+            if (tokens.front().type == Token::TOK_COL)
             {
-                print_error("redefinition of `" + node->token.data + "`", node->token);
-                print_warning("note: previous definition is here", scope.at(node->token.data)->token);
-                exit(EXIT_FAILURE);
-            }
+                tokens.pop_front();
+                node->children.push_back(parse_or(tokens, scope));
 
-            node->expr_type = node->children.front()->token.type;
-            node->is_arr = node->children.front()->expr_type == Token::TOK_ARR;
-            scope.insert({ node->token.data, node });
-        }
+                // redefinition of already existing variable
+                if (scope.count(node->token.data))
+                {
+                    print_error("redefinition of `" + node->token.data + "`", node->token);
+                    print_warning("note: previous definition is here", scope.at(node->token.data)->token);
+                    exit(EXIT_FAILURE);
+                }
 
-        // variable initialization
-        if (tokens.front().type == Token::TOK_EQ)
-        {
-            tokens.pop_front();
-            node->children.push_back(parse_or(tokens, scope));
-
-            if (!scope.count(node->token.data))
-            {
-                // TODO: figure out actual size of variable types
-                node->expr_type = node->children.front()->expr_type;
-                node->children.push_front(new_node({ .type = node->expr_type }));
                 scope.insert({ node->token.data, node });
             }
 
-            Token scope_check = check_scope(node, scope);
-            if (scope_check.data != "")
+            if (tokens.front().type == Token::TOK_EQ)
             {
-                print_error("unknown identifier `" + scope_check.data + "`", scope_check);
-                exit(EXIT_FAILURE);
+                tokens.pop_front();
+                node->children.push_back(parse_or(tokens, scope));
+
+                if (!scope.count(node->token.data))
+                {
+                    print_error("unknown identifier `" + node->token.data + "`", node->token);
+                    exit(EXIT_FAILURE);
+                }
             }
         }
     }
@@ -550,13 +256,7 @@ Node *parse_expr(std::list<Token> &tokens, std::unordered_map<std::string, Node 
     return node;
 }
 
-/*
- * parse_statement
- *    Purpose: parses a statement 
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_statement(std::list<Token> &tokens, Scope &scope)
 {
     Node *node = new Node();
 
@@ -567,19 +267,17 @@ Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, 
         print_error("expected identifier", tokens.front());
         exit(EXIT_FAILURE);
     }
+
+    if (tokens.front().type == Token::TOK_EOL)
+    {
+        tokens.pop_front();
+    }
     
     node = parse_expr(tokens, scope);
 
     while (tokens.front().type != Token::TOK_EOL && tokens.front().type != Token::TOK_RBRACE)
     {
         node->children.push_back(parse_expr(tokens, scope));
-        
-        Token scope_check = check_scope(node, scope);
-        if (scope_check.data != "")
-        {
-            print_error("unknown identifier `" + scope_check.data + "`", scope_check);
-            exit(EXIT_FAILURE);
-        }
     }
 
     if (tokens.front().type == Token::TOK_EOL)
@@ -590,208 +288,18 @@ Node *parse_statement(std::list<Token> &tokens, std::unordered_map<std::string, 
     return node;
 }
 
-/*
- * parse_if
- *    Purpose: parses a loop
- * Parameters: tokens - the list of tokens to parse, scope - the variables that are in scope of the if block
- *    Returns: a pointer to the new node
- */
-Node *parse_if(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_if(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new_node(tokens.front());
-    node->scope = scope;
-    tokens.pop_front();
-
-    int paren = 0;
-    while (tokens.front().type == Token::TOK_LPAREN)
-    {
-        paren++;
-        tokens.pop_front();
-    }
-
-    // parse condition
-    if (tokens.front().type != Token::TOK_LBRACE)
-    {
-        node->children.push_back(parse_expr(tokens, node->scope));
-    }
-
-    if (paren)
-    {
-        while (paren--)
-        {
-            if (tokens.front().type != Token::TOK_RPAREN)
-            {
-                print_error("expected `)`", tokens.front());
-                exit(EXIT_FAILURE);
-            }
-            tokens.pop_front();
-        }
-    }
-
-    Token scope_check = check_scope(node, node->scope);
-    if (scope_check.data != "")
-    {
-        print_error("unknown identifier `" + scope_check.data + "`", scope_check);
-        exit(EXIT_FAILURE);
-    }
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
-    if (tokens.front().type != Token::TOK_LBRACE)
-    {
-        print_token(tokens.front());
-        print_error("expected `{`", tokens.front());
-        exit(EXIT_FAILURE);
-    }
-    tokens.pop_front();
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
-    while (tokens.front().type != Token::TOK_RBRACE)
-    {
-        if (tokens.front().type == Token::TOK_LOOP)
-        {
-            node->children.push_back(parse_loop(tokens, node->scope));
-        }
-        else if (tokens.front().type == Token::TOK_IF)
-        {
-            node->children.push_back(parse_if(tokens, node->scope));
-        }
-        else
-        {
-            node->children.push_back(parse_statement(tokens, node->scope));
-        }
-    }
-
-    tokens.pop_front();
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
-    return node;
+    (void)(tokens);
+    (void)(scope);
+    return new Node();
 }
 
-/*
- * parse_loop
- *    Purpose: parses a loop
- * Parameters: tokens - the list of tokens to parse, scope - the variables that are in scope of the loop
- *    Returns: a pointer to the new node
- */
-Node *parse_loop(std::list<Token> &tokens, std::unordered_map<std::string, Node *> &scope)
+Node *parse_loop(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new_node(tokens.front());
-    node->scope = scope;
-    tokens.pop_front();
-
-    int paren = 0;
-    while (tokens.front().type == Token::TOK_LPAREN)
-    {
-        paren++;
-        tokens.pop_front();
-    }
-
-    // parse initialization, condition, and increment
-    Node *list = new_node({ .type = Token::TOK_LIST });
-
-    // initialization
-    list->children.push_back(parse_expr(tokens, node->scope));
-
-    // optional comma to separate condition
-    if (tokens.front().type == Token::TOK_COM)
-    {
-        tokens.pop_front();
-    }
-
-    // condition
-    if (tokens.front().type != Token::TOK_LBRACE &&
-        tokens.front().type != Token::TOK_RPAREN &&
-        tokens.front().type != Token::TOK_EOL)
-    {
-        list->children.push_back(parse_expr(tokens, node->scope));
-    }
-     
-    // optional comma to separate increment
-    if (tokens.front().type == Token::TOK_COM)
-    {
-        tokens.pop_front();
-    }
-
-    // increment
-    if (tokens.front().type != Token::TOK_LBRACE &&
-        tokens.front().type != Token::TOK_RPAREN &&
-        tokens.front().type != Token::TOK_EOL)
-    {
-        list->children.push_back(parse_expr(tokens, node->scope));
-    }
-
-    while (paren--)
-    {
-        if (tokens.front().type != Token::TOK_RPAREN)
-        {
-            print_error("expected `)`", tokens.front());
-            exit(EXIT_FAILURE);
-        }
-        tokens.pop_front();
-    }
-
-    Token scope_check = check_scope(list, node->scope);
-    if (scope_check.data != "")
-    {
-        print_error("unknown identifier `" + scope_check.data + "`", scope_check);
-        exit(EXIT_FAILURE);
-    }
-    node->children.push_back(list);
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
-    if (tokens.front().type != Token::TOK_LBRACE)
-    {
-        print_token(tokens.front());
-        print_error("expected `{`", tokens.front());
-        exit(EXIT_FAILURE);
-    }
-    tokens.pop_front();
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
-    while (tokens.front().type != Token::TOK_RBRACE)
-    {
-        if (tokens.front().type == Token::TOK_LOOP)
-        {
-            node->children.push_back(parse_loop(tokens, node->scope));
-        }
-        else if (tokens.front().type == Token::TOK_IF || tokens.front().type == Token::TOK_ELSE)
-        {
-            node->children.push_back(parse_if(tokens, node->scope));
-        }
-        else
-        {
-            node->children.push_back(parse_statement(tokens, node->scope));
-        }
-    }
-
-    tokens.pop_front();
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
-    return node;
+    (void)(tokens);
+    (void)(scope);
+    return new Node();
 }
 
 /*
@@ -813,7 +321,8 @@ Node *parse_function(std::list<Token> &tokens)
 
     if (tokens.front().type == Token::TOK_LPAREN)
     {
-        tokens.pop_front();
+        int p = eat_open_parens(tokens);
+
         while (tokens.front().type != Token::TOK_RPAREN)
         {
             if (tokens.front().type == Token::TOK_COM)
@@ -822,7 +331,8 @@ Node *parse_function(std::list<Token> &tokens)
             }
             args->children.push_back(parse_expr(tokens, node->scope));
         }
-        tokens.pop_front();
+        
+        eat_close_parens(tokens, p);
     }
 
     node->children.push_back(args);
@@ -834,8 +344,7 @@ Node *parse_function(std::list<Token> &tokens)
 
         // expect type of function
         if (tokens.front().type != Token::TOK_ID && 
-            !INTRINSICS.count(tokens.front().data) &&
-            tokens.front().data != "*")
+            !INTRINSICS.count(tokens.front().data))
         {
             print_error("expected identifier", tokens.front());
             exit(EXIT_FAILURE);
@@ -844,10 +353,8 @@ Node *parse_function(std::list<Token> &tokens)
     }
     else
     {
-        node->children.push_back(new_node({ .type = Token::TOK_VOID }));
-        node->children.back()->expr_type = Token::TOK_VOID;
+        node->children.push_back(new_node({ .type = Token::KEY_VOID }));
     }
-    node->expr_type = node->children.back()->expr_type;
 
     // conditional expect EOL
     if (tokens.front().type == Token::TOK_EOL)
@@ -862,18 +369,17 @@ Node *parse_function(std::list<Token> &tokens)
         exit(EXIT_FAILURE);
     }
     tokens.pop_front();
-
-    // conditional expect EOL
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
     
     // parse statements
     while (tokens.front().type != Token::TOK_RBRACE)
     {
+        if (tokens.front().type == Token::TOK_EOL)
+        {
+            tokens.pop_front();
+        }
+
         // stop parsing function body when the first return statement is hit
-        if (tokens.front().type == Token::TOK_RETURN)
+        if (tokens.front().type == Token::KEY_RETURN)
         {
             node->children.push_back(parse_statement(tokens, node->scope));
             break;
@@ -896,15 +402,15 @@ Node *parse_function(std::list<Token> &tokens)
     auto it = node->children.begin();
     std::advance(it, 1);
 
-    if ((*it)->token.type != Token::TOK_VOID && 
-        node->children.back()->token.type != Token::TOK_RETURN)
+    if ((*it)->token.type != Token::KEY_VOID && 
+        node->children.back()->token.type != Token::KEY_RETURN)
     {
         print_error("expected return statement for non-void function", tokens.front());
         print_warning("note: function type declared here", (*it)->token);
         exit(EXIT_FAILURE);
     }
-    else if ((*it)->token.type == Token::TOK_VOID && 
-             node->children.back()->token.type == Token::TOK_RETURN)
+    else if ((*it)->token.type == Token::KEY_VOID && 
+             node->children.back()->token.type == Token::KEY_RETURN)
     {
         print_error("found return statement in void function", node->children.back()->token);
         exit(EXIT_FAILURE);
@@ -973,17 +479,6 @@ void pretty_print_tabs(int num_tabs, std::ostream &out)
 void pretty_print_helper(Node *node, int num_tabs, std::ostream &out)
 {
     print_token(node->token, out, false);
-    if (node->expr_type != Token::TOK_NONE)
-    {
-        out << ": [ ";
-        out << token_id_to_str(node->expr_type);
-        out << " ]";
-    }
-    if (node->is_arr)
-    {
-        out << " *";
-    }
-
     out << "\n";
     num_tabs++;
     
