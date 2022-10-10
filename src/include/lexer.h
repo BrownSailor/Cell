@@ -11,8 +11,8 @@
 #include <unordered_set>
 
 /*
- * Token 
- * contains the type of token and the value of the token, as well as the 
+ * Token
+ * contains the type of token and the value of the token, as well as the
  * location the token is found at in the file
  */
 struct Token
@@ -20,27 +20,27 @@ struct Token
     enum Type
     {
         TOK_NONE,
-        // Non built-ins
+
         TOK_ID,
-        TOK_NUM,
-        TOK_IDX,
+        KEY_BOOL,
+
         TOK_CHAR,
+        TOK_INT,
+
+        KEY_CHAR,
+        KEY_INT,
+        KEY_UINT,
+
         TOK_STR,
+        TOK_ARR,
         TOK_LIST,
         TOK_FUNC,
         TOK_PROG,
 
         // Intrinsic keywords
         KEY_RETURN,
-        KEY_PRINT,
-        KEY_PRINTLN,
-        KEY_BYTE,
-        KEY_CHAR,
-        KEY_BOOL,
-        KEY_SHORT,
-        KEY_INT,
-        KEY_LONG,
-        KEY_ARR,
+        KEY_DUMP,
+        KEY_DUMPLN,
         KEY_VOID,
 
         // Unary operators
@@ -82,6 +82,7 @@ struct Token
         TOK_COM,
         TOK_LOOP,
         TOK_IF,
+        TOK_ELIF,
         TOK_ELSE,
         TOK_EOL,
         TOK_EOF

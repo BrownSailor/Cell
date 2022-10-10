@@ -1,17 +1,15 @@
 #include "include/lexer.h"
 
-std::unordered_map<std::string, Token::Type> INTRINSICS = 
+std::unordered_map<std::string, Token::Type> INTRINSICS =
 {
     // Intrinsic keywords
     { "return", Token::KEY_RETURN },
-    { "print", Token::KEY_PRINT },
-    { "println", Token::KEY_PRINTLN },
-    { "byte", Token::KEY_BYTE },
+    { "dump", Token::KEY_DUMP },
+    { "dumpln", Token::KEY_DUMPLN },
     { "char", Token::KEY_CHAR },
     { "bool", Token::KEY_BOOL },
-    { "short", Token::KEY_SHORT },
     { "int", Token::KEY_INT },
-    { "long", Token::KEY_LONG },
+    { "uint", Token::KEY_UINT },
 };
 
 /*
@@ -27,14 +25,14 @@ Token lex_word(const std::string &word, int row, int col, const std::string &fil
         return { .type = INTRINSICS[word], .data = word, .row = row, .col = col, .file = file };
     }
     else
-    { 
+    {
         try
-        { 
+        {
             std::stoull(word);
-            return { .type = Token::TOK_NUM, .data = word, .row = row, .col = col, .file = file };
+            return { .type = Token::TOK_INT, .data = word, .row = row, .col = col, .file = file };
         }
         catch (const std::exception &e)
-        { 
+        {
             return { .type = Token::TOK_ID, .data = word, .row = row, .col = col, .file = file };
         }
     }
@@ -293,7 +291,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             }
 
             col = col_end;
-            
+
             if (line[i + 1] == '-')
             {
                 tokens.push_back({ .type = Token::TOK_DEC, .data = "--", .row = row, .col = col, .file = file });
@@ -381,7 +379,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
 
             col = col_end;
             tokens.push_back({ .type = Token::TOK_LBRACE, .data = "{", .row = row, .col = col, .file = file });
-            
+
             col_end++;
         }
         else if (c == '}')
@@ -394,7 +392,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
 
             col = col_end;
             tokens.push_back({ .type = Token::TOK_RBRACE, .data = "}", .row = row, .col = col, .file = file });
-            
+
             col_end++;
         }
         else if (c == '(')
@@ -407,7 +405,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
 
             col = col_end;
             tokens.push_back({ .type = Token::TOK_LPAREN, .data = "(", .row = row, .col = col, .file = file });
-            
+
             col_end++;
         }
         else if (c == ')')
@@ -420,7 +418,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
 
             col = col_end;
             tokens.push_back({ .type = Token::TOK_RPAREN, .data = ")", .row = row, .col = col, .file = file });
-            
+
             col_end++;
         }
         else if (c == '[')
@@ -446,7 +444,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
 
             col = col_end;
             tokens.push_back({ .type = Token::TOK_RBRACK, .data = "]", .row = row, .col = col, .file = file });
-            
+
             col_end++;
         }
         else if (c == ',')
@@ -483,7 +481,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
  *   Returns: the list of tokens
  */
 std::list<Token> lex(const std::string &input)
-{ 
+{
     std::ifstream in;
     in.open(input);
 
@@ -496,10 +494,10 @@ std::list<Token> lex(const std::string &input)
         if (line.size() && line.find_first_not_of(" \t\n\v\f\r") != std::string::npos)
         {
             lex_line(line, tokens, row, input);
-            tokens.push_back({ Token::TOK_EOL, "", .row = row, .col = (int)(line.size()) + 1, .file = input });
+            tokens.push_back({ .type = Token::TOK_EOL, .data = "", .row = row, .col = (int)(line.size()) + 1, .file = input });
         }
 
-        row++;  
+        row++;
     }
 
     // tokens.push_back({ Token::TOK_EOF, "", .row = row, .col = 1, .file = input });
@@ -514,11 +512,8 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::TOK_ID:
             return "TOKEN_ID";
 
-        case Token::TOK_NUM:
-            return "TOKEN_NUM";
-        
-        case Token::TOK_IDX:
-            return "TOKEN_IDX";
+        case Token::TOK_INT:
+            return "TOKEN_INT";
 
         case Token::TOK_CHAR:
             return "TOKEN_CHAR";
@@ -526,12 +521,15 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::TOK_STR:
             return "TOKEN_STR";
 
+        case Token::TOK_ARR:
+            return "TOKEN_ARR";
+
         case Token::TOK_LIST:
             return "TOKEN_LIST";
 
         case Token::TOK_FUNC:
             return "TOKEN_FUNCTION";
-        
+
         case Token::TOK_PROG:
             return "TOKEN_PROGRAM";
 
@@ -539,14 +537,11 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::KEY_RETURN:
             return "KEY_RETURN";
 
-        case Token::KEY_PRINT:
-            return "KEY_PRINT";
+        case Token::KEY_DUMP:
+            return "KEY_DUMP";
 
-        case Token::KEY_PRINTLN:
-            return "KEY_PRINTLN";
-        
-        case Token::KEY_BYTE:
-            return "KEY_BYTE";
+        case Token::KEY_DUMPLN:
+            return "KEY_DUMPLN";
 
         case Token::KEY_CHAR:
             return "KEY_CHAR";
@@ -554,25 +549,19 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::KEY_BOOL:
             return "KEY_BOOL";
 
-        case Token::KEY_SHORT:
-            return "KEY_SHORT";
-
         case Token::KEY_INT:
             return "KEY_INT";
 
-        case Token::KEY_LONG:
-            return "KEY_LONG";
-        
-        case Token::KEY_ARR:
-            return "KEY_ARR";
-        
+        case Token::KEY_UINT:
+            return "KEY_UINT";
+
         case Token::KEY_VOID:
             return "TOKEN_VOID";
 
+        // Unary operators
         case Token::TOK_BANG:
             return "TOKEN_BANG";
 
-        // Unary operators
         case Token::TOK_TILDA:
             return "TOKEN_TILDA";
 
@@ -669,6 +658,9 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::TOK_IF:
             return "TOKEN_IF";
 
+        case Token::TOK_ELIF:
+            return "TOKEN_ELIF";
+
         case Token::TOK_ELSE:
             return "TOKEN_ELSE";
 
@@ -677,7 +669,7 @@ std::string token_id_to_str(const Token::Type &type)
 
         case Token::TOK_EOF:
             return "TOKEN_EOF";
-        
+
         default:
             return "";
     }
@@ -699,12 +691,8 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_ID";
             break;
 
-        case Token::TOK_NUM:
+        case Token::TOK_INT:
             out << "TOKEN_NUM";
-            break;
-
-        case Token::TOK_IDX:
-            out << "TOKEN_IDX";
             break;
 
         case Token::TOK_CHAR:
@@ -715,6 +703,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_STR";
             break;
 
+        case Token::TOK_ARR:
+            out << "TOKEN_ARR";
+            break;
+
         case Token::TOK_LIST:
             out << "TOKEN_LIST";
             break;
@@ -722,7 +714,7 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
         case Token::TOK_FUNC:
             out << "TOKEN_FUNCTION";
             break;
-        
+
         case Token::TOK_PROG:
             out << "TOKEN_PROGRAM";
             break;
@@ -732,18 +724,14 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "KEY_RETURN";
             break;
 
-        case Token::KEY_PRINT:
-            out << "KEY_PRINT";
+        case Token::KEY_DUMP:
+            out << "KEY_DUMP";
             break;
 
-        case Token::KEY_PRINTLN:
-            out << "KEY_PRINTLN";
+        case Token::KEY_DUMPLN:
+            out << "KEY_DUMPLN";
             break;
 
-        case Token::KEY_BYTE:
-            out << "KEY_BYTE";
-            break;
-            
         case Token::KEY_CHAR:
             out << "KEY_CHAR";
             break;
@@ -752,22 +740,14 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "KEY_BOOL";
             break;
 
-        case Token::KEY_SHORT:
-            out << "KEY_SHORT";
-            break;
-
         case Token::KEY_INT:
             out << "KEY_INT";
             break;
 
-        case Token::KEY_LONG:
-            out << "KEY_LONG";
+        case Token::KEY_UINT:
+            out << "KEY_UINT";
             break;
-        
-        case Token::KEY_ARR:
-            out << "KEY_ARR";
-            break;
-        
+
         case Token::KEY_VOID:
             out << "KEY_VOID";
             break;
@@ -792,7 +772,7 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
         case Token::TOK_DEC:
             out << "TOKEN_DEC";
             break;
-        
+
         case Token::TOK_POST_DEC:
             out << "TOKEN_POST_DEC";
 
@@ -903,6 +883,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_IF";
             break;
 
+        case Token::TOK_ELIF:
+            out << "TOKEN_ELIF";
+            break;
+
         case Token::TOK_ELSE:
             out << "TOKEN_ELSE";
             break;
@@ -914,7 +898,7 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
         case Token::TOK_EOF:
             out << "TOKEN_EOF";
             break;
-        
+
         default:
             out << "Unknown token: ";
     }

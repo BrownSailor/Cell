@@ -1,4 +1,4 @@
-#include "include/assembler.h"
+#include "include/compiler.h"
 
 int main(int argc, char **argv)
 {
@@ -14,7 +14,8 @@ int main(int argc, char **argv)
 
     std::cout << "\n=== CODE ===\n\n";
     print_assembled(root);
-    assemble("main.c", root);
+
+    compile_and_link(argv[1], root);
 
     return 0;
 }
