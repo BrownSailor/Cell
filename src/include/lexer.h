@@ -25,9 +25,9 @@ struct Token
         KEY_BOOL,
 
         TOK_CHAR,
-        TOK_INT,
-
         KEY_CHAR,
+
+        TOK_INT,
         KEY_INT,
         KEY_UINT,
 
@@ -41,6 +41,9 @@ struct Token
         KEY_RETURN,
         KEY_DUMP,
         KEY_DUMPLN,
+        KEY_SIZE,
+        KEY_PUSHB,
+        KEY_POPF,
         KEY_VOID,
 
         // Unary operators

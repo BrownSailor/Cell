@@ -3,5 +3,5 @@ build:
 
 clean:
 	-rm slang
-	-rm *.asm
-	-rm *.o
+	-rm *.s
+	-rm *.c

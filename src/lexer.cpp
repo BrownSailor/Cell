@@ -6,6 +6,9 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "return", Token::KEY_RETURN },
     { "dump", Token::KEY_DUMP },
     { "dumpln", Token::KEY_DUMPLN },
+    { "size" , Token::KEY_SIZE },
+    { "pushb" , Token::KEY_PUSHB },
+    { "popf" , Token::KEY_POPF },
     { "char", Token::KEY_CHAR },
     { "bool", Token::KEY_BOOL },
     { "int", Token::KEY_INT },
@@ -543,6 +546,9 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::KEY_DUMPLN:
             return "KEY_DUMPLN";
 
+        case Token::KEY_SIZE:
+            return "KEY_SIZE";
+
         case Token::KEY_CHAR:
             return "KEY_CHAR";
 
@@ -730,6 +736,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
 
         case Token::KEY_DUMPLN:
             out << "KEY_DUMPLN";
+            break;
+
+        case Token::KEY_SIZE:
+            out << "KEY_SIZE";
             break;
 
         case Token::KEY_CHAR:

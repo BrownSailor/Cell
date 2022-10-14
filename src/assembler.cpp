@@ -26,6 +26,24 @@ std::string assemble_unary(Node *root, const Scope &scope)
     return expr;
 }
 
+std::string assemble_post_unary(Node *root, const Scope &scope)
+{
+    std::string expr = "";
+
+    if (root == nullptr)
+    {
+        return "";
+    }
+
+    if (root->children.size())
+    {
+        expr += "(" + assemble_expr(root->children.front(), scope) + ")";
+        expr += root->token.data;
+    }
+
+    return expr;
+}
+
 /*
  * assemble_binary
  *    Purpose: writes assembly for a binary operation
@@ -54,9 +72,21 @@ std::string assemble_binary(Node *root, const Scope &scope)
     return expr;
 }
 
-std::string assemble_type(Node *root, bool ptr)
+std::string assemble_type(Node *root, size_t size)
 {
     std::string type = "";
+
+    if (size == 1 && root->token.type == Token::KEY_CHAR)
+    {
+        type += "__built_in::string";
+        return type;
+    }
+
+    if (size)
+    {
+        type += "__built_in::array<" + assemble_type(root, size - 1) + ">";
+        return type;
+    }
 
     /* Converting the type of the variable to the corresponding C type. */
     switch (root->token.type)
@@ -94,18 +124,10 @@ std::string assemble_type(Node *root, bool ptr)
         }
     }
 
-    if (ptr)
-    {
-        for (int i = 0; i < root->arr_size; i++)
-        {
-            type += '*';
-        }
-    }
-
     return type;
 }
 
-std::string assemble_expr(Node *root, const Scope &scope)
+std::string assemble_expr(Node *root, const Scope &scope, Node *parent, size_t arr_size)
 {
     std::string expr = "";
 
@@ -129,6 +151,24 @@ std::string assemble_expr(Node *root, const Scope &scope)
             break;
         }
 
+        case Token::KEY_SIZE:
+        {
+            expr += builtin_size(root->children.front(), assemble_expr(root->children.front(), scope));
+            break;
+        }
+
+        case Token::KEY_PUSHB:
+        {
+            expr += builtin_pushb(root->children.front(), assemble_expr(root->children.front(), scope), assemble_expr(root->children.back(), scope));
+            break;
+        }
+
+        case Token::KEY_POPF:
+        {
+            expr += builtin_popf(root->children.front(), assemble_expr(root->children.front(), scope));
+            break;
+        }
+
         case Token::TOK_CHAR:
         {
             expr += "'" + root->token.data + "'";
@@ -145,6 +185,8 @@ std::string assemble_expr(Node *root, const Scope &scope)
         case Token::TOK_STAR:
         case Token::TOK_SLASH:
         case Token::TOK_PERCENT:
+        case Token::TOK_SHL:
+        case Token::TOK_SHR:
         case Token::TOK_EQEQ:
         case Token::TOK_NEQ:
         case Token::TOK_LT:
@@ -172,15 +214,33 @@ std::string assemble_expr(Node *root, const Scope &scope)
             break;
         }
 
+        case Token::TOK_BANG:
+        case Token::TOK_TILDA:
+        case Token::TOK_INC:
+        case Token::TOK_DEC:
+        {
+            expr += assemble_unary(root, scope);
+            break;
+        }
+
+        case Token::TOK_POST_INC:
+        case Token::TOK_POST_DEC:
+        {
+            expr += assemble_post_unary(root, scope);
+            break;
+        }
+
         case Token::TOK_ARR:
         {
+            expr += "__built_in::array<" + assemble_type(parent->children.front(), arr_size - 1) + ">(";
             expr += "{";
             for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
             {
-                expr += assemble_expr(*it, scope);
+                expr += assemble_expr(*it, scope, parent, arr_size - 1);
                 expr += ",";
             }
             expr[expr.size() - 1] = '}';
+            expr += ")";
 
             break;
         }
@@ -193,17 +253,20 @@ std::string assemble_expr(Node *root, const Scope &scope)
                 {
                     expr += root->token.data;
 
-                    for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
+                    if (root->arr_dim)
                     {
-                        expr += "[";
-                        expr += assemble_expr(*it, scope);
-                        expr += "]";
+                        for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
+                        {
+                            expr += "[";
+                            expr += assemble_expr(*it, scope);
+                            expr += "]";
+                        }
                     }
                     break;
                 }
                 case Node::NODE_VAR_ASN:
                 {
-                    if (root->children.size() > 1)
+                    if (root->arr_dim && root->children.size()  == root->arr_dim + 1)
                     {
                         expr += root->token.data;
                         auto end = root->children.begin();
@@ -217,41 +280,40 @@ std::string assemble_expr(Node *root, const Scope &scope)
                         }
 
                         expr += " = ";
+                        expr += assemble_expr(root->children.back(), scope);
                     }
                     else
                     {
                         expr += root->token.data + " = ";
+                        expr += assemble_expr(root->children.back(), scope);
                     }
 
-                    expr += assemble_expr(root->children.front(), scope);
                     break;
                 }
                 case Node::NODE_VAR_DEC:
                 {
-                    expr += assemble_type(root->children.front()) + " ";
+                    expr += assemble_type(root->children.front(), root->arr_dim) + " ";
                     expr += root->token.data;
+
                     break;
                 }
                 case Node::NODE_VAR_DEC_ASN:
                 {
-                    expr += assemble_type(root->children.front(), false) + " ";
-
-                    if (root->arr_size)
+                    if (root->arr_dim && root->children.back()->token.type == Token::TOK_ARR)
                     {
+                        expr += assemble_type(root->children.front(), root->arr_dim) + " ";
                         expr += root->token.data;
-                        for (int i = 0; i < root->arr_size; i++)
-                        {
-                            expr += "[]";
-                        }
 
                         expr += " = ";
+                        expr += assemble_expr(root->children.back(), scope, root, root->arr_dim);
                     }
                     else
                     {
+                        expr += assemble_type(root->children.front(), root->arr_dim) + " ";
                         expr += root->token.data + " = ";
+                        expr += assemble_expr(root->children.back(), scope);
                     }
 
-                    expr += assemble_expr(root->children.back(), scope);
                     break;
                 }
                 case Node::NODE_FUNC_CALL:
@@ -341,6 +403,57 @@ std::string assemble_loop(Node *root)
             loop += "}\n";
             break;
         }
+        case 1:
+        {
+            loop += "for (;";
+            loop += assemble_expr(root->children.front()->children.front(), root->scope);
+            loop += ";) {\n";
+            std::advance(x, 1);
+
+            loop += assemble_body(x, root->children.end(), root->scope);
+            loop += "}\n";
+            break;
+        }
+        case 2:
+        {
+            loop += "for (";
+            bool b = false;
+
+            // initializer
+            if (root->children.front()->children.front()->type == Node::NODE_VAR_DEC_ASN ||
+                root->children.front()->children.front()->type == Node::NODE_VAR_ASN)
+            {
+                loop += assemble_expr(root->children.front()->children.front(), root->scope);
+                b = true;
+            }
+            loop += ";";
+
+            if (b)
+            {
+                loop += assemble_expr(root->children.front()->children.back(), root->scope);
+            }
+            else
+            {
+                loop += assemble_expr(root->children.front()->children.front(), root->scope);
+            }
+            loop += ";";
+
+            // increment
+            if (root->children.front()->children.back()->type == Node::NODE_VAR_ASN ||
+                root->children.front()->children.back()->token.type == Token::TOK_INC ||
+                root->children.front()->children.back()->token.type == Token::TOK_DEC ||
+                root->children.front()->children.back()->token.type == Token::TOK_POST_INC ||
+                root->children.front()->children.back()->token.type == Token::TOK_POST_DEC)
+            {
+                loop += assemble_expr(root->children.front()->children.back(), root->scope);
+            }
+            loop += ") {\n";
+            std::advance(x, 1);
+
+            loop += assemble_body(x, root->children.end(), root->scope) + "}\n";
+
+            break;
+        }
         case 3:
         {
             auto it = root->children.front()->children.begin();
@@ -405,24 +518,34 @@ std::string assemble_function(Node *root)
 
     std::string type = assemble_type(*x);
     std::string name = root->token.data;
+    std::string args = "";
 
     if (name == "main")
     {
         type = "int32_t";
+        args = "int32_t argc, char** argv";
     }
-    std::string args = "";
-
-    if (root->children.front()->token.type == Token::TOK_LIST)
+    else
     {
-        auto it = root->children.front()->children.begin();
-        for (size_t i = 0; i < root->children.front()->children.size(); i++)
+        if (root->children.front()->token.type == Token::TOK_LIST)
         {
-            args += assemble_expr(*it, root->scope);
-            if (i != root->children.front()->children.size() - 1)
+            auto it = root->children.front()->children.begin();
+            for (size_t i = 0; i < root->children.front()->children.size(); i++)
             {
-                args += ", ";
+                args += assemble_type((*it)->children.front(), (*it)->arr_dim);
+
+                if ((*it)->arr_dim)
+                {
+                    args += "&";
+                }
+
+                args += " " + (*it)->token.data;
+                if (i != root->children.front()->children.size() - 1)
+                {
+                    args += ", ";
+                }
+                std::advance(it, 1);
             }
-            std::advance(it, 1);
         }
     }
 
@@ -438,8 +561,7 @@ std::string assemble_function(Node *root)
 std::string assemble_program(Node *root)
 {
     std::string program = "";
-    program += "#include <stdio.h>\n";
-    program += "#include <stdint.h>\n";
+    program += "#include \"std/array.h\"\n";
 
     for (Node *child : root->children)
     {

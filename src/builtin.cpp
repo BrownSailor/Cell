@@ -4,9 +4,8 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
 {
     std::string print = "";
     Token::Type type = eval_node(root, scope);
-    (void)(type);
 
-    if (!root->arr_size)
+    if (!root->arr_dim)
     {
         switch (type)
         {
@@ -24,12 +23,12 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
             case Token::TOK_INT:
             case Token::KEY_INT:
             {
-                print += "printf(\"%ld\", " + expr + ")";
+                print += "printf(\"%lld\", " + expr + ")";
                 break;
             }
             case Token::KEY_UINT:
             {
-                print += "printf(\"%lu\", " + expr + ")";
+                print += "printf(\"%llu\", " + expr + ")";
                 break;
             }
 
@@ -38,7 +37,7 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
     }
     else
     {
-        switch ((root->arr_size - root->children.size()))
+        switch ((root->arr_dim - root->children.size()))
         {
             case 0:
             {
@@ -58,12 +57,12 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
                     case Token::TOK_INT:
                     case Token::KEY_INT:
                     {
-                        print += "printf(\"%ld\", " + expr + ")";
+                        print += "printf(\"%lld\", " + expr + ")";
                         break;
                     }
                     case Token::KEY_UINT:
                     {
-                        print += "printf(\"%lu\", " + expr + ")";
+                        print += "printf(\"%llu\", " + expr + ")";
                         break;
                     }
 
@@ -72,29 +71,10 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
 
                 break;
             }
-            case 1:
-            {
-                switch (type)
-                {
-                    case Token::KEY_CHAR:
-                    {
-                        print += "printf(\"%s\", " + expr + ")";
-                        break;
-                    }
-
-                    default:
-                    {
-                        print += "printf(\"%x\", " + expr + ")";
-                        break;
-                    }
-                }
-
-                break;
-            }
 
             default:
             {
-                print += "printf(\"%x\", " + expr + ")";
+                print += "printf(\"%s\", " + expr + ".to_string())";
                 break;
             }
         }
@@ -107,9 +87,8 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
 {
     std::string println = "";
     Token::Type type = eval_node(root, scope);
-    (void)(type);
 
-    if (!root->arr_size)
+    if (!root->arr_dim)
     {
         switch (type)
         {
@@ -127,12 +106,12 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
             case Token::TOK_INT:
             case Token::KEY_INT:
             {
-                println += "printf(\"%ld\\n\", " + expr + ")";
+                println += "printf(\"%lld\\n\", " + expr + ")";
                 break;
             }
             case Token::KEY_UINT:
             {
-                println += "printf(\"%lu\\n\", " + expr + ")";
+                println += "printf(\"%llu\\n\", " + expr + ")";
                 break;
             }
 
@@ -141,7 +120,7 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
     }
     else
     {
-        switch ((root->arr_size - root->children.size()))
+        switch ((root->arr_dim - root->children.size()))
         {
             case 0:
             {
@@ -161,12 +140,12 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
                     case Token::TOK_INT:
                     case Token::KEY_INT:
                     {
-                        println += "printf(\"%ld\\n\", " + expr + ")";
+                        println += "printf(\"%lld\\n\", " + expr + ")";
                         break;
                     }
                     case Token::KEY_UINT:
                     {
-                        println += "printf(\"%lu\\n\", " + expr + ")";
+                        println += "printf(\"%llu\\n\", " + expr + ")";
                         break;
                     }
 
@@ -175,33 +154,35 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
 
                 break;
             }
-            case 1:
-            {
-                switch (type)
-                {
-                    case Token::KEY_CHAR:
-                    {
-                        println += "printf(\"%s\\n\", " + expr + ")";
-                        break;
-                    }
-
-                    default:
-                    {
-                        println += "printf(\"%x\\n\", " + expr + ")";
-                        break;
-                    }
-                }
-
-                break;
-            }
-
             default:
             {
-                println += "printf(\"%x\\n\", " + expr + ")";
+                println += "printf(\"%s\\n\", " + expr + ".to_string())";
                 break;
             }
         }
     }
 
     return println;
+}
+
+std::string builtin_size(Node *root, std::string expr)
+{
+    (void)(root);
+    std::string size = expr + ".size()";
+
+    return size;
+}
+
+std::string builtin_pushb(Node *root, std::string expr1, std::string expr2)
+{
+    (void)(root);
+    std::string pushb = expr1 + ".pushb(" + expr2 + ")";
+    return pushb;
+}
+
+std::string builtin_popf(Node *root, std::string expr)
+{
+    (void)(root);
+    std::string popf = expr + ".popf()";
+    return popf;
 }

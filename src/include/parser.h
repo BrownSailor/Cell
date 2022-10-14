@@ -28,7 +28,7 @@ struct Node
     Type type = NODE_NONE;
     Token token;
     Scope scope;
-    int arr_size = 0;
+    size_t arr_dim = 0;
     bool semi = false;
     std::list<Node *> children;
 };

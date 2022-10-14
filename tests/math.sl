@@ -1,12 +1,9 @@
 main (argc: int, argv: [[char]]): int
 {
-    val1: int = 3 + 3
-    val2: int = val1 * val1
 
-    dumpln val2 / val1 + val1
-    dumpln val2 % val1 + (val2 * val1 / val2) - val1
+    val1: int = 0
+    val2: int = 1
 
-    dumpln val1 && val2 && val1 && val2 && val1 && val2 && val1 && val2 && val1 && val2 && 0
-
+    dumpln (val1 - val2)
     return 0
 }

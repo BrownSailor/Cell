@@ -9,15 +9,15 @@
  */
 void compile_and_link(std::string filename, Node *root, std::ostream &out)
 {
-    std::string asm_command = "gcc -O3 -S " + filename + ".c";
-    std::string lnk_command = "gcc -O3 -o " + filename + " " + filename + ".c";
-    std::string rmf_command = "rm " + filename + ".c";
+    std::string asm_command = "clang++ -O3 -S " + filename + ".cc";
+    std::string lnk_command = "clang++ -O3 -o " + filename + " " + filename + ".cc";
+    std::string rmf_command = "rm " + filename + ".cc";
 
     out << "[INFO] Generating " << filename << ".s\n";
-    assemble(filename + ".c", root);
+    assemble(filename + ".cc", root);
     system(asm_command.c_str());
 
     out << "[INFO] Linking " << filename << " executable\n";
     system(lnk_command.c_str());
-    // system(rmf_command.c_str());
+//    system(rmf_command.c_str());
 }
