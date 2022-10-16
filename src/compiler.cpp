@@ -9,11 +9,11 @@
  */
 void compile_and_link(std::string filename, Node *root, std::ostream &out)
 {
-    std::string asm_command = "clang++ -O3 -S " + filename + ".cc";
+    std::string asm_command = "clang++ -O3 -c " + filename + ".cc";
     std::string lnk_command = "clang++ -O3 -o " + filename + " " + filename + ".cc";
     std::string rmf_command = "rm " + filename + ".cc";
 
-    out << "[INFO] Generating " << filename << ".s\n";
+    out << "[INFO] Generating " << filename << ".o\n";
     assemble(filename + ".cc", root);
     system(asm_command.c_str());
 

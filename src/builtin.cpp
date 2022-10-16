@@ -32,7 +32,12 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
                 break;
             }
 
-            default: break;
+            default:
+            {
+                // TODO: fix this lol
+                print += "printf(\"%lld\", " + expr + ")";
+                break;
+            }
         }
     }
     else
@@ -163,26 +168,4 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
     }
 
     return println;
-}
-
-std::string builtin_size(Node *root, std::string expr)
-{
-    (void)(root);
-    std::string size = expr + ".size()";
-
-    return size;
-}
-
-std::string builtin_pushb(Node *root, std::string expr1, std::string expr2)
-{
-    (void)(root);
-    std::string pushb = expr1 + ".pushb(" + expr2 + ")";
-    return pushb;
-}
-
-std::string builtin_popf(Node *root, std::string expr)
-{
-    (void)(root);
-    std::string popf = expr + ".popf()";
-    return popf;
 }

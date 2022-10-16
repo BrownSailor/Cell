@@ -7,7 +7,7 @@ dfs (grid: [[int]], vis: [[int]], row: int, col: int, target: int): bool {
     vis[row col] = 1
 
     ? grid[row col] == target {
-        return true
+        return 1
     }
 
     ? valid (grid row + 1 col) && vis[row + 1 col] == 0 {
@@ -20,7 +20,7 @@ dfs (grid: [[int]], vis: [[int]], row: int, col: int, target: int): bool {
         return dfs (grid vis row col - 1 target)
     }
 
-    return false
+    return 0
 }
 
 main (argc: int, argv: [[char]]): int {

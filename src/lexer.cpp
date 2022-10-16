@@ -6,13 +6,17 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "return", Token::KEY_RETURN },
     { "dump", Token::KEY_DUMP },
     { "dumpln", Token::KEY_DUMPLN },
-    { "size" , Token::KEY_SIZE },
-    { "pushb" , Token::KEY_PUSHB },
-    { "popf" , Token::KEY_POPF },
     { "char", Token::KEY_CHAR },
     { "bool", Token::KEY_BOOL },
     { "int", Token::KEY_INT },
     { "uint", Token::KEY_UINT },
+    { "null", Token::KEY_NULL },
+    { "tru", Token::KEY_TRU },
+    { "fls", Token::KEY_FLS },
+    { "struct", Token::KEY_STRUCT },
+    { "new", Token::KEY_NEW },
+    { "delete", Token::KEY_DELETE },
+    { "#cpp", Token::KEY_CPP }
 };
 
 /*
@@ -368,9 +372,18 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             }
 
             col = col_end;
-            tokens.push_back({ .type = Token::TOK_COL, .data = ":", .row = row, .col = col, .file = file });
 
-            col_end++;
+            if (line[i + 1] == ':')
+            {
+                tokens.push_back({ .type = Token::TOK_ACCESS, .data = "::", .row = row, .col = col, .file = file });
+                i++;
+                col_end += 2;
+            }
+            else
+            {
+                tokens.push_back({ .type = Token::TOK_COL, .data = ":", .row = row, .col = col, .file = file });
+                col_end++;
+            }
         }
         else if (c == '{')
         {
@@ -494,7 +507,33 @@ std::list<Token> lex(const std::string &input)
 
     while (getline(in, line))
     {
-        if (line.size() && line.find_first_not_of(" \t\n\v\f\r") != std::string::npos)
+        if (line == "#cpp")
+        {
+            Token cpp = { .type = Token::KEY_CPP, .data = "", .row = row, .col = (int)(line.size()) + 1, .file = input };
+            std::string l;
+            while (getline(in, l))
+            {
+                if (l == "#cpp") break;
+                size_t start = l.find_first_not_of(" \t\n\v\f\r");
+                size_t end = l.find_last_not_of(" \t\n\v\f\r");
+
+                if (start != std::string::npos)
+                {
+                    if (end != std::string::npos)
+                    {
+                        l = l.substr(start, end - start + 1);
+                    }
+                    else
+                    {
+                        l = l.substr(start);
+                    }
+                }
+                cpp.data += l + "\n";
+            }
+
+            tokens.push_back(cpp);
+        }
+        else if (line.size() && line.find_first_not_of(" \t\n\v\f\r") != std::string::npos)
         {
             lex_line(line, tokens, row, input);
             tokens.push_back({ .type = Token::TOK_EOL, .data = "", .row = row, .col = (int)(line.size()) + 1, .file = input });
@@ -546,9 +585,6 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::KEY_DUMPLN:
             return "KEY_DUMPLN";
 
-        case Token::KEY_SIZE:
-            return "KEY_SIZE";
-
         case Token::KEY_CHAR:
             return "KEY_CHAR";
 
@@ -561,8 +597,29 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::KEY_UINT:
             return "KEY_UINT";
 
+        case Token::KEY_STRUCT:
+            return "KEY_STRUCT";
+
+        case Token::KEY_CPP:
+            return "KEY_CPP";
+        
+        case Token::KEY_NEW:
+            return "KEY_NEW";
+
+        case Token::KEY_DELETE:
+            return "KEY_DELETE";
+
         case Token::KEY_VOID:
-            return "TOKEN_VOID";
+            return "KEY_VOID";
+
+        case Token::KEY_NULL:
+            return "KEY_NULL";
+
+        case Token::KEY_TRU:
+            return "KEY_TRU";
+
+        case Token::KEY_FLS:
+            return "KEY_FLS";
 
         // Unary operators
         case Token::TOK_BANG:
@@ -629,6 +686,10 @@ std::string token_id_to_str(const Token::Type &type)
 
         case Token::TOK_GTE:
             return "TOKEN_GTE";
+
+        // Double character tokens
+        case Token::TOK_ACCESS:
+            return "TOKEN_ACCESS";
 
         // Single character tokens
         case Token::TOK_LBRACE:
@@ -738,10 +799,6 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "KEY_DUMPLN";
             break;
 
-        case Token::KEY_SIZE:
-            out << "KEY_SIZE";
-            break;
-
         case Token::KEY_CHAR:
             out << "KEY_CHAR";
             break;
@@ -758,8 +815,36 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "KEY_UINT";
             break;
 
+        case Token::KEY_STRUCT:
+            out << "KEY_STRUCT";
+            break;
+
+        case Token::KEY_CPP:
+            out << "KEY_CPP";
+            break;
+
+        case Token::KEY_NEW:
+            out << "KEY_NEW";
+            break;
+
+        case Token::KEY_DELETE:
+            out << "KEY_DELETE";
+            break;
+
         case Token::KEY_VOID:
             out << "KEY_VOID";
+            break;
+
+        case Token::KEY_NULL:
+            out << "KEY_NULL";
+            break;
+
+        case Token::KEY_TRU:
+            out << "KEY_TRU";
+            break;
+
+        case Token::KEY_FLS:
+            out << "KEY_FLS";
             break;
 
         case Token::TOK_BANG:
@@ -848,6 +933,11 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "TOKEN_GTE";
             break;
 
+        // Double character tokens
+        case Token::TOK_ACCESS:
+            out << "TOKEN_ACCESS";
+            break;
+
         // Single character tokens
         case Token::TOK_LBRACE:
             out << "TOKEN_LBRACE";
@@ -913,7 +1003,7 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             out << "Unknown token: ";
     }
 
-    out << ": " << token.data;
+    if (token.type != Token::KEY_CPP) out << ": " << token.data;
     if (new_line)
     {
         out << "\n";

@@ -1,3 +1,4 @@
+#include "include/type.h"
 #include "include/compiler.h"
 
 int main(int argc, char **argv)

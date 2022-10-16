@@ -1,6 +1,7 @@
 #include "include/parser.h"
 
 Scope global = Scope();
+Scope structs = Scope();
 
 int eat_open_parens(std::list<Token> &tokens, char p)
 {
@@ -66,11 +67,23 @@ Token::Type eval_node(Node *node, const Scope &scope)
         }
         case Node::NODE_VAR:
         case Node::NODE_VAR_ASN:
+        case Node::NODE_VAR_DEC:
         case Node::NODE_VAR_DEC_ASN:
         {
-            return eval_node(scope.at(node->token.data)->children.front(), scope);
+            if (scope.count(node->token.data))
+            {
+                return eval_node(scope.at(node->token.data)->children.front(), scope);
+            }
+            else if (structs.count(node->token.data))
+            {
+                return eval_node(structs.at(node->token.data)->children.front(), structs);
+            }
+            return Token::TOK_NONE;
         }
-
+        case Node::NODE_STRUCT:
+        {
+            return Token::KEY_STRUCT;
+        }
         case Node::NODE_FUNC_CALL:
         {
             auto it = global.at(node->token.data)->children.begin();
@@ -98,12 +111,21 @@ Node *binary(Node *left, Node *op, Node *right)
     return op;
 }
 
-Node *parse_fact(std::list<Token> &tokens, Scope &scope)
+Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
 {
     Node *node = new Node;
 
     switch (tokens.front().type)
     {
+        case Token::KEY_CPP:
+        case Token::KEY_NULL:
+        case Token::KEY_TRU:
+        case Token::KEY_FLS:
+        {
+            node = new_node(tokens.front());
+            tokens.pop_front();
+            break;
+        }
         case Token::TOK_LPAREN:
         {
             int p = eat_open_parens(tokens);
@@ -171,28 +193,28 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope)
             node->type = Node::NODE_KEY;
             break;
         }
-        case Token::KEY_SIZE:
-        case Token::KEY_POPF:
-        case Token::KEY_PUSHB:
+        case Token::KEY_STRUCT:
         {
-            node = new_node(tokens.front());
-            tokens.pop_front();
-            node->type = Node::NODE_KEY;
-
-            int p = eat_open_parens(tokens);
-            while (tokens.front().type != Token::TOK_RPAREN)
-            {
-                node->children.push_back(parse_expr(tokens, scope));
-            }
-            eat_close_parens(tokens, p);
-            break;
+            print_error("cannot define struct within function or struct", tokens.front());
+            print_warning("note: structs must be defined globally", tokens.front());
+            exit(EXIT_FAILURE);
         }
         case Token::TOK_ID:
         {
             node = new_node(tokens.front());
             tokens.pop_front();
 
-            if (global.count(node->token.data))
+            bool exists_in_struct = false;
+
+            if (parent != nullptr && scope.count(parent->token.data) && structs.count(scope.at(parent->token.data)->children.front()->token.data))
+            {
+                for (auto x : structs.at(scope.at(parent->token.data)->children.front()->token.data)->children)
+                {
+                    if (x->token.data == node->token.data) exists_in_struct = true;
+                }
+            }
+
+            if (!exists_in_struct && global.count(node->token.data))
             {
                 node->type = Node::NODE_FUNC_CALL;
                 int np = eat_open_parens(tokens);
@@ -223,6 +245,20 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope)
                 }
             }
 
+            if (tokens.front().type == Token::TOK_ACCESS)
+            {
+                Node *acc = node;
+
+                while (tokens.front().type == Token::TOK_ACCESS)
+                {
+                    acc->children.push_back(new_node(tokens.front()));
+                    tokens.pop_front();
+                    acc = acc->children.front();
+                    acc->children.push_back(parse_fact(tokens, scope, node));
+                    acc = acc->children.front();
+                }
+            }
+
             while (tokens.front().type == Token::TOK_LBRACK)
             {
                 tokens.pop_front();
@@ -231,16 +267,30 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope)
                     node->children.push_back(parse_expr(tokens, scope));
                 }
                 tokens.pop_front();
+
+                if (tokens.front().type == Token::TOK_ACCESS)
+                {
+                    Node *acc = node->children.front();
+
+                    while (tokens.front().type == Token::TOK_ACCESS)
+                    {
+                        acc->children.push_back(new_node(tokens.front()));
+                        tokens.pop_front();
+                        acc = acc->children.front();
+                        acc->children.push_back(parse_fact(tokens, scope, node));
+                        acc = acc->children.front();
+                    }
+                }
             }
 
-            if (tokens.front().type == Token::TOK_INC ||
-                tokens.front().type == Token::TOK_DEC)
-            {
-                Node *op = new_node(tokens.front());
-                op->token.type = (tokens.front().type == Token::TOK_INC ? Token::TOK_POST_INC : Token::TOK_POST_DEC);
-                tokens.pop_front();
-                node = unary(op, node);
-            }
+            // if (tokens.front().type == Token::TOK_INC ||
+            //     tokens.front().type == Token::TOK_DEC)
+            // {
+            //     Node *op = new_node(tokens.front());
+            //     op->token.type = (tokens.front().type == Token::TOK_INC ? Token::TOK_POST_INC : Token::TOK_POST_DEC);
+            //     tokens.pop_front();
+            //     node = unary(op, node);
+            // }
             break;
         }
         default: break;
@@ -363,10 +413,19 @@ Node *parse_expr(std::list<Token> &tokens, Scope &scope)
         case Token::KEY_RETURN:
         case Token::KEY_DUMP:
         case Token::KEY_DUMPLN:
+        case Token::KEY_NEW:
+        case Token::KEY_DELETE:
         {
             node = new_node(tokens.front());
             tokens.pop_front();
             node->children.push_back(parse_expr(tokens, scope));
+            node->type = Node::NODE_KEY;
+            break;
+        }
+        case Token::KEY_CPP:
+        {
+            node = new_node(tokens.front());
+            tokens.pop_front();
             node->type = Node::NODE_KEY;
             break;
         }
@@ -381,10 +440,10 @@ Node *parse_expr(std::list<Token> &tokens, Scope &scope)
                 node->children.push_back(parse_or(tokens, scope));
 
                 // redefinition of already existing variable
-                if (scope.count(node->token.data) || global.count(node->token.data))
+                if (scope.count(node->token.data) || global.count(node->token.data) || structs.count(node->token.data))
                 {
                     print_error("redefinition of `" + node->token.data + "`", node->token);
-                    print_warning("note: previous definition is here", (scope.count(node->token.data) ? scope.at(node->token.data)->token : global.at(node->token.data)->token));
+                    print_warning("note: previous definition is here", (scope.count(node->token.data) ? scope.at(node->token.data)->token : global.count(node->token.data) ? global.at(node->token.data)->token : structs.at(node->token.data)->token));
                     exit(EXIT_FAILURE);
                 }
 
@@ -400,18 +459,20 @@ Node *parse_expr(std::list<Token> &tokens, Scope &scope)
 
                 node->type = (node->type == Node::NODE_VAR_DEC ? Node::NODE_VAR_DEC_ASN : Node::NODE_VAR_ASN);
 
-                if (!scope.count(node->token.data) && !global.count(node->token.data))
+                if (!scope.count(node->token.data) && !global.count(node->token.data) && !structs.count(node->token.data))
                 {
                     print_error("unknown identifier `" + node->token.data + "`", node->token);
                     exit(EXIT_FAILURE);
                 }
             }
 
-
-            if ((node->type == Node::NODE_VAR || node->type == Node::NODE_FUNC_CALL) && !scope.count(node->token.data) && !global.count(node->token.data))
+            if (tokens.front().type == Token::TOK_INC ||
+                tokens.front().type == Token::TOK_DEC)
             {
-                print_error("unknown identifier `" + node->token.data + "`", node->token);
-                exit(EXIT_FAILURE);
+                Node *op = new_node(tokens.front());
+                op->token.type = (tokens.front().type == Token::TOK_INC ? Token::TOK_POST_INC : Token::TOK_POST_DEC);
+                tokens.pop_front();
+                node = unary(op, node);
             }
 
             break;
@@ -427,6 +488,9 @@ Node *parse_statement(std::list<Token> &tokens, Scope &scope)
 
     if (tokens.front().type != Token::TOK_INT &&
         tokens.front().type != Token::TOK_ID &&
+        tokens.front().type != Token::KEY_CPP &&
+        tokens.front().type != Token::TOK_INC &&
+        tokens.front().type != Token::TOK_DEC &&
         !INTRINSICS.count(tokens.front().data) &&
         tokens.front().type != Token::TOK_LPAREN)
     {
@@ -439,17 +503,24 @@ Node *parse_statement(std::list<Token> &tokens, Scope &scope)
         tokens.pop_front();
     }
 
-    node = parse_expr(tokens, scope);
-
-    while (tokens.front().type != Token::TOK_EOL && tokens.front().type != Token::TOK_RBRACE)
+    if (tokens.front().type == Token::KEY_CPP)
     {
-        node->children.push_back(parse_expr(tokens, scope));
+        node = parse_expr(tokens, scope);
     }
-
-    if (tokens.front().type == Token::TOK_EOL)
+    else
     {
-        node->semi = true;
-        tokens.pop_front();
+        node = parse_expr(tokens, scope);
+
+        while (tokens.front().type != Token::TOK_EOL && tokens.front().type != Token::TOK_RBRACE)
+        {
+            node->children.push_back(parse_expr(tokens, scope));
+        }
+
+        if (tokens.front().type == Token::TOK_EOL)
+        {
+            node->semi = true;
+            tokens.pop_front();
+        }
     }
 
     return node;
@@ -558,6 +629,7 @@ Node *parse_loop(std::list<Token> &tokens, Scope &scope)
     return node;
 }
 
+
 Node *parse_body(Node *node, std::list<Token> &tokens, Scope &scope)
 {
     while (tokens.front().type != Token::TOK_RBRACE)
@@ -574,12 +646,53 @@ Node *parse_body(Node *node, std::list<Token> &tokens, Scope &scope)
                 node->children.push_back(parse_if(tokens, scope));
                 break;
             }
+            case Token::TOK_EOL:
+            {
+                tokens.pop_front();
+                break;
+            }
             default:
             {
                 node->children.push_back(parse_statement(tokens, scope));
                 break;
             }
         }
+    }
+
+    return node;
+}
+
+Node *parse_struct(std::list<Token> &tokens)
+{
+    Token struct_name = tokens.front();
+    struct_name.type = Token::KEY_STRUCT;
+    Node *node = new_node(struct_name);
+
+    structs.insert({ struct_name.data, node });
+    tokens.pop_front();
+
+    // expect colon
+    tokens.pop_front();
+
+    // expect struct keyword
+    tokens.pop_front();
+
+    if (tokens.front().type == Token::TOK_EOL)
+    {
+        tokens.pop_front();
+    }
+
+    // LBRACE
+    tokens.pop_front();
+
+    parse_body(node, tokens, node->scope);
+
+    // RBRACE
+    tokens.pop_front();
+
+    if (tokens.front().type == Token::TOK_EOL)
+    {
+        tokens.pop_front();
     }
 
     return node;
@@ -597,9 +710,6 @@ Node *parse_function(std::list<Token> &tokens)
     Token func_name = tokens.front();
     func_name.type = Token::TOK_FUNC;
     Node *node = new_node(func_name);
-
-    // std::cout << "Parse function: ";
-    // print_token(tokens.front());
 
     global.insert({ tokens.front().data, node });
     tokens.pop_front();
@@ -693,7 +803,25 @@ Node *parse_program(std::list<Token> &tokens)
 
         if (tokens.size())
         {
-            node->children.push_back(parse_function(tokens));
+            if (tokens.front().type == Token::KEY_CPP)
+            {
+                node->children.push_back(new_node(tokens.front()));
+                tokens.pop_front();
+            }
+            else
+            {
+                auto it = tokens.begin();
+                std::advance(it, 2);
+
+                if ((*it).type == Token::KEY_STRUCT)
+                {
+                    node->children.push_back(parse_struct(tokens));
+                }
+                else
+                {
+                    node->children.push_back(parse_function(tokens));
+                }
+            }
         }
     }
 
@@ -788,9 +916,10 @@ void pretty_print_helper(Node *node, const Scope &scope, int num_tabs, std::ostr
 
     if (node->arr_dim)
     {
+        out << " ";
         for (size_t i = 0; i < node->arr_dim; i++)
         {
-            out << "*";
+            out << "[]";
         }
     }
 

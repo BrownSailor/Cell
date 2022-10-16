@@ -8,6 +8,7 @@ struct Node;
 typedef std::unordered_map<std::string, Node *> Scope;
 
 extern Scope global;
+extern Scope structs;
 
 struct Node
 {
@@ -21,6 +22,7 @@ struct Node
         NODE_VAR_ASN,
         NODE_VAR_DEC,
         NODE_VAR_DEC_ASN,
+        NODE_STRUCT,
         NODE_FUNC_CALL,
         NODE_FUNC_DEC
     };
@@ -30,6 +32,7 @@ struct Node
     Scope scope;
     size_t arr_dim = 0;
     bool semi = false;
+    bool ptr = false;
     std::list<Node *> children;
 };
 
@@ -42,7 +45,7 @@ Token::Type eval_node(Node *node, const Scope &scope);
 Node *unary(Node *op, Node *node);
 Node *binary(Node *left, Node *op, Node *right);
 
-Node *parse_fact(std::list<Token> &tokens, Scope &scope);
+Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent = nullptr);
 Node *parse_term(std::list<Token> &tokens, Scope &scope);
 Node *parse_add_sub(std::list<Token> &tokens, Scope &scope);
 Node *parse_lt_gt(std::list<Token> &tokens, Scope &scope);
@@ -53,6 +56,7 @@ Node *parse_expr(std::list<Token> &tokens, Scope &scope);
 Node *parse_statement(std::list<Token> &tokens, Scope &scope);
 Node *parse_if(std::list<Token> &tokens, Scope &scope);
 Node *parse_loop(std::list<Token> &tokens, Scope &scope);
+Node *parse_struct(std::list<Token> &tokens, Scope &scope);
 Node *parse_body(Node *node, std::list<Token> &tokens, Scope &scope);
 Node *parse_function(std::list<Token> &tokens);
 Node *parse_program(std::list<Token> &tokens);

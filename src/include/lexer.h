@@ -30,6 +30,10 @@ struct Token
         TOK_INT,
         KEY_INT,
         KEY_UINT,
+        KEY_STRUCT,
+        KEY_NEW,
+        KEY_DELETE,
+        KEY_CPP,
 
         TOK_STR,
         TOK_ARR,
@@ -41,10 +45,10 @@ struct Token
         KEY_RETURN,
         KEY_DUMP,
         KEY_DUMPLN,
-        KEY_SIZE,
-        KEY_PUSHB,
-        KEY_POPF,
         KEY_VOID,
+        KEY_NULL,
+        KEY_TRU,
+        KEY_FLS,
 
         // Unary operators
         TOK_BANG,
@@ -72,6 +76,9 @@ struct Token
         TOK_GT,
         TOK_LTE,
         TOK_GTE,
+
+        // Accessor
+        TOK_ACCESS,
 
         // Single character tokens
         TOK_LBRACE,
