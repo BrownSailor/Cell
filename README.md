@@ -2,33 +2,29 @@
 ### a compiled, statically-typed programming language with easy to type syntax and high performance
 
 ```cpp
-// hello world
+// hello.sl
 
-main(argc: int, argv: [str]): int 
+main
 {
-    print "Hello, World!\n"
-    
-    return 0
+    dumpln "Hello, World!"
 }
 ```
 ```cpp
-// fizzbuzz
+// fizzbuzz.sl
 
-main(argc: int, argv: [str]): int 
+main
 {
     @ i: int = 1, i < 20, i++
     {
         ? i % 3 == 0 {
-            print "Fizz"
+            dumpln "Fizz"
         } | i % 5 == 0 {
-            print "Buzz"
+            dumpln "Buzz"
         } | i % 3 == 0 && i % 5 == 0 {
-            print "FizzBuzz"
+            dumpln "FizzBuzz"
         } | {
-            print i
+            dumpln i
         }
     }
-    
-    return 0
 }
 ```
