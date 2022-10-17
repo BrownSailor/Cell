@@ -83,8 +83,9 @@ printLevelOrder (root: tree) {
 
     @ size queue {
         root = queue[0]
-        x: tree = queue[0]::val
-        dump ' '
+#cpp
+        printf("%lld ", root->val);
+#cpp
         popf queue
 
         left: tree = root::left
@@ -113,15 +114,15 @@ invert (root: tree) {
     invert root::right
 }
 
-delete (root: tree) {
+free (root: tree) {
     ? root == null {
         return
     }
 
-    delete root::left
-    delete root::right
+    free root::left
+    free root::right
 
-    free root
+    delete root
 }
 
 main {
@@ -151,5 +152,5 @@ main {
     printLevelOrder t
     dumpln ""
 
-    delete t
+    free t
 }

@@ -137,7 +137,7 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
         case Token::TOK_LBRACK:
         {
             int p = eat_open_parens(tokens, '[');
-            node = parse_expr(tokens, scope);
+            node = parse_fact(tokens, scope);
             eat_close_parens(tokens, p, ']');
             node->arr_dim = p;
             break;
@@ -742,6 +742,7 @@ Node *parse_function(std::list<Token> &tokens)
 
         // expect type of function
         if (tokens.front().type != Token::TOK_ID &&
+            tokens.front().type != Token::TOK_LBRACK &&
             !INTRINSICS.count(tokens.front().data))
         {
             print_error("expected identifier", tokens.front());

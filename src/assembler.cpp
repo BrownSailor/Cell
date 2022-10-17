@@ -293,7 +293,7 @@ std::string assemble_expr(Node *root, const Scope &scope, Node *parent, size_t a
                         }
 
                         expr += " = ";
-                        expr += assemble_expr(root->children.back(), scope);
+                        expr += assemble_expr(root->children.back(), scope, scope.at(root->token.data), root->arr_dim);
                     }
                     else
                     {
@@ -303,8 +303,9 @@ std::string assemble_expr(Node *root, const Scope &scope, Node *parent, size_t a
                         {
                             expr += assemble_expr(root->children.front(), scope);
                         }
-
-                        expr += " = " + assemble_expr(root->children.back(), scope);
+                        
+                        // pretty_print(scope.at(root->token.data));
+                        expr += " = " + assemble_expr(root->children.back(), scope, scope.at(root->token.data), root->arr_dim);
                     }
 
                     break;
@@ -549,7 +550,7 @@ std::string assemble_function(Node *root)
     auto x = root->children.begin();
     std::advance(x, 1);
 
-    std::string type = assemble_type(*x);
+    std::string type = assemble_type(*x, (*x)->arr_dim);
     std::string name = root->token.data;
     std::string args = "";
 
@@ -596,6 +597,7 @@ std::string assemble_program(Node *root)
     std::string program = "";
     program += "#include \"std/util.h\"\n";
     program += "#include \"std/array.h\"\n";
+    program += "#include \"std/string.h\"\n";
 
     for (Node *child : root->children)
     {

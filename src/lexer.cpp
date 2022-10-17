@@ -510,10 +510,15 @@ std::list<Token> lex(const std::string &input)
         if (line == "#cpp")
         {
             Token cpp = { .type = Token::KEY_CPP, .data = "", .row = row, .col = (int)(line.size()) + 1, .file = input };
+            row++;
+
             std::string l;
             while (getline(in, l))
             {
-                if (l == "#cpp") break;
+                if (l == "#cpp")
+                {
+                    break;
+                }
                 size_t start = l.find_first_not_of(" \t\n\v\f\r");
                 size_t end = l.find_last_not_of(" \t\n\v\f\r");
 
@@ -529,6 +534,7 @@ std::list<Token> lex(const std::string &input)
                     }
                 }
                 cpp.data += l + "\n";
+                row++;
             }
 
             tokens.push_back(cpp);
