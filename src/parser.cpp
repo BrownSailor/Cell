@@ -217,11 +217,11 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
             if (!exists_in_struct && global.count(node->token.data))
             {
                 node->type = Node::NODE_FUNC_CALL;
-                int np = eat_open_parens(tokens);
+                // int np = eat_open_parens(tokens);
 
                 for (size_t i = 0; i < global.at(node->token.data)->children.front()->children.size(); i++)
                 {
-                    node->children.push_back(parse_expr(tokens, scope));
+                    node->children.push_back(parse_fact(tokens, scope));
 
                     if (tokens.front().type == Token::TOK_COM)
                     {
@@ -233,7 +233,7 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
                         }
                     }
                 }
-                eat_close_parens(tokens, np);
+                // eat_close_parens(tokens, np);
             }
             else
             {

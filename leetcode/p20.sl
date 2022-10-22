@@ -30,11 +30,11 @@ pop (s: stack): char {
 validParentheses (s: [char]): bool {
     st: stack
     @ i: int = 0, i < size s, i++ {
-        ? s[i] == ')' && pop (st) != '(' {
+        ? s[i] == ')' && pop st != '(' {
             return fls
-        } | s[i] == ']' && pop (st) != '[' {
+        } | s[i] == ']' && pop st != '[' {
             return fls
-        } | s[i] == '}' && pop (st) != '{' {
+        } | s[i] == '}' && pop st != '{' {
             return fls
         }
 

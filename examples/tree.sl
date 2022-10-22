@@ -28,9 +28,9 @@ _insert (root: tree, val: int): tree {
         r::val = val
         root = r
     } | root::val > val {
-        root::left = _insert root::left val
+        root::left = _insert (root::left) val
     } | {
-        root::right = _insert root::right val
+        root::right = _insert (root::right) val
     }
 
     return root
@@ -48,8 +48,8 @@ printPreOrder (root: tree) {
     dump root::val
     dump ' '
 
-    printPreOrder root::left
-    printPreOrder root::right
+    printPreOrder (root::left)
+    printPreOrder (root::right)
 }
 
 printInOrder (root: tree) {
@@ -57,12 +57,12 @@ printInOrder (root: tree) {
         return
     }
 
-    printInOrder root::left
+    printInOrder (root::left)
 
     dump root::val
     dump ' '
 
-    printInOrder root::right
+    printInOrder (root::right)
 }
 
 printPostOrder (root: tree) {
@@ -70,8 +70,8 @@ printPostOrder (root: tree) {
         return
     }
 
-    printPostOrder root::left
-    printPostOrder root::right
+    printPostOrder (root::left)
+    printPostOrder (root::right)
 
     dump root::val
     dump ' '
@@ -110,8 +110,8 @@ invert (root: tree) {
     root::left::val = root::right::val
     root::right::val = tmp
 
-    invert root::left
-    invert root::right
+    invert (root::left)
+    invert (root::right)
 }
 
 free (root: tree) {
@@ -126,7 +126,7 @@ free (root: tree) {
 }
 
 main {
-    t: tree
+    t: tree = new tree
     t::val = 4
 
     insert t 2

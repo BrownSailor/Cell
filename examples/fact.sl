@@ -3,7 +3,7 @@ fact (n: int): int {
         return 1
     }
 
-    return n * fact n - 1
+    return n * fact (n - 1)
 }
 
 main (argc: int, argv: [[char]]): int {

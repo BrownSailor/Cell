@@ -23,9 +23,9 @@ swap (arr: [[int]], i: uint, j: uint, x: uint, y: uint) {
 }
 
 rotateImage (arr: [[int]]) {
-    @ i: int = 0, i < size (arr) / 2, i++ {
+    @ i: int = 0, i < size arr / 2, i++ {
         @ j: int = 0, j < size arr, j++ {
-            swap arr i j size (arr) - i - 1 j
+            swap arr i j size arr - i - 1 j
         }
     }
 

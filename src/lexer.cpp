@@ -333,6 +333,12 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             }
 
             col = col_end;
+
+            if (line[i + 1] == '/')
+            {
+                curr = "";
+                break;
+            }
             tokens.push_back({ .type = Token::TOK_SLASH, .data = "/", .row = row, .col = col, .file = file });
 
             col_end++;
@@ -542,7 +548,11 @@ std::list<Token> lex(const std::string &input)
         else if (line.size() && line.find_first_not_of(" \t\n\v\f\r") != std::string::npos)
         {
             lex_line(line, tokens, row, input);
-            tokens.push_back({ .type = Token::TOK_EOL, .data = "", .row = row, .col = (int)(line.size()) + 1, .file = input });
+
+            if (tokens.back().type != Token::TOK_EOL)
+            {
+                tokens.push_back({ .type = Token::TOK_EOL, .data = "", .row = row, .col = (int)(line.size()) + 1, .file = input });
+            }
         }
 
         row++;

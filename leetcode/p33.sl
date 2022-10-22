@@ -9,10 +9,10 @@ findPivot (arr: [int], left: int, right: int): int {
         mid: int = (right + left) / 2
         ? arr[mid] > arr[mid + 1] {
             return mid
-        } | arr[(size arr) - 1] < arr[mid] {
-            return findPivot arr mid + 1 right
+        } | arr[size arr - 1] < arr[mid] {
+            return findPivot arr (mid + 1) right
         } | {
-            return findPivot arr left mid - 1
+            return findPivot arr left (mid - 1)
         }
     }
 
@@ -25,9 +25,9 @@ binSearch (arr: [int], left: int, right: int, target: int): int {
         ? arr[mid] == target {
             return mid
         } | arr[mid] > target {
-            return binSearch arr left mid - 1 target
+            return binSearch arr left (mid - 1) target
         } | {
-            return binSearch arr mid + 1 right target
+            return binSearch arr (mid + 1) right target
         }
     }
 
@@ -39,7 +39,7 @@ solve (arr: [int], target: int) {
     ans: int = binSearch arr 0 pivot target
 
     ? ans == -1 {
-        ans = binSearch arr pivot + 1 size arr target
+        ans = binSearch arr (pivot + 1) size arr target
     }
 
     dumpln ans

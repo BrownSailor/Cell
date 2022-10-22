@@ -28,7 +28,7 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
             }
             case Token::KEY_UINT:
             {
-                print += "printf(\"%llu\", " + expr + ")";
+                print += "printf(\"%lu\", " + expr + ")";
                 break;
             }
 
@@ -67,7 +67,7 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
                     }
                     case Token::KEY_UINT:
                     {
-                        print += "printf(\"%llu\", " + expr + ")";
+                        print += "printf(\"%lu\", " + expr + ")";
                         break;
                     }
 
@@ -116,7 +116,7 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
             }
             case Token::KEY_UINT:
             {
-                println += "printf(\"%llu\\n\", " + expr + ")";
+                println += "printf(\"%lu\\n\", " + expr + ")";
                 break;
             }
 
@@ -150,7 +150,7 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
                     }
                     case Token::KEY_UINT:
                     {
-                        println += "printf(\"%llu\\n\", " + expr + ")";
+                        println += "printf(\"%lu\\n\", " + expr + ")";
                         break;
                     }
 
