@@ -1,3 +1,15 @@
+size (arr: [int]): uint {
+#cpp
+    return arr.size();
+#cpp
+}
+
+size (arr: [[int]]): uint {
+#cpp
+    return arr.size();
+#cpp
+}
+
 valid (grid: [[int]], row: int, col: int): bool {
     return col >= 0 && col < size grid[0] && row >= 0 && row < size grid
 }
@@ -23,7 +35,7 @@ dfs (grid: [[int]], vis: [[int]], row: int, col: int, target: int): bool {
     return 0
 }
 
-main (argc: int, argv: [[char]]): int {
+main {
 
     grid: [[int]] = { { 1 2 3 4 } { 5 6 7 8 } { 9 10 11 12 } }
     vis: [[int]] = { { 0 0 0 0 } { 0 0 0 0 } { 0 0 0 0 } }
@@ -33,6 +45,4 @@ main (argc: int, argv: [[char]]): int {
     } | {
         dumpln "Did not find target :("
     }
-
-    return 0
 }

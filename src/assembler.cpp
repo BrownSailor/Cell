@@ -78,13 +78,13 @@ std::string assemble_type(Node *root, size_t size)
 
     if (size == 1 && root->token.type == Token::KEY_CHAR)
     {
-        type += "__built_in::string";
+        type += "__string__";
         return type;
     }
 
     if (size)
     {
-        type += "__built_in::array<" + assemble_type(root, size - 1) + ">";
+        type += "__array__<" + assemble_type(root, size - 1) + ">";
         return type;
     }
 
@@ -225,15 +225,19 @@ std::string assemble_expr(Node *root, const Scope &scope, Node *parent, size_t a
 
         case Token::TOK_ARR:
         {
-            expr += "__built_in::array<" + assemble_type(parent->children.front(), arr_size - 1) + ">(";
-            expr += "{";
+            expr += "__array__<" + assemble_type(parent->children.front(), arr_size - 1) + ">(";
+
+            bool b = root->children.size() > 1;
+
+            if (b) expr += '{';
             for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
             {
                 expr += assemble_expr(*it, scope, parent, arr_size - 1);
-                expr += ",";
+                if (b) expr += ',';
             }
-            expr[expr.size() - 1] = '}';
-            expr += ")";
+
+            if (b) expr[expr.size() - 1] = '}';
+            expr += ')';
 
             break;
         }

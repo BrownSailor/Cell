@@ -3,31 +3,31 @@ CXXFLAGS = -g3 -std=c++20 -Ofast -Wall -Wextra -Wpedantic -Wshadow -Werror
 LDFLAGS  = -g3
 
 SRC = src
-INCLUDE = src/include
+INC = src/include
+BIN = bin
+OBJ = $(BIN)/obj
 
-slang: main.o compiler.o assembler.o builtin.o parser.o lexer.o
-	${CXX} ${LDFLAGS} -o slang $^
+SOURCE_FILES  = lexer.cpp parser.cpp type.cpp builtin.cpp assembler.cpp \
+				compiler.cpp main.cpp
 
-main.o: $(SRC)/main.cpp $(INCLUDE)/compiler.h $(INCLUDE)/assembler.h $(INCLUDE)/builtin.h $(INCLUDE)/parser.h $(INCLUDE)/lexer.h
-	$(CXX) $(CXXFLAGS) -c src/main.cpp
+OBJECT_FILES  = $(SOURCE_FILES:%.cpp=$(OBJ)/%.o)
 
-compiler.o: $(SRC)/compiler.cpp $(INCLUDE)/compiler.h $(INCLUDE)/assembler.h $(INCLUDE)/builtin.h $(INCLUDE)/parser.h $(INCLUDE)/lexer.h
-	$(CXX) $(CXXFLAGS) -c src/compiler.cpp
+build: slang
 
-assembler.o: $(SRC)/assembler.cpp $(INCLUDE)/assembler.h $(INCLUDE)/builtin.h $(INCLUDE)/parser.h $(INCLUDE)/lexer.h
-	$(CXX) $(CXXFLAGS) -c src/assembler.cpp
-
-builtin.o: $(SRC)/builtin.cpp $(INCLUDE)/builtin.h $(INCLUDE)/parser.h $(INCLUDE)/lexer.h
-	$(CXX) $(CXXFLAGS) -c src/builtin.cpp
-
-parser.o: $(SRC)/parser.cpp $(INCLUDE)/parser.h $(INCLUDE)/lexer.h
-	$(CXX) $(CXXFLAGS) -c src/parser.cpp
-
-lexer.o: $(SRC)/lexer.cpp $(INCLUDE)/lexer.h
-	$(CXX) $(CXXFLAGS) -c src/lexer.cpp
+test: slang
+	python test.py
 
 clean:
-	-rm slang
-	-rm *.o
-	-rm *.cc
-	-rm main
+	@echo Cleaning binaries
+	@rm -rf bin
+	@echo Cleaning executable
+	@rm slang
+
+slang: $(OBJECT_FILES)
+	@echo Generating executable
+	@$(CXX) $(LDFLAGS) -o $@ $^
+
+$(OBJECT_FILES): $(OBJ)/%.o: $(SRC)/%.cpp $(INC)/%.h
+	@mkdir -p $(@D)
+	@echo Compiling $< to $@
+	@$(CXX) $(CXXFLAGS) -c $< -o $@

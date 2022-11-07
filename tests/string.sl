@@ -1,4 +1,4 @@
-main (argc: int, argv: [[char]]): int {
+main {
 
     val: [char] = "hello"
     dumpln val
@@ -13,6 +13,4 @@ main (argc: int, argv: [[char]]): int {
     val2 = val
 
     dumpln val2
-
-    return 0
 }

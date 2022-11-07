@@ -22,6 +22,7 @@ struct Node
         NODE_VAR_ASN,
         NODE_VAR_DEC,
         NODE_VAR_DEC_ASN,
+        NODE_LIST,
         NODE_STRUCT,
         NODE_FUNC_CALL,
         NODE_FUNC_DEC
@@ -40,6 +41,7 @@ int eat_open_parens(std::list<Token> &tokens, char p='(');
 void eat_close_parens(std::list<Token> &tokens, int parens, char p=')');
 
 Node *new_node(Token token);
+Token::Type key_to_tok(Token::Type key);
 Token::Type eval_node(Node *node, const Scope &scope);
 
 Node *unary(Node *op, Node *node);

@@ -1,4 +1,16 @@
-main (argc: int, argv: [[char]]): int {
+size (arr: [int]): uint {
+#cpp
+    return arr.size();
+#cpp
+}
+
+size (arr: [[int]]): uint {
+#cpp
+    return arr.size();
+#cpp
+}
+
+main {
 
     arr1: [int] = { 1 2 3 4 }
     arr2: [int] = { 10 9 8 7 }
@@ -17,13 +29,6 @@ main (argc: int, argv: [[char]]): int {
     dumpln "arr2"
     @ i: int = 0, i < size arr2, i++ {
         dump arr2[i]
-        dump ' '
-    }
-    dumpln "\n"
-
-    dumpln "arr3"
-    @ i: int = 0, i < size arr3, i++ {
-        dump arr3[i]
         dump ' '
     }
     dumpln "\n"
@@ -53,7 +58,6 @@ main (argc: int, argv: [[char]]): int {
         }
         dumpln ""
     }
-    dumpln ""
 
     return 0
 }

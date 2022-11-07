@@ -23,19 +23,19 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
             case Token::TOK_INT:
             case Token::KEY_INT:
             {
-                print += "printf(\"%lld\", " + expr + ")";
+                print += "printf(\"%lld\", (long long)(" + expr + "))";
                 break;
             }
             case Token::KEY_UINT:
             {
-                print += "printf(\"%lu\", " + expr + ")";
+                print += "printf(\"%lu\", (unsigned long)(" + expr + "))";
                 break;
             }
 
             default:
             {
                 // TODO: fix this lol
-                print += "printf(\"%lld\", " + expr + ")";
+                print += "printf(\"%lld\", (long long)(" + expr + "))";
                 break;
             }
         }
@@ -60,14 +60,13 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
                         break;
                     }
                     case Token::TOK_INT:
-                    case Token::KEY_INT:
                     {
-                        print += "printf(\"%lld\", " + expr + ")";
+                        print += "printf(\"%lld\", (long long)(" + expr + "))";
                         break;
                     }
-                    case Token::KEY_UINT:
+                    case Token::TOK_UINT:
                     {
-                        print += "printf(\"%lu\", " + expr + ")";
+                        print += "printf(\"%lu\", (unsigned long)(" + expr + "))";
                         break;
                     }
 
@@ -98,7 +97,6 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
         switch (type)
         {
             case Token::TOK_CHAR:
-            case Token::KEY_CHAR:
             {
                 println += "printf(\"%c\\n\", " + expr + ")";
                 break;
@@ -109,14 +107,13 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
                 break;
             }
             case Token::TOK_INT:
-            case Token::KEY_INT:
             {
-                println += "printf(\"%lld\\n\", " + expr + ")";
+                println += "printf(\"%lld\\n\", (long long)(" + expr + "))";
                 break;
             }
-            case Token::KEY_UINT:
+            case Token::TOK_UINT:
             {
-                println += "printf(\"%lu\\n\", " + expr + ")";
+                println += "printf(\"%lu\\n\", (unsigned long)(" + expr + "))";
                 break;
             }
 
@@ -132,7 +129,6 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
                 switch (type)
                 {
                     case Token::TOK_CHAR:
-                    case Token::KEY_CHAR:
                     {
                         println += "printf(\"%c\\n\", " + expr + ")";
                         break;
@@ -143,14 +139,13 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
                         break;
                     }
                     case Token::TOK_INT:
-                    case Token::KEY_INT:
                     {
-                        println += "printf(\"%lld\\n\", " + expr + ")";
+                        println += "printf(\"%lld\\n\", (long long)(" + expr + "))";
                         break;
                     }
-                    case Token::KEY_UINT:
+                    case Token::TOK_UINT:
                     {
-                        println += "printf(\"%lu\\n\", " + expr + ")";
+                        println += "printf(\"%lu\\n\", (unsigned long)(" + expr + "))";
                         break;
                     }
 

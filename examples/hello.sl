@@ -1,7 +1,5 @@
-main(argc: int, argv: [[char]]): int {
+main {
 
     x: [char] = "Hello, World!"
     dumpln x
-
-    return 0
 }

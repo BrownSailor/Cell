@@ -2,51 +2,47 @@
 #define ARRAY_H
 
 #include "util.h"
-#include "string.h"
 
 typedef long unsigned int size_t;
 
-namespace __built_in
+template <typename T>
+class __array__
 {
-    template <typename T>
-    class array
-    {
-        public:
-            array();
-            array(size_t n);
+    public:
+        __array__();
+        __array__(T val);
 
-            template <size_t n>
-            array(T const (&rhs)[n]);
-            array(const array<T> &rhs);
-            ~array();
+        template <size_t n>
+        __array__(T const (&rhs)[n]);
+        __array__(const __array__<T> &rhs);
+        ~__array__();
 
-            array<T> &operator=(const array<T> &rhs);
-            array<T> &operator+=(const T &val);
+        __array__<T> &operator=(const __array__<T> &rhs);
+        __array__<T> &operator+=(const T &val);
 
-            T &operator[](size_t idx);
+        T &operator[](size_t idx);
 
-            const size_t size() const;
-            void clear();
+        const size_t size() const;
+        void clear();
 
-            void insert(size_t idx, const T &val);
-            void pushb(const T &val);
-            void pushf(const T &val);
+        void insert(size_t idx, const T &val);
+        void pushb(const T &val);
+        void pushf(const T &val);
 
-            void remove(size_t idx);
-            void popb();
-            void popf();
+        void remove(size_t idx);
+        void popb();
+        void popf();
 
-        private:
-            void resize();
+    private:
+        void resize();
 
-            T *data;
-            size_t cap;
-            size_t num;
-    };
-}
+        T *data;
+        size_t cap;
+        size_t num;
+};
 
 template <typename T>
-__built_in::array<T>::array()
+__array__<T>::__array__()
 {
     cap = 8;
     num = 0;
@@ -54,16 +50,8 @@ __built_in::array<T>::array()
 }
 
 template <typename T>
-__built_in::array<T>::array(size_t n)
-{
-    cap = n;
-    num = n;
-    data = new T[cap];
-}
-
-template <typename T>
 template <size_t n>
-__built_in::array<T>::array(T const (&rhs)[n])
+__array__<T>::__array__(T const (&rhs)[n])
 {
     cap = n;
     num = n;
@@ -76,7 +64,7 @@ __built_in::array<T>::array(T const (&rhs)[n])
 }
 
 template <typename T>
-__built_in::array<T>::array(const array<T> &rhs)
+__array__<T>::__array__(const __array__<T> &rhs)
 {
     cap = rhs.cap;
     num = rhs.num;
@@ -89,13 +77,13 @@ __built_in::array<T>::array(const array<T> &rhs)
 }
 
 template <typename T>
-__built_in::array<T>::~array()
+__array__<T>::~__array__()
 {
     delete []data;
 }
 
 template <typename T>
-__built_in::array<T> &__built_in::array<T>::operator=(const array<T> &rhs)
+__array__<T> &__array__<T>::operator=(const __array__<T> &rhs)
 {
     cap = rhs.cap;
     num = rhs.num;
@@ -112,26 +100,26 @@ __built_in::array<T> &__built_in::array<T>::operator=(const array<T> &rhs)
 }
 
 template <typename T>
-__built_in::array<T> &__built_in::array<T>::operator+=(const T &val)
+__array__<T> &__array__<T>::operator+=(const T &val)
 {
     pushb(val);
     return *this;
 }
 
 template <typename T>
-const size_t __built_in::array<T>::size() const
+const size_t __array__<T>::size() const
 {
     return num;
 }
 
 template <typename T>
-void __built_in::array<T>::clear()
+void __array__<T>::clear()
 {
     num = 0;
 }
 
 template <typename T>
-void __built_in::array<T>::insert(size_t idx, const T &val)
+void __array__<T>::insert(size_t idx, const T &val)
 {
     if (cap <= num)
     {
@@ -148,19 +136,19 @@ void __built_in::array<T>::insert(size_t idx, const T &val)
 }
 
 template <typename T>
-void __built_in::array<T>::pushb(const T &val)
+void __array__<T>::pushb(const T &val)
 {
     insert(num, val);
 }
 
 template <typename T>
-void __built_in::array<T>::pushf(const T &val)
+void __array__<T>::pushf(const T &val)
 {
     insert(0, val);
 }
 
 template <typename T>
-void __built_in::array<T>::remove(size_t idx)
+void __array__<T>::remove(size_t idx)
 {
     num--;
     for (int i = idx; i < num; i++)
@@ -170,25 +158,25 @@ void __built_in::array<T>::remove(size_t idx)
 }
 
 template <typename T>
-void __built_in::array<T>::popb()
+void __array__<T>::popb()
 {
     remove(num - 1);
 }
 
 template <typename T>
-void __built_in::array<T>::popf()
+void __array__<T>::popf()
 {
     remove(0);
 }
 
 template <typename T>
-T &__built_in::array<T>::operator[](size_t idx)
+T &__array__<T>::operator[](size_t idx)
 {
     return data[idx];
 }
 
 template <typename T>
-void __built_in::array<T>::resize()
+void __array__<T>::resize()
 {
     while (cap <= num)
     {

@@ -1,5 +1,4 @@
-main (argc: int, argv: [[char]]): int
-{
+main {
     @ i: int = 1, i <= 20, i = i + 1 {
         ? i % 15 == 0 {
             dumpln "FizzBuzz"
@@ -11,6 +10,4 @@ main (argc: int, argv: [[char]]): int
             dumpln i
         }
     }
-
-    return 0
 }

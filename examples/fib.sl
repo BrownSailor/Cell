@@ -19,13 +19,11 @@ fib (n: int): int {
     return -1
 }
 
-main (argc: int, argv: [[char]]): int {
+main {
 
     @ i: int = 1, i <= 10, i = i + 1 {
         dump fib i
         dump " "
     }
     dump "\n"
-
-    return 0
 }

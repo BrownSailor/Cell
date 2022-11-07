@@ -6,8 +6,7 @@ fact (n: int): int {
     return n * fact (n - 1)
 }
 
-main (argc: int, argv: [[char]]): int {
+main {
 
     dumpln fact 6
-    return 0
 }

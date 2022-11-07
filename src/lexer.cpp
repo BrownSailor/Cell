@@ -378,18 +378,22 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             }
 
             col = col_end;
+            tokens.push_back({ .type = Token::TOK_COL, .data = ":", .row = row, .col = col, .file = file });
 
-            if (line[i + 1] == ':')
+            col_end++;
+        }
+        else if (c == '.')
+        {
+            if (curr != "")
             {
-                tokens.push_back({ .type = Token::TOK_ACCESS, .data = "::", .row = row, .col = col, .file = file });
-                i++;
-                col_end += 2;
+                tokens.push_back(lex_word(curr, row, col, file));
+                curr = "";
             }
-            else
-            {
-                tokens.push_back({ .type = Token::TOK_COL, .data = ":", .row = row, .col = col, .file = file });
-                col_end++;
-            }
+
+            col = col_end;
+            tokens.push_back({ .type = Token::TOK_ACCESS, .data = ".", .row = row, .col = col, .file = file });
+
+            col_end++;
         }
         else if (c == '{')
         {
@@ -570,8 +574,14 @@ std::string token_id_to_str(const Token::Type &type)
         case Token::TOK_ID:
             return "TOKEN_ID";
 
+        case Token::TOK_BOOL:
+            return "TOKEN_BOOL";
+
         case Token::TOK_INT:
             return "TOKEN_INT";
+
+        case Token::TOK_UINT:
+            return "TOKEN_UINT";
 
         case Token::TOK_CHAR:
             return "TOKEN_CHAR";

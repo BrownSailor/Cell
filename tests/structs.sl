@@ -5,8 +5,8 @@ node: struct {
 
 printList (root: node) {
 
-    @ tmp: node = root, tmp != null, tmp = tmp::next {
-        dump tmp::val
+    @ tmp: node = root, tmp != null, tmp = tmp.next {
+        dump tmp.val
         dump ' '
     }
     dumpln ""
@@ -14,15 +14,13 @@ printList (root: node) {
 
 main {
 
-    root: node
+    root: node = new node
     head: node = root
 
     @ i: int = 1, i <= 10, i++ {
-#cpp
-        head->next = new node;
-#cpp
-        head::next::val = i
-        head = head::next
+        head.next = new node
+        head.next.val = i
+        head = head.next
     }
 
     printList (root)

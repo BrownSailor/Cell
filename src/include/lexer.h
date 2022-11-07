@@ -22,19 +22,10 @@ struct Token
         TOK_NONE,
 
         TOK_ID,
-        KEY_BOOL,
-
+        TOK_BOOL,
         TOK_CHAR,
-        KEY_CHAR,
-
         TOK_INT,
-        KEY_INT,
-        KEY_UINT,
-        KEY_STRUCT,
-        KEY_NEW,
-        KEY_DELETE,
-        KEY_CPP,
-
+        TOK_UINT,
         TOK_STR,
         TOK_ARR,
         TOK_LIST,
@@ -42,6 +33,14 @@ struct Token
         TOK_PROG,
 
         // Intrinsic keywords
+        KEY_BOOL,
+        KEY_CHAR,
+        KEY_INT,
+        KEY_UINT,
+        KEY_STRUCT,
+        KEY_NEW,
+        KEY_DELETE,
+        KEY_CPP,
         KEY_RETURN,
         KEY_DUMP,
         KEY_DUMPLN,

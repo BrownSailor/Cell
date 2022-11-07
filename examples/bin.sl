@@ -40,12 +40,10 @@ binarySearch (arr: [int], start: int, end: int, target: int): int {
     return -1
 }
 
-main (argc: int, argv: [[char]]): int {
+main {
 
     arr: [int] = { 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 }
     insertionSort arr
 
     dumpln arr[binarySearch arr 0 20 binarySearch arr 0 20 15]
-
-    return 0
 }

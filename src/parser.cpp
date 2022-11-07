@@ -34,6 +34,7 @@ void eat_close_parens(std::list<Token> &tokens, int parens, char p)
         error += '`';
 
         print_error(error, tokens.front());
+        std::cerr << "Compilation failed\n";
         exit(EXIT_FAILURE);
     }
 }
@@ -47,6 +48,23 @@ Node *new_node(Token token)
 }
 
 /*
+ * key_to_tok
+ *    Purpose: convert a KEY_* token to a TOK_* token
+ * Parameters: key - the KEY_* token to convert
+ *    Returns: a converted token type
+ */
+Token::Type key_to_tok(Token::Type key)
+{
+    switch (key)
+    {
+        case Token::KEY_BOOL: return Token::TOK_BOOL;
+        case Token::KEY_CHAR: return Token::TOK_CHAR;
+        case Token::KEY_INT: return Token::TOK_INT;
+        case Token::KEY_UINT: return Token::TOK_UINT;
+        default: return key;
+    }
+}
+/*
  * eval_node
  *    Purpose: evaluate a node to a specific type
  * Parameters: node - the node to evaluate, scope - the scope to reference
@@ -59,11 +77,38 @@ Token::Type eval_node(Node *node, const Scope &scope)
         case Node::NODE_LIT:
         case Node::NODE_KEY:
         {
+            switch (node->token.type)
+            {
+                case Token::KEY_TRU:
+                case Token::KEY_FLS:
+                {
+                    return Token::TOK_BOOL;
+                }
+
+                default: return node->token.type;
+            }
             return node->token.type;
         }
         case Node::NODE_OP:
         {
-            return std::max(eval_node(node->children.front(), scope), eval_node(node->children.back(), scope));
+            switch (node->token.type)
+            {
+                case Token::TOK_EQEQ:
+                case Token::TOK_NEQ:
+                case Token::TOK_LT:
+                case Token::TOK_LTE:
+                case Token::TOK_GT:
+                case Token::TOK_GTE:
+                case Token::TOK_BANG:
+                case Token::TOK_LAND:
+                case Token::TOK_LOR:
+                {
+                    return Token::TOK_BOOL;
+                }
+
+                // TODO: fix this lol
+                default: return std::max(eval_node(node->children.front(), scope), eval_node(node->children.back(), scope));
+            }
         }
         case Node::NODE_VAR:
         case Node::NODE_VAR_ASN:
@@ -72,13 +117,17 @@ Token::Type eval_node(Node *node, const Scope &scope)
         {
             if (scope.count(node->token.data))
             {
-                return eval_node(scope.at(node->token.data)->children.front(), scope);
+                return key_to_tok(eval_node(scope.at(node->token.data)->children.front(), scope));
             }
             else if (structs.count(node->token.data))
             {
                 return eval_node(structs.at(node->token.data)->children.front(), structs);
             }
             return Token::TOK_NONE;
+        }
+        case Node::NODE_LIST:
+        {
+            return eval_node(node->children.front(), scope);
         }
         case Node::NODE_STRUCT:
         {
@@ -123,6 +172,7 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
         case Token::KEY_FLS:
         {
             node = new_node(tokens.front());
+            node->type = Node::NODE_KEY;
             tokens.pop_front();
             break;
         }
@@ -145,7 +195,7 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
 
         case Token::TOK_LBRACE:
         {
-            node = new_node({ .type = Token::TOK_ARR });
+            node = new_node({ .type = Token::TOK_ARR, .data = "{}", .row = tokens.front().row, .col = tokens.front().col, .file = tokens.front().file });
             tokens.pop_front();
 
             while (tokens.front().type != Token::TOK_RBRACE)
@@ -157,6 +207,7 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
                     tokens.pop_front();
                 }
             }
+            node->type = Node::NODE_LIST;
             tokens.pop_front();
 
             break;
@@ -197,6 +248,7 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
         {
             print_error("cannot define struct within function or struct", tokens.front());
             print_warning("note: structs must be defined globally", tokens.front());
+            std::cerr << "Compilation failed\n";
             exit(EXIT_FAILURE);
         }
         case Token::TOK_ID:
@@ -229,6 +281,7 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
                         if (tokens.front().type == Token::TOK_EOL || tokens.front().type == Token::TOK_RPAREN)
                         {
                             print_error("expected identifier, found `" + tokens.front().data + "`", tokens.front());
+                            std::cerr << "Compilation failed\n";
                             exit(EXIT_FAILURE);
                         }
                     }
@@ -444,6 +497,7 @@ Node *parse_expr(std::list<Token> &tokens, Scope &scope)
                 {
                     print_error("redefinition of `" + node->token.data + "`", node->token);
                     print_warning("note: previous definition is here", (scope.count(node->token.data) ? scope.at(node->token.data)->token : global.count(node->token.data) ? global.at(node->token.data)->token : structs.at(node->token.data)->token));
+                    std::cerr << "Compilation failed\n";
                     exit(EXIT_FAILURE);
                 }
 
@@ -495,6 +549,7 @@ Node *parse_statement(std::list<Token> &tokens, Scope &scope)
         tokens.front().type != Token::TOK_LPAREN)
     {
         print_error("expected expression", tokens.front());
+        std::cerr << "Compilation failed\n";
         exit(EXIT_FAILURE);
     }
 
@@ -592,6 +647,7 @@ Node *parse_loop(std::list<Token> &tokens, Scope &scope)
         {
             print_error("too many arguments in loop statement", tokens.front());
             print_warning("note: loops may accept 0-3 expressions", tokens.front());
+            std::cerr << "Compilation failed\n";
             exit(EXIT_FAILURE);
         }
 
@@ -746,6 +802,7 @@ Node *parse_function(std::list<Token> &tokens)
             !INTRINSICS.count(tokens.front().data))
         {
             print_error("expected identifier", tokens.front());
+            std::cerr << "Compilation failed\n";
             exit(EXIT_FAILURE);
         }
         node->children.push_back(parse_expr(tokens, node->scope));
@@ -765,6 +822,7 @@ Node *parse_function(std::list<Token> &tokens)
     if (tokens.front().type != Token::TOK_LBRACE)
     {
         print_error("expected `{`", tokens.front());
+        std::cerr << "Compilation failed\n";
         exit(EXIT_FAILURE);
     }
     tokens.pop_front();
@@ -866,6 +924,14 @@ std::string node_type_to_str(Node *node)
         case Node::NODE_VAR_DEC_ASN:
         {
             return "NODE_VAR_DEC_ASN";
+        }
+        case Node::NODE_LIST:
+        {
+            return "NODE_LIST";
+        }
+        case Node::NODE_STRUCT:
+        {
+            return "NODE_STRUCT";
         }
         case Node::NODE_FUNC_CALL:
         {

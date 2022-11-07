@@ -1,5 +1,4 @@
-main (argc: int, argv: [[char]]): int
-{
+main {
 
     val1: int = 0
     val2: int = 1

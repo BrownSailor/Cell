@@ -1,8 +1,7 @@
-main (argc: int, argv: [[char]]): int
-{
+main {
     x: int = 32
     y: int = 14
-    z: uint = x + y
+    z: int = x + y
 
     c: char = 'c'
     s: [char] = "Hello!"

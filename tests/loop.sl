@@ -1,4 +1,4 @@
-main (argc: int, argv: [[char]]): int {
+main {
     @ i: int = 0, i < 10, i++ {
         dump i
         dump ' '
@@ -18,11 +18,4 @@ main (argc: int, argv: [[char]]): int {
         dump ' '
     }
     dumpln ""
-
-    @ {
-        dumpln 3
-        return 0
-    }
-
-    return 0
 }

@@ -1,3 +1,15 @@
+size (arr: [int]): uint {
+#cpp
+    return arr.size();
+#cpp
+}
+
+size (arr: [[int]]): uint {
+#cpp
+    return arr.size();
+#cpp
+}
+
 valid (grid: [[int]], row: int, col: int): bool {
     return col >= 0 && col < size grid[0] && row >= 0 && row < size grid
 }

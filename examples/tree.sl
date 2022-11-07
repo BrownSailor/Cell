@@ -110,8 +110,8 @@ invert (root: tree) {
     root::left::val = root::right::val
     root::right::val = tmp
 
-    invert (root::left)
-    invert (root::right)
+    invert root::left
+    invert root::right
 }
 
 free (root: tree) {

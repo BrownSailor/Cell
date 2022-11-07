@@ -2,69 +2,67 @@
 #define STRING_H
 
 #include "util.h"
+#include "array.h"
 
 typedef long unsigned int size_t;
 
-namespace __built_in
+class __string__
 {
-    class string
-    {
-        public:
-            string();
-            string(char val);
-            string(const char *str);
-            string(const string &str);
-            ~string();
+    public:
+        __string__();
+        __string__(const char *str);
+        __string__(const __string__ &str);
+        __string__(__array__<char> str);
+        ~__string__();
 
-            string &operator=(char val);
-            string &operator=(const char *str);
-            string &operator=(const string &str);
+        __string__ &operator=(const char *str);
+        __string__ &operator=(const __string__ &str);
+        __string__ &operator=(__array__<char> str);
 
-            string operator+(char val);
-            string operator+(const char *str);
-            string operator+(const string &str);
+        __string__ operator+(char val);
+        __string__ operator+(const char *str);
+        __string__ operator+(const __string__ &str);
 
-            string &operator+=(char val);
-            string &operator+=(const char *str);
-            string &operator+=(const string &str);
+        __string__ &operator+=(char val);
+        __string__ &operator+=(const char *str);
+        __string__ &operator+=(const __string__ &str);
 
-            bool operator==(const char *str);
-            bool operator==(const string &str);
+        bool operator==(const char *str);
+        bool operator==(const __string__ &str);
 
-            bool operator!=(const char *str);
-            bool operator!=(const string &str);
+        bool operator!=(const char *str);
+        bool operator!=(const __string__ &str);
 
-            void insert(size_t idx, char val);
-            void insert(size_t idx, const char *str);
-            void insert(size_t idx, const string &str);
+        void insert(size_t idx, char val);
+        void insert(size_t idx, const char *str);
+        void insert(size_t idx, const __string__ &str);
 
-            void pushb(char val);
-            void pushb(const char *str);
-            void pushb(const string &str);
+        void pushb(char val);
+        void pushb(const char *str);
+        void pushb(const __string__ &str);
 
-            void pushf(char val);
-            void pushf(const char *str);
-            void pushf(const string &str);
+        void pushf(char val);
+        void pushf(const char *str);
+        void pushf(const __string__ &str);
 
-            void remove(size_t idx, size_t len = 1);
-            void popb();
-            void popf();
+        void remove(size_t idx, size_t len = 1);
+        void popb();
+        void popf();
 
-            char &operator[](size_t idx);
+        char &operator[](size_t idx);
 
-            const size_t size() const;
-            const char *to_string() const;
+        const size_t size() const;
+        const char *to_string() const;
 
-        private:
-            void resize();
+    private:
+        void resize();
 
-            char *data;
-            size_t num;
-            size_t cap;
-    };
-}
+        char *data;
+        size_t num;
+        size_t cap;
+};
 
-__built_in::string::string()
+__string__::__string__()
 {
     num = 0;
     cap = 4;
@@ -72,16 +70,7 @@ __built_in::string::string()
     data[0] = '\0';
 }
 
-__built_in::string::string(char val)
-{
-    num = 1;
-    cap = 4;
-    data = new char[cap];
-    data[0] = val;
-    data[1] = '\0';
-}
-
-__built_in::string::string(const char *str)
+__string__::__string__(const char *str)
 {
     num = strlen(str);
     cap = num + 1;
@@ -89,7 +78,7 @@ __built_in::string::string(const char *str)
     memcpy(data, str, cap);
 }
 
-__built_in::string::string(const string &str)
+__string__::__string__(const __string__ &str)
 {
     num = str.size();
     cap = num + 1;
@@ -97,30 +86,29 @@ __built_in::string::string(const string &str)
     memcpy(data, str.data, cap);
 }
 
-__built_in::string::~string()
+__string__::__string__(__array__<char> str)
+{
+    num = str.size();
+    cap = num + 1;
+    data = new char[cap];
+
+    for (int i = 0; i < num; i++)
+    {
+        data[i] = str[i];
+    }
+}
+
+__string__::~__string__()
 {
     if (data != nullptr) delete []data;
 }
 
-const size_t __built_in::string::size() const
+const size_t __string__::size() const
 {
     return num;
 }
 
-__built_in::string &__built_in::string::operator=(char val)
-{
-    if (data != nullptr) delete []data;
-
-    num = 1;
-    cap = 4;
-    data = new char[cap];
-    data[0] = val;
-    data[1] = '\0';
-
-    return *this;
-}
-
-__built_in::string &__built_in::string::operator=(const char *str)
+__string__ &__string__::operator=(const char *str)
 {
     if (data != nullptr) delete []data;
 
@@ -132,7 +120,7 @@ __built_in::string &__built_in::string::operator=(const char *str)
     return *this;
 }
 
-__built_in::string &__built_in::string::operator=(const string &rhs)
+__string__ &__string__::operator=(const __string__ &rhs)
 {
     if (data != nullptr) delete []data;
 
@@ -144,9 +132,25 @@ __built_in::string &__built_in::string::operator=(const string &rhs)
     return *this;
 }
 
-__built_in::string __built_in::string::operator+(char val)
+__string__ &__string__::operator=(__array__<char> rhs)
 {
-    string sum;
+    if (data != nullptr) delete []data;
+
+    num = rhs.size();
+    cap = num + 1;
+    data = new char[cap];
+
+    for (int i = 0; i < num; i++)
+    {
+        data[i] = rhs[i];
+    }
+
+    return *this;
+}
+
+__string__ __string__::operator+(char val)
+{
+    __string__ sum;
 
     sum.num = size() + 1;
     sum.cap = sum.num + 1;
@@ -159,9 +163,9 @@ __built_in::string __built_in::string::operator+(char val)
     return sum;
 }
 
-__built_in::string __built_in::string::operator+(const char *str)
+__string__ __string__::operator+(const char *str)
 {
-    string sum;
+    __string__ sum;
 
     size_t str_size = strlen(str);
 
@@ -176,9 +180,9 @@ __built_in::string __built_in::string::operator+(const char *str)
     return sum;
 }
 
-__built_in::string __built_in::string::operator+(const string &str)
+__string__ __string__::operator+(const __string__ &str)
 {
-    string sum;
+    __string__ sum;
 
     sum.num = size() + str.size();
     sum.cap = sum.num + 1;
@@ -191,7 +195,7 @@ __built_in::string __built_in::string::operator+(const string &str)
     return sum;
 }
 
-__built_in::string &__built_in::string::operator+=(char val)
+__string__ &__string__::operator+=(char val)
 {
     num++;
     if (num >= cap - 1)
@@ -205,7 +209,7 @@ __built_in::string &__built_in::string::operator+=(char val)
     return *this;
 }
 
-__built_in::string &__built_in::string::operator+=(const char *str)
+__string__ &__string__::operator+=(const char *str)
 {
     size_t str_size = strlen(str);
     size_t old_size = num;
@@ -223,7 +227,7 @@ __built_in::string &__built_in::string::operator+=(const char *str)
     return *this;
 }
 
-__built_in::string &__built_in::string::operator+=(const string &str)
+__string__ &__string__::operator+=(const __string__ &str)
 {
     size_t old_size = num;
     num += str.size();
@@ -239,32 +243,32 @@ __built_in::string &__built_in::string::operator+=(const string &str)
     return *this;
 }
 
-bool __built_in::string::operator==(const char *str)
+bool __string__::operator==(const char *str)
 {
     return strcmp(data, str) == 0;
 }
 
-bool __built_in::string::operator==(const string &str)
+bool __string__::operator==(const __string__ &str)
 {
     return strcmp(data, str.data) == 0;
 }
 
-bool __built_in::string::operator!=(const char *str)
+bool __string__::operator!=(const char *str)
 {
     return strcmp(data, str) != 0;
 }
 
-bool __built_in::string::operator!=(const string &str)
+bool __string__::operator!=(const __string__ &str)
 {
     return strcmp(data, str.data) != 0;
 }
 
-char &__built_in::string::operator[](size_t idx)
+char &__string__::operator[](size_t idx)
 {
     return data[idx];
 }
 
-void __built_in::string::insert(size_t idx, char val)
+void __string__::insert(size_t idx, char val)
 {
     num++;
     if (num >= cap - 1)
@@ -277,7 +281,7 @@ void __built_in::string::insert(size_t idx, char val)
     data[num] = '\0';
 }
 
-void __built_in::string::insert(size_t idx, const char *str)
+void __string__::insert(size_t idx, const char *str)
 {
     size_t str_size = strlen(str);
     num += str_size;
@@ -291,7 +295,7 @@ void __built_in::string::insert(size_t idx, const char *str)
     data[num] = '\0';
 }
 
-void __built_in::string::insert(size_t idx, const string &str)
+void __string__::insert(size_t idx, const __string__ &str)
 {
     num += str.size();
     if (num >= cap - 1)
@@ -304,59 +308,59 @@ void __built_in::string::insert(size_t idx, const string &str)
     data[num] = '\0';
 }
 
-void __built_in::string::pushb(char val)
+void __string__::pushb(char val)
 {
     insert(num, val);
 }
 
-void __built_in::string::pushb(const char *str)
+void __string__::pushb(const char *str)
 {
     insert(num, str);
 }
 
-void __built_in::string::pushb(const string &str)
+void __string__::pushb(const __string__ &str)
 {
     insert(num, str);
 }
 
-void __built_in::string::pushf(char val)
+void __string__::pushf(char val)
 {
     insert(0, val);
 }
 
-void __built_in::string::pushf(const char *str)
+void __string__::pushf(const char *str)
 {
     insert(0, str);
 }
 
-void __built_in::string::pushf(const string &str)
+void __string__::pushf(const __string__ &str)
 {
     insert(0, str);
 }
 
-void __built_in::string::remove(size_t idx, size_t len)
+void __string__::remove(size_t idx, size_t len)
 {
     memmove(data + idx, data + idx + len, num - idx);
     num -= len;
     data[num] = '\0';
 }
 
-void __built_in::string::popb()
+void __string__::popb()
 {
     remove(num - 1);
 }
 
-void __built_in::string::popf()
+void __string__::popf()
 {
     remove(0);
 }
 
-const char *__built_in::string::to_string() const
+const char *__string__::to_string() const
 {
     return data;
 }
 
-void __built_in::string::resize()
+void __string__::resize()
 {
     while (num >= cap - 1)
     {
