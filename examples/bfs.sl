@@ -59,7 +59,7 @@ main {
     grid: [[int]] = { { 1 2 3 4 } { 5 6 7 8 } { 9 10 11 12 } }
     vis: [[bool]] = { { 0 0 0 0 } { 0 0 0 0 } { 0 0 0 0 } }
 
-    ? bfs grid vis 0 0 15 {
+    ? bfs grid vis 0 0 9 {
         dumpln "Found target :)"
     } | {
         dumpln "Did not find target :("

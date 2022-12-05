@@ -25,12 +25,12 @@ popf (arr: [tree]) {
 _insert (root: tree, val: int): tree {
     ? root == null {
         r: tree
-        r::val = val
+        r.val = val
         root = r
-    } | root::val > val {
-        root::left = _insert (root::left) val
+    } | root.val > val {
+        root.left = _insert (root.left) val
     } | {
-        root::right = _insert (root::right) val
+        root.right = _insert (root.right) val
     }
 
     return root
@@ -45,11 +45,11 @@ printPreOrder (root: tree) {
         return
     }
 
-    dump root::val
+    dump root.val
     dump ' '
 
-    printPreOrder (root::left)
-    printPreOrder (root::right)
+    printPreOrder (root.left)
+    printPreOrder (root.right)
 }
 
 printInOrder (root: tree) {
@@ -57,12 +57,12 @@ printInOrder (root: tree) {
         return
     }
 
-    printInOrder (root::left)
+    printInOrder (root.left)
 
-    dump root::val
+    dump root.val
     dump ' '
 
-    printInOrder (root::right)
+    printInOrder (root.right)
 }
 
 printPostOrder (root: tree) {
@@ -70,10 +70,10 @@ printPostOrder (root: tree) {
         return
     }
 
-    printPostOrder (root::left)
-    printPostOrder (root::right)
+    printPostOrder root.left
+    printPostOrder root.right
 
-    dump root::val
+    dump root.val
     dump ' '
 }
 
@@ -88,8 +88,8 @@ printLevelOrder (root: tree) {
 #cpp
         popf queue
 
-        left: tree = root::left
-        right: tree = root::right
+        left: tree = root.left
+        right: tree = root.right
 
         ? left != null {
             pushb queue left
@@ -102,16 +102,16 @@ printLevelOrder (root: tree) {
 }
 
 invert (root: tree) {
-    ? root::left == root::right {
+    ? root.left == root.right {
         return
     }
 
-    tmp: int = root::left::val
-    root::left::val = root::right::val
-    root::right::val = tmp
+    tmp: int = root.left.val
+    root.left.val = root.right.val
+    root.right.val = tmp
 
-    invert root::left
-    invert root::right
+    invert root.left
+    invert root.right
 }
 
 free (root: tree) {
@@ -119,15 +119,15 @@ free (root: tree) {
         return
     }
 
-    free root::left
-    free root::right
+    free root.left
+    free root.right
 
     delete root
 }
 
 main {
     t: tree = new tree
-    t::val = 4
+    t.val = 4
 
     insert t 2
     insert t 6

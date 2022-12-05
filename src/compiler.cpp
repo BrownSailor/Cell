@@ -16,5 +16,5 @@ void compile_and_link(std::string filename, Node *root, std::ostream &out)
     assemble("." + filename + ".cc", root);
 
     system(cmp_command.c_str());
-    system(rmf_command.c_str());
+    // system(rmf_command.c_str());
 }

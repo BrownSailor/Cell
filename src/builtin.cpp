@@ -2,15 +2,23 @@
 
 std::string builtin_print(Node *root, const Scope &scope, std::string expr)
 {
+    (void)(scope);
     std::string print = "";
-    Token::Type type = eval_node(root, scope);
+    // Token::Type type = eval_node(root, scope);
+    Token::Type type = Token::TOK_NONE;
 
     if (!root->arr_dim)
     {
         switch (type)
         {
-            case Token::TOK_CHAR:
+            case Token::KEY_BOOL:
+            case Token::TOK_BOOL:
+            {
+                print += "printf(\"%s\", " + expr + " ? \"tru\" : \"fls\")";
+                break;
+            }
             case Token::KEY_CHAR:
+            case Token::TOK_CHAR:
             {
                 print += "printf(\"%c\", " + expr + ")";
                 break;
@@ -20,13 +28,14 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
                 print += "printf(\"%s\", " + expr + ")";
                 break;
             }
-            case Token::TOK_INT:
             case Token::KEY_INT:
+            case Token::TOK_INT:
             {
                 print += "printf(\"%lld\", (long long)(" + expr + "))";
                 break;
             }
             case Token::KEY_UINT:
+            case Token::TOK_UINT:
             {
                 print += "printf(\"%lu\", (unsigned long)(" + expr + "))";
                 break;
@@ -48,8 +57,14 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
             {
                 switch (type)
                 {
-                    case Token::TOK_CHAR:
+                    case Token::KEY_BOOL:
+                    case Token::TOK_BOOL:
+                    {
+                        print += "printf(\"%d\", " + expr + " ? \"tru\" : \"fls\")";
+                        break;
+                    }
                     case Token::KEY_CHAR:
+                    case Token::TOK_CHAR:
                     {
                         print += "printf(\"%c\", " + expr + ")";
                         break;
@@ -59,18 +74,25 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
                         print += "printf(\"%s\", " + expr + ")";
                         break;
                     }
+                    case Token::KEY_INT:
                     case Token::TOK_INT:
                     {
                         print += "printf(\"%lld\", (long long)(" + expr + "))";
                         break;
                     }
+                    case Token::KEY_UINT:
                     case Token::TOK_UINT:
                     {
                         print += "printf(\"%lu\", (unsigned long)(" + expr + "))";
                         break;
                     }
 
-                    default: break;
+                    default:
+                    {
+                        // TODO: fix this lol
+                        print += "printf(\"%lld\", (long long)(" + expr + "))";
+                        break;
+                    }
                 }
 
                 break;
@@ -89,13 +111,22 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
 
 std::string builtin_println(Node *root, const Scope &scope, std::string expr)
 {
+    (void)(scope);
     std::string println = "";
-    Token::Type type = eval_node(root, scope);
+    // Token::Type type = eval_node(root, scope);
+    Token::Type type = Token::TOK_BOOL;
 
     if (!root->arr_dim)
     {
         switch (type)
         {
+            case Token::KEY_BOOL:
+            case Token::TOK_BOOL:
+            {
+                println += "printf(\"%s\\n\", " + expr + " ? \"tru\" : \"fls\")";
+                break;
+            }
+            case Token::KEY_CHAR:
             case Token::TOK_CHAR:
             {
                 println += "printf(\"%c\\n\", " + expr + ")";
@@ -106,18 +137,25 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
                 println += "printf(\"%s\\n\", " + expr + ")";
                 break;
             }
+            case Token::KEY_INT:
             case Token::TOK_INT:
             {
                 println += "printf(\"%lld\\n\", (long long)(" + expr + "))";
                 break;
             }
+            case Token::KEY_UINT:
             case Token::TOK_UINT:
             {
                 println += "printf(\"%lu\\n\", (unsigned long)(" + expr + "))";
                 break;
             }
 
-            default: break;
+            default:
+            {
+                // TODO: fix this lol
+                println += "printf(\"%lld\\n\", (long long)(" + expr + "))";
+                break;
+            }
         }
     }
     else
@@ -128,6 +166,13 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
             {
                 switch (type)
                 {
+                    case Token::KEY_BOOL:
+                    case Token::TOK_BOOL:
+                    {
+                        println += "printf(\"%d\\n\", " + expr + " ? \"tru\" : \"fls\")";
+                        break;
+                    }
+                    case Token::KEY_CHAR:
                     case Token::TOK_CHAR:
                     {
                         println += "printf(\"%c\\n\", " + expr + ")";
@@ -138,18 +183,25 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
                         println += "printf(\"%s\\n\", " + expr + ")";
                         break;
                     }
+                    case Token::KEY_INT:
                     case Token::TOK_INT:
                     {
                         println += "printf(\"%lld\\n\", (long long)(" + expr + "))";
                         break;
                     }
+                    case Token::KEY_UINT:
                     case Token::TOK_UINT:
                     {
                         println += "printf(\"%lu\\n\", (unsigned long)(" + expr + "))";
                         break;
                     }
 
-                    default: break;
+                    default:
+                    {
+                        // TODO: fix this lol
+                        println += "printf(\"%lld\\n\", (long long)(" + expr + "))";
+                        break;
+                    }
                 }
 
                 break;

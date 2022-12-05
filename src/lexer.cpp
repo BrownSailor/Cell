@@ -16,6 +16,7 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "struct", Token::KEY_STRUCT },
     { "new", Token::KEY_NEW },
     { "delete", Token::KEY_DELETE },
+    { "type", Token::KEY_TYPE },
     { "#cpp", Token::KEY_CPP }
 };
 
@@ -143,7 +144,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             {
                 tokens.push_back({ .type = Token::TOK_LAND, .data = "&&", .row = row, .col = col, .file = file });
                 i++;
-                col_end++;
+                col_end += 2;
             }
         }
         else if (c == '|')
@@ -159,7 +160,7 @@ void lex_line(const std::string &line, std::list<Token> &tokens, int row, const 
             {
                 tokens.push_back({ .type = Token::TOK_LOR, .data = "||", .row = row, .col = col, .file = file });
                 i++;
-                col_end++;
+                col_end += 2;
             }
             else
             {
@@ -628,7 +629,7 @@ std::string token_id_to_str(const Token::Type &type)
 
         case Token::KEY_CPP:
             return "KEY_CPP";
-        
+
         case Token::KEY_NEW:
             return "KEY_NEW";
 
@@ -646,6 +647,9 @@ std::string token_id_to_str(const Token::Type &type)
 
         case Token::KEY_FLS:
             return "KEY_FLS";
+
+        case Token::KEY_TYPE:
+            return "KEY_TYPE";
 
         // Unary operators
         case Token::TOK_BANG:
@@ -785,7 +789,7 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
             break;
 
         case Token::TOK_INT:
-            out << "TOKEN_NUM";
+            out << "TOKEN_INT";
             break;
 
         case Token::TOK_CHAR:
@@ -871,6 +875,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
 
         case Token::KEY_FLS:
             out << "KEY_FLS";
+            break;
+
+        case Token::KEY_TYPE:
+            out << "KEY_TYPE";
             break;
 
         case Token::TOK_BANG:

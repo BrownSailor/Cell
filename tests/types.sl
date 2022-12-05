@@ -1,20 +1,82 @@
+node T: type = {
+    val: T
+    next: node T
+}
+
+list T: type = {
+    front: node T
+    back: node T
+    size: uint
+}
+
+queue T: type = {
+    data: list T
+}
+
+stack T: type = {
+    data: [T]
+}
+
+size (arr: [char]): uint {
+#cpp
+    return arr.size();
+#cpp
+}
+
+pushb (arr: [char], val: char) {
+#cpp
+    arr.pushb(val);
+#cpp
+}
+
+popb (arr: [char]): char {
+    val: char = arr[size arr - 1]
+#cpp
+    arr.popb();
+#cpp
+    return val
+}
+
+size (stk: stack char): uint {
+    return size stk.data
+}
+
+push (stk: stack char, val: char) {
+    pushb stk.data val
+}
+
+pop (stk: stack char): char {
+    return popb stk.data
+}
+
+top (stk: stack char): char {
+    return stk.data[size stk - 1]
+}
+
+pair K V: type = {
+    key: K
+    val: V
+}
+
+map K V: type = {
+    data: [pair K V]
+}
+
+solve: bool {
+    s: stack char = new stack char
+    str: [char] = "()()()()()"
+
+    @ i: int = 0, i < size str - 1, i++ {
+        ? str[i] == '(' {
+            push s str[i]
+        } | pop s != '(' {
+            return fls
+        }
+    }
+
+    return size s == 0
+}
+
 main {
-
-    // variable declaration and assignment failures
-    vda1: bool = tru
-    // vda2: bool = 'c'
-    // vda3: bool = 0
-    // vda4: bool = "hi"
-    // vda5: bool = { 1 2 3 }
-    // vda6: bool = { (1 == 0) (2 == 0) }
-
-    // variable assignment failures
-    va1: bool  = tru
-    // va1 = 3
-    // va1 = "hi"
-    // va1 = bool
-    va1 = 2 == 3
-
-    dumpln vda1
-    dumpln va1
+    dumpln solve
 }

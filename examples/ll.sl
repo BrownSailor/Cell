@@ -10,49 +10,49 @@ list: struct {
 }
 
 size (root: list): uint {
-    return root::size
+    return root.size
 }
 
 add (root: list, val: int) {
 
-    ? root::size == 0 {
-        root::front = new node
-        root::front::val = val
-        root::back = root::front
+    ? root.size == 0 {
+        root.front = new node
+        root.front.val = val
+        root.back = root.front
     } | {
-        root::back::next = new node
-        root::back::next::val = val
-        root::back = root::back::next
+        root.back.next = new node
+        root.back.next.val = val
+        root.back = root.back.next
     }
 
-    root::size++
+    root.size++
 }
 
 reverse (root: list) {
-    root::back = root::front
+    root.back = root.front
 
     prev: node = null
-    curr: node = root::front
-    next: node = root::front::next
+    curr: node = root.front
+    next: node = root.front.next
 
     @ curr != null {
-        curr::next = prev
+        curr.next = prev
         prev = curr
         curr = next
-        next = next::next
+        next = next.next
     }
 
-    root::front = prev
+    root.front = prev
 }
 
 print (root: list) {
 
     dump "List size: "
-    dump root::size
+    dump root.size
     dumpln ""
 
-    @ tmp: node = root::front, tmp != null, tmp = tmp::next {
-        dump tmp::val
+    @ tmp: node = root.front, tmp != null, tmp = tmp.next {
+        dump tmp.val
         dump ' '
     }
     dumpln ""
@@ -63,8 +63,8 @@ free (root: node) {
         return
     }
 
-    free root::next
-    delete root::next
+    free root.next
+    delete root.next
 }
 
 main {
@@ -79,6 +79,6 @@ main {
     reverse ls
     print ls
 
-    free ls::front
+    free ls.front
     delete ls
 }

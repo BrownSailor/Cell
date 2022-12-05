@@ -7,8 +7,8 @@ struct Node;
 
 typedef std::unordered_map<std::string, Node *> Scope;
 
-extern Scope global;
-extern Scope structs;
+extern Scope functions;
+extern Scope types;
 
 struct Node
 {
@@ -23,7 +23,8 @@ struct Node
         NODE_VAR_DEC,
         NODE_VAR_DEC_ASN,
         NODE_LIST,
-        NODE_STRUCT,
+        NODE_TYPE,
+        NODE_TYPE_DEF,
         NODE_FUNC_CALL,
         NODE_FUNC_DEC
     };
@@ -41,8 +42,6 @@ int eat_open_parens(std::list<Token> &tokens, char p='(');
 void eat_close_parens(std::list<Token> &tokens, int parens, char p=')');
 
 Node *new_node(Token token);
-Token::Type key_to_tok(Token::Type key);
-Token::Type eval_node(Node *node, const Scope &scope);
 
 Node *unary(Node *op, Node *node);
 Node *binary(Node *left, Node *op, Node *right);
@@ -58,16 +57,10 @@ Node *parse_expr(std::list<Token> &tokens, Scope &scope);
 Node *parse_statement(std::list<Token> &tokens, Scope &scope);
 Node *parse_if(std::list<Token> &tokens, Scope &scope);
 Node *parse_loop(std::list<Token> &tokens, Scope &scope);
-Node *parse_struct(std::list<Token> &tokens, Scope &scope);
 Node *parse_body(Node *node, std::list<Token> &tokens, Scope &scope);
+Node *parse_type_def(std::list<Token> &tokens);
 Node *parse_function(std::list<Token> &tokens);
 Node *parse_program(std::list<Token> &tokens);
-
-std::string node_type_to_str(Node *node);
-void pretty_print_tabs(int num_tabs, std::ostream &out=std::cout);
-void print_scope(const Scope &scope, std::ostream &out=std::cout);
-void pretty_print_helper(Node *node, const Scope &scope, int num_tabs, std::ostream &out=std::cout);
-void pretty_print(Node *node, std::ostream &out=std::cout);
 
 void print_warning(std::string message, const Token &token);
 void print_error(std::string message, const Token &token);

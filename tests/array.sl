@@ -17,6 +17,7 @@ main {
     arr3: [[int]] = { { 1 2 3 } { 4 5 6 } }
     arr4: [int] = arr2
     arr5: [[int]] = arr3
+    arr6: [int] = arr5[1]
 
     dumpln "arr1"
     @ i: int = 0, i < size arr1, i++ {
@@ -58,6 +59,12 @@ main {
         }
         dumpln ""
     }
-
-    return 0
+    dumpln ""
+    
+    dumpln "arr6"
+    @ i: int = 0, i < size arr6, i++ {
+        dump arr6[i]
+        dump ' '
+    }
+    dumpln ""
 }

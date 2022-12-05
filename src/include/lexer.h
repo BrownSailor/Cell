@@ -48,6 +48,7 @@ struct Token
         KEY_NULL,
         KEY_TRU,
         KEY_FLS,
+        KEY_TYPE,
 
         // Unary operators
         TOK_BANG,

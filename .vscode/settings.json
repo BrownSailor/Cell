@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.sl": "slang",
+        "*.scm": "clojure",
+        "cstring": "cpp"
+    }
+}

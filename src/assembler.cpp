@@ -76,11 +76,11 @@ std::string assemble_type(Node *root, size_t size)
 {
     std::string type = "";
 
-    if (size == 1 && root->token.type == Token::KEY_CHAR)
-    {
-        type += "__string__";
-        return type;
-    }
+    // if (size == 1 && root->token.type == Token::KEY_CHAR)
+    // {
+    //     type += "__string__";
+    //     return type;
+    // }
 
     if (size)
     {
@@ -119,13 +119,27 @@ std::string assemble_type(Node *root, size_t size)
 
         default:
         {
-            if (structs.count(root->token.data))
+            if (types.count(root->token.data))
             {
-                type += root->token.data + "*";
+                type += root->token.data;
+
+                if (root->children.size())
+                {
+                    type += "<";
+                    for (auto x : root->children)
+                    {
+                        type += assemble_type(x, x->arr_dim) + ",";
+                    }
+                    type[type.size() - 1] = '>';
+                }
+                type += "*";
                 break;
             }
-            print_error("Unknown type `" + root->token.data + "`", root->token);
-            exit(EXIT_FAILURE);
+            else
+            {
+                type += root->token.data;
+                break;
+            }
         }
     }
 
@@ -243,6 +257,19 @@ std::string assemble_expr(Node *root, const Scope &scope, Node *parent, size_t a
         }
 
         case Token::KEY_NEW:
+        {
+            expr += root->token.data + " " + root->children.front()->token.data;
+            if (root->children.front()->children.size())
+            {
+                expr += "<";
+                for (auto x : root->children.front()->children)
+                {
+                    expr += assemble_type(x, x->arr_dim) + ",";
+                }
+                expr[expr.size() - 1] = '>';
+            }
+            break;
+        }
         case Token::KEY_DELETE:
         {
             expr += root->token.data + " " + assemble_expr(root->children.front(), scope);
@@ -307,7 +334,7 @@ std::string assemble_expr(Node *root, const Scope &scope, Node *parent, size_t a
                         {
                             expr += assemble_expr(root->children.front(), scope);
                         }
-                        
+
                         // pretty_print(scope.at(root->token.data));
                         expr += " = " + assemble_expr(root->children.back(), scope, scope.at(root->token.data), root->arr_dim);
                     }
@@ -319,7 +346,7 @@ std::string assemble_expr(Node *root, const Scope &scope, Node *parent, size_t a
                     std::string type = assemble_type(root->children.front(), root->arr_dim);
                     expr += type + " " + root->token.data;
 
-                    if (structs.count(type.substr(0, type.size() - 1)) && parent == nullptr)
+                    if (types.count(type.substr(0, type.size() - 1)) && parent == nullptr)
                     {
                         expr += " = new " + type.substr(0, type.size() - 1);
                     }
@@ -349,7 +376,15 @@ std::string assemble_expr(Node *root, const Scope &scope, Node *parent, size_t a
                     {
                         expr += assemble_expr(*it, scope) + ",";
                     }
-                    expr[expr.size() - 1] = ')';
+
+                    if (root->children.size())
+                    {
+                        expr[expr.size() - 1] = ')';
+                    }
+                    else
+                    {
+                        expr += ")";
+                    }
 
                     break;
                 }
@@ -535,16 +570,28 @@ std::string assemble_body(std::list<Node *>::iterator &it, const std::list<Node 
     return body;
 }
 
-std::string assemble_struct(Node *root)
+std::string assemble_type_def(Node *root)
 {
-    std::string object = "struct ";
-    object += root->token.data + " {\n";
+    std::string type_def = "";
+    if (root->children.front()->children.size())
+    {
+        type_def += "template <";
+        for (auto x : root->children.front()->children)
+        {
+            type_def += "typename " + x->token.data + ",";
+        }
+        type_def[type_def.size() - 1] = '>';
+        type_def += "\n";
+    }
+
+    type_def += "struct ";
+    type_def += root->token.data + " {\n";
 
     auto it = root->children.begin();
-    object += assemble_body(it, root->children.end(), root->scope, root);
-    object += "};\n";
+    type_def += assemble_body(it, root->children.end(), root->scope, root);
+    type_def += "};\n";
 
-    return object;
+    return type_def;
 }
 
 std::string assemble_function(Node *root)
@@ -609,9 +656,9 @@ std::string assemble_program(Node *root)
         {
             program += child->token.data;
         }
-        else if (child->token.type == Token::KEY_STRUCT)
+        else if (child->type == Node::NODE_TYPE_DEF)
         {
-            program += assemble_struct(child);
+            program += assemble_type_def(child);
         }
         else
         {
