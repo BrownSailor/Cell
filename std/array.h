@@ -88,7 +88,7 @@ __array__<T> &__array__<T>::operator=(const __array__<T> &rhs)
     cap = rhs.cap;
     num = rhs.num;
 
-    if (data != nullptr) delete []data;
+    if (data != NULL) delete []data;
 
     data = new T[cap];
     for (int i = 0; i < cap; i++)

@@ -100,7 +100,7 @@ __string__::__string__(__array__<char> str)
 
 __string__::~__string__()
 {
-    if (data != nullptr) delete []data;
+    if (data != NULL) delete []data;
 }
 
 const size_t __string__::size() const
@@ -110,7 +110,7 @@ const size_t __string__::size() const
 
 __string__ &__string__::operator=(const char *str)
 {
-    if (data != nullptr) delete []data;
+    if (data != NULL) delete []data;
 
     num = strlen(str);
     cap = num + 1;
@@ -122,7 +122,7 @@ __string__ &__string__::operator=(const char *str)
 
 __string__ &__string__::operator=(const __string__ &rhs)
 {
-    if (data != nullptr) delete []data;
+    if (data != NULL) delete []data;
 
     num = rhs.size();
     cap = num + 1;
@@ -134,7 +134,7 @@ __string__ &__string__::operator=(const __string__ &rhs)
 
 __string__ &__string__::operator=(__array__<char> rhs)
 {
-    if (data != nullptr) delete []data;
+    if (data != NULL) delete []data;
 
     num = rhs.size();
     cap = num + 1;

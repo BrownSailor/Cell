@@ -114,7 +114,7 @@ std::string builtin_println(Node *root, const Scope &scope, std::string expr)
     (void)(scope);
     std::string println = "";
     // Token::Type type = eval_node(root, scope);
-    Token::Type type = Token::TOK_BOOL;
+    Token::Type type = Token::TOK_NONE;
 
     if (!root->arr_dim)
     {

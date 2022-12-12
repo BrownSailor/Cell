@@ -1,7 +1,10 @@
 {
     "files.associations": {
-        "*.sl": "slang",
         "*.scm": "clojure",
-        "cstring": "cpp"
+        "*.nml": "clojure",
+        "*.sml": "sml",
+        "*.sl": "slang",
+        "cstring": "cpp",
+        "unordered_map": "cpp"
     }
 }

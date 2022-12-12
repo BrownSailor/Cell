@@ -54,10 +54,10 @@ __array__<pair<K,V>*> data;
 };
 int8_t solve() {
 stack<char>* s = new stack<char>;
-__array__<char> str = "()()()()()";
-for (int64_t i = 0;(i)<((size(str))-(1));(i)++) {
-if ((str[i])==('(')) {
-push(s,str[i]);
+__string__ t = "()()()()()";
+for (int64_t i = 0;(i)<((size(t))-(1));(i)++) {
+if ((t)==('(')) {
+push(s,t);
 }
 else if ((pop(s))!=('(')) {
 return fls;
@@ -66,5 +66,5 @@ return fls;
 return (size(s))==(0);
 }
 int32_t main(int32_t argc, char** argv) {
-printf("%s\n", solve() ? "tru" : "fls");
+printf("%lld\n", (long long)(solve()));
 }

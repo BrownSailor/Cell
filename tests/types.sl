@@ -64,11 +64,11 @@ map K V: type = {
 
 solve: bool {
     s: stack char = new stack char
-    str: [char] = "()()()()()"
+    t: str = "()()()()()"
 
-    @ i: int = 0, i < size str - 1, i++ {
-        ? str[i] == '(' {
-            push s str[i]
+    @ i: int = 0, i < size t - 1, i++ {
+        ? t[i] == '(' {
+            push s t[i]
         } | pop s != '(' {
             return fls
         }

@@ -37,6 +37,7 @@ struct Token
         KEY_CHAR,
         KEY_INT,
         KEY_UINT,
+        KEY_STR,
         KEY_STRUCT,
         KEY_NEW,
         KEY_DELETE,
@@ -106,6 +107,7 @@ struct Token
 };
 
 extern std::unordered_map<std::string, Token::Type> INTRINSICS;
+extern std::unordered_map<std::string, Token::Type> BUILTIN_TYPES;
 
 Token lex_word(const std::string &word, int row, int col, const std::string &file);
 void lex_line(const std::string &line, std::list<Token> &tokens, int row, const std::string &file);

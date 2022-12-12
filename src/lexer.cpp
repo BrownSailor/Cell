@@ -10,6 +10,7 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "bool", Token::KEY_BOOL },
     { "int", Token::KEY_INT },
     { "uint", Token::KEY_UINT },
+    { "str", Token::KEY_STR },
     { "null", Token::KEY_NULL },
     { "tru", Token::KEY_TRU },
     { "fls", Token::KEY_FLS },
@@ -18,6 +19,14 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "delete", Token::KEY_DELETE },
     { "type", Token::KEY_TYPE },
     { "#cpp", Token::KEY_CPP }
+};
+
+std::unordered_map<std::string, Token::Type> BUILTIN_TYPES = 
+{
+    { "bool", Token::KEY_BOOL },
+    { "char", Token::KEY_CHAR },
+    { "int", Token::KEY_INT },
+    { "uint", Token::KEY_UINT }
 };
 
 /*
@@ -623,6 +632,9 @@ std::string token_id_to_str(const Token::Type &type)
 
         case Token::KEY_UINT:
             return "KEY_UINT";
+        
+        case Token::KEY_STR:
+            return "KEY_STR";
 
         case Token::KEY_STRUCT:
             return "KEY_STRUCT";
@@ -843,6 +855,10 @@ void print_token(const Token &token, std::ostream &out, bool new_line)
 
         case Token::KEY_UINT:
             out << "KEY_UINT";
+            break;
+
+        case Token::KEY_STR:
+            out << "KEY_STR";
             break;
 
         case Token::KEY_STRUCT:

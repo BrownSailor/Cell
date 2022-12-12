@@ -5,7 +5,7 @@
 
 struct Node;
 
-typedef std::unordered_map<std::string, Node *> Scope;
+#define Scope std::unordered_map<std::string, Node *>
 
 extern Scope functions;
 extern Scope types;
@@ -35,6 +35,7 @@ struct Node
     size_t arr_dim = 0;
     bool semi = false;
     bool ptr = false;
+    std::string datatype = "";
     std::list<Node *> children;
 };
 
@@ -64,5 +65,11 @@ Node *parse_program(std::list<Token> &tokens);
 
 void print_warning(std::string message, const Token &token);
 void print_error(std::string message, const Token &token);
+
+std::string node_type_to_str(Node *node);
+void pretty_print_tabs(int num_tabs, std::ostream &out=std::cout);
+void print_scope(const Scope &scope, std::ostream &out=std::cout);
+void pretty_print_helper(Node *node, const Scope &scope, int num_tabs, std::ostream &out=std::cout);
+void pretty_print(Node *node, std::ostream &out=std::cout);
 
 #endif

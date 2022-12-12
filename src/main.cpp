@@ -1,5 +1,5 @@
-#include "include/util.h"
 #include "include/compiler.h"
+#include "include/types.h"
 #include <cstring>
 
 int main(int argc, char **argv)
@@ -7,9 +7,11 @@ int main(int argc, char **argv)
     (void)(argc);
 
     std::list<Token> tokens = lex(argv[2]);
-    Node *root = parse_program(tokens);
+    print_lex(tokens);
 
-    if (argc > 3 && !strcmp(argv[3], "--debug")) pretty_print(root);
+    Node *root = parse_program(tokens);
+    root = set_types(root, root->scope);
+    pretty_print(root);
 
     // if (!check_errors(root, root->scope))
     // {
@@ -17,7 +19,7 @@ int main(int argc, char **argv)
     //     exit(EXIT_FAILURE);
     // }
 
-    compile_and_link(argv[1], root);
+    // compile_and_link(argv[1], root);
 
     return 0;
 }

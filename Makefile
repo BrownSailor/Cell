@@ -7,8 +7,8 @@ INC = src/include
 BIN = bin
 OBJ = $(BIN)/obj
 
-SOURCE_FILES  = lexer.cpp parser.cpp error.cpp builtin.cpp assembler.cpp \
-				compiler.cpp util.cpp main.cpp
+SOURCE_FILES  = lexer.cpp parser.cpp types.cpp error.cpp builtin.cpp \
+				assembler.cpp compiler.cpp main.cpp
 
 OBJECT_FILES  = $(SOURCE_FILES:%.cpp=$(OBJ)/%.o)
 

@@ -76,12 +76,6 @@ std::string assemble_type(Node *root, size_t size)
 {
     std::string type = "";
 
-    // if (size == 1 && root->token.type == Token::KEY_CHAR)
-    // {
-    //     type += "__string__";
-    //     return type;
-    // }
-
     if (size)
     {
         type += "__array__<" + assemble_type(root, size - 1) + ">";
@@ -109,6 +103,11 @@ std::string assemble_type(Node *root, size_t size)
         case Token::KEY_UINT:
         {
             type += "uint64_t";
+            break;
+        }
+        case Token::KEY_STR:
+        {
+            type += "__string__";
             break;
         }
         case Token::KEY_VOID:
