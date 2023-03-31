@@ -4,7 +4,11 @@
 
 int main(int argc, char **argv)
 {
-    (void)(argc);
+    if (argc < 3)
+    {
+        std::cerr << "Usage: ./slang executableName inputFiles\n";
+        return 0;
+    }
 
     std::list<Token> tokens = lex(argv[2]);
     print_lex(tokens);
@@ -19,7 +23,7 @@ int main(int argc, char **argv)
     //     exit(EXIT_FAILURE);
     // }
 
-    // compile_and_link(argv[1], root);
+    compile_and_link(argv[1], root);
 
     return 0;
 }

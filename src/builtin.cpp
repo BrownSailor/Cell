@@ -23,6 +23,7 @@ std::string builtin_print(Node *root, const Scope &scope, std::string expr)
                 print += "printf(\"%c\", " + expr + ")";
                 break;
             }
+            case Token::KEY_STR:
             case Token::TOK_STR:
             {
                 print += "printf(\"%s\", " + expr + ")";

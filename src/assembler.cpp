@@ -283,7 +283,7 @@ std::string assemble_expr(Node *root, const Scope &scope, Node *parent, size_t a
                 {
                     expr += root->token.data;
 
-                    if (root->arr_dim)
+                    if ((root->arr_dim || root->datatype == "str"))
                     {
                         for (auto it = root->children.begin(); it != root->children.end(); std::advance(it, 1))
                         {

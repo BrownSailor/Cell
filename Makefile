@@ -1,21 +1,21 @@
 CXX      = clang++
 CXXFLAGS = -g3 -std=c++20 -Ofast -Wall -Wextra -Wpedantic -Wshadow -Werror
-LDFLAGS  = -g3
+LDFLAGS  = -g3 -Wc -fsanitize=address -fsanitize=undefined
 
 SRC = src
 INC = src/include
 BIN = bin
-OBJ = $(BIN)/obj
 
-SOURCE_FILES  = lexer.cpp parser.cpp types.cpp error.cpp builtin.cpp \
-				assembler.cpp compiler.cpp main.cpp
-
-OBJECT_FILES  = $(SOURCE_FILES:%.cpp=$(OBJ)/%.o)
+INCLUDES = $(shell echo $(INC)/*.h)
+SOURCES = $(shell echo $(SRC)/*.cpp)
+OBJECTS = $(SOURCES:$(SRC)/%.cpp=$(BIN)/%.o)
 
 build: slang
 
-test: slang
-	python test.py
+$(OBJECTS): $(BIN)/%.o: $(SRC)/%.c $(INCLUDES)
+	mkdir -p $(@D)
+	@echo Compiling $< to $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	@echo Cleaning binaries
@@ -27,7 +27,7 @@ slang: $(OBJECT_FILES)
 	@echo Generating executable
 	@$(CXX) $(LDFLAGS) -o $@ $^
 
-$(OBJECT_FILES): $(OBJ)/%.o: $(SRC)/%.cpp $(INC)/%.h
+$(OBJECT_FILES): $(BIN)/%.o: $(SRC)/%.cpp $(INC)/%.h
 	@mkdir -p $(@D)
 	@echo Compiling $< to $@
 	@$(CXX) $(CXXFLAGS) -c $< -o $@

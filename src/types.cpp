@@ -22,6 +22,10 @@ std::string node_to_type(Node *node)
             {
                 return "uint";
             }
+            case Token::KEY_STR:
+            {
+                return "str";
+            }
 
             default: return node->token.data;
         }
@@ -154,11 +158,11 @@ Node *set_types(Node *node, const Scope &scope)
         {
             if (scope.count(node->token.data))
             {
-                node->datatype = scope.at(node->token.data)->datatype;
+                node->datatype = scope.at(node->token.data)->children.front()->token.data;
             }
             else if (types.count(node->token.data))
             {
-                node->datatype = types.at(node->token.data)->datatype;
+                node->datatype = types.at(node->token.data)->children.front()->token.data;
             }
 
             return node;

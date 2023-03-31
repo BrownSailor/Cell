@@ -1,3 +1,0 @@
-main {
-    val: str = "hello"
-}

@@ -153,6 +153,7 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
             node->type = Node::NODE_LIT;
             break;
         }
+
         case Token::KEY_CHAR:
         case Token::KEY_BOOL:
         case Token::KEY_INT:
@@ -167,7 +168,7 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
         case Token::KEY_STRUCT:
         {
             print_error("cannot define struct within function or struct", tokens.front());
-            print_warning("note: types must be defined functionsly", tokens.front());
+            print_warning("note: types must be defined globally", tokens.front());
             std::cerr << "Compilation failed\n";
             exit(EXIT_FAILURE);
         }
@@ -1012,7 +1013,7 @@ void pretty_print_helper(Node *node, const Scope &scope, int num_tabs, std::ostr
     {
         out << " (" << node_type_to_str(node) << ")";
     }
-    
+
     out << " <" << node->datatype << ">";
 
     if (node->scope.size())
