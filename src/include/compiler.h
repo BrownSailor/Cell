@@ -1,10 +1,9 @@
 #ifndef COMPILER_H
 #define COMPILER_H
 
-#include <string>
 #include <iostream>
-#include "assembler.h"
+#include "parser.h"
 
-void compile_and_link(std::string filename, Node *root, std::ostream &out=std::cout);
+void compile_program(Node *root);
 
 #endif

@@ -1,14 +1,13 @@
-#include "include/parser.h"
+#include "parser.h"
 
-Scope functions = Scope();
-Scope types = Scope();
+static Node *parse_expr(std::list<Token> &tokens, Scope &scope);
+static Node *parse_statement(std::list<Token> &tokens, Scope &scope);
 
-int eat_open_parens(std::list<Token> &tokens, char p)
+static int eat_open_parens(std::list<Token> &tokens, Token::Type paren_type)
 {
-    Token::Type t = (p == '(' ? Token::TOK_LPAREN : p == '[' ? Token::TOK_LBRACK : Token::TOK_LBRACE);
-
     int parens = 0;
-    while (tokens.front().type == t)
+
+    while (tokens.size() && tokens.front().type == paren_type)
     {
         parens++;
         tokens.pop_front();
@@ -17,29 +16,22 @@ int eat_open_parens(std::list<Token> &tokens, char p)
     return parens;
 }
 
-void eat_close_parens(std::list<Token> &tokens, int parens, char p)
+static void eat_close_parens(std::list<Token> &tokens, int num, Token::Type paren_type)
 {
-    Token::Type t = (p == ')' ? Token::TOK_RPAREN : p == ']' ? Token::TOK_RBRACK : Token::TOK_RBRACE);
-
-    while (parens && tokens.front().type == t)
+    while (num && tokens.size() && tokens.front().type == paren_type)
     {
-        parens--;
         tokens.pop_front();
+        num--;
     }
 
-    if (parens)
+    if (num)
     {
-        std::string error = "expected `";
-        error += p;
-        error += '`';
-
-        print_error(error, tokens.front());
-        std::cerr << "Compilation failed\n";
+        std::cerr << "Parentheses issue!\n";
         exit(EXIT_FAILURE);
     }
 }
 
-Node *new_node(Token token)
+static Node *new_node(Token token)
 {
     Node *node = new Node;
     node->token = token;
@@ -47,96 +39,75 @@ Node *new_node(Token token)
     return node;
 }
 
-Node *unary(Node *op, Node *node)
+static Node *unary(Node *op, Node *operand)
 {
-    op->children.push_back(node);
+    op->children.push_back(operand);
     op->type = Node::NODE_OP;
     return op;
 }
 
-Node *binary(Node *left, Node *op, Node *right)
+static Node *binary(Node *left, Node *op, Node *right)
 {
     op->children.push_back(left);
     op->children.push_back(right);
     op->type = Node::NODE_OP;
-
     return op;
 }
 
-Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
+static Node *parse_fact(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node;
+    Node *node = nullptr;
 
     switch (tokens.front().type)
     {
-        case Token::KEY_CPP:
-        case Token::KEY_NULL:
-        case Token::KEY_TRU:
-        case Token::KEY_FLS:
+        case Token::TOK_NUM:
+        case Token::TOK_TRU:
+        case Token::TOK_FLS:
+        case Token::TOK_STR:
+        {
+            node = new_node(tokens.front());
+            node->type = Node::NODE_LIT;
+            tokens.pop_front();
+            break;
+        }
+
+        case Token::KEY_NUM:
+        case Token::KEY_BOOL:
+        case Token::KEY_STR:
+        case Token::KEY_NIL:
         {
             node = new_node(tokens.front());
             node->type = Node::NODE_KEY;
             tokens.pop_front();
             break;
         }
+
+        case Token::TOK_IN:
+        {
+            node = new_node(tokens.front());
+            node->type = Node::NODE_KEY;
+            tokens.pop_front();
+            break;
+        }
+
+        case Token::TOK_OUT:
+        {
+            node = new_node(tokens.front());
+            node->type = Node::NODE_KEY;
+            tokens.pop_front();
+            break;
+        }
+
         case Token::TOK_LPAREN:
         {
-            int p = eat_open_parens(tokens);
+            int p = eat_open_parens(tokens, Token::TOK_LPAREN);
             node = parse_expr(tokens, scope);
-            eat_close_parens(tokens, p);
+            eat_close_parens(tokens, p, Token::TOK_RPAREN);
             break;
         }
 
-        case Token::TOK_LBRACK:
-        {
-            int p = eat_open_parens(tokens, '[');
-
-            if (types.count(tokens.front().data))
-            {
-                std::cout << tokens.front().data << "\n";
-                size_t generics = types.at(tokens.front().data)->children.front()->children.size();
-                node = parse_fact(tokens, scope);
-
-                for (size_t i = 0; i < generics; i++)
-                {
-                    node->children.push_back(parse_fact(tokens, scope));
-                }
-            }
-            else
-            {
-                node = parse_fact(tokens, scope);
-            }
-
-            eat_close_parens(tokens, p, ']');
-            node->arr_dim = p;
-            break;
-        }
-
-        case Token::TOK_LBRACE:
-        {
-            node = new_node({ .type = Token::TOK_ARR, .data = "{}", .row = tokens.front().row, .col = tokens.front().col, .file = tokens.front().file });
-            tokens.pop_front();
-
-            while (tokens.front().type != Token::TOK_RBRACE)
-            {
-                node->children.push_back(parse_expr(tokens, scope));
-
-                if (tokens.front().type == Token::TOK_COM)
-                {
-                    tokens.pop_front();
-                }
-            }
-            node->type = Node::NODE_LIST;
-            tokens.pop_front();
-
-            break;
-        }
-
-        case Token::TOK_TILDA:
-        case Token::TOK_BANG:
-        case Token::TOK_MINUS:
-        case Token::TOK_INC:
-        case Token::TOK_DEC:
+        case Token::TOK_NOT:
+        case Token::TOK_SUB:
         {
             Node *op = new_node(tokens.front());
             tokens.pop_front();
@@ -144,133 +115,40 @@ Node *parse_fact(std::list<Token> &tokens, Scope &scope, Node *parent)
             break;
         }
 
-        case Token::TOK_INT:
-        case Token::TOK_CHAR:
-        case Token::TOK_STR:
-        {
-            node = new_node(tokens.front());
-            tokens.pop_front();
-            node->type = Node::NODE_LIT;
-            break;
-        }
-
-        case Token::KEY_CHAR:
-        case Token::KEY_BOOL:
-        case Token::KEY_INT:
-        case Token::KEY_UINT:
-        case Token::KEY_STR:
-        {
-            node = new_node(tokens.front());
-            tokens.pop_front();
-            node->type = Node::NODE_KEY;
-            break;
-        }
-        case Token::KEY_STRUCT:
-        {
-            print_error("cannot define struct within function or struct", tokens.front());
-            print_warning("note: types must be defined globally", tokens.front());
-            std::cerr << "Compilation failed\n";
-            exit(EXIT_FAILURE);
-        }
         case Token::TOK_ID:
         {
             node = new_node(tokens.front());
             tokens.pop_front();
-
-            bool exists_in_types = false;
-
-            if (parent != nullptr && scope.count(parent->token.data) && types.count(scope.at(parent->token.data)->children.front()->token.data))
-            {
-                for (auto x : types.at(scope.at(parent->token.data)->children.front()->token.data)->children)
-                {
-                    if (x->token.data == node->token.data) exists_in_types = true;
-                }
-            }
-
-            if (!exists_in_types && functions.count(node->token.data))
-            {
-                node->type = Node::NODE_FUNC_CALL;
-
-                for (size_t i = 0; tokens.front().type != Token::TOK_EOL && i < functions.at(node->token.data)->children.front()->children.size(); i++)
-                {
-                    node->children.push_back(parse_fact(tokens, scope));
-
-                    if (tokens.front().type == Token::TOK_COM)
-                    {
-                        tokens.pop_front();
-                        if (tokens.front().type == Token::TOK_EOL || tokens.front().type == Token::TOK_RPAREN)
-                        {
-                            print_error("expected identifier, found `" + tokens.front().data + "`", tokens.front());
-                            std::cerr << "Compilation failed\n";
-                            exit(EXIT_FAILURE);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                node->type = Node::NODE_VAR;
-
-                if (scope.count(node->token.data))
-                {
-                    node->arr_dim = scope.at(node->token.data)->arr_dim;
-                }
-            }
-
-            if (tokens.front().type == Token::TOK_ACCESS)
-            {
-                Node *acc = node;
-
-                while (tokens.front().type == Token::TOK_ACCESS)
-                {
-                    acc->children.push_back(new_node(tokens.front()));
-                    tokens.pop_front();
-                    acc = acc->children.front();
-                    acc->children.push_back(parse_fact(tokens, scope, node));
-                    acc = acc->children.front();
-                }
-            }
-
-            while (tokens.front().type == Token::TOK_LBRACK)
-            {
-                tokens.pop_front();
-                while (tokens.front().type != Token::TOK_RBRACK)
-                {
-                    node->children.push_back(parse_expr(tokens, scope));
-                }
-                tokens.pop_front();
-
-                if (tokens.front().type == Token::TOK_ACCESS)
-                {
-                    Node *acc = node->children.front();
-
-                    while (tokens.front().type == Token::TOK_ACCESS)
-                    {
-                        acc->children.push_back(new_node(tokens.front()));
-                        tokens.pop_front();
-                        acc = acc->children.front();
-                        acc->children.push_back(parse_fact(tokens, scope, node));
-                        acc = acc->children.front();
-                    }
-                }
-            }
-
+            node->type = Node::NODE_VAR;
             break;
         }
-        default: break;
+
+        case Token::KEY_PRINT:
+        case Token::KEY_PRINTLN:
+        {
+            node = new_node(tokens.front());
+            tokens.pop_front();
+            node->type = Node::NODE_FUN_CALL;
+            node->children.push_back(parse_expr(tokens, scope));
+            break;
+        }
+
+        default:
+        {
+            break;
+        }
     }
 
     return node;
 }
 
-Node *parse_term(std::list<Token> &tokens, Scope &scope)
+static Node *parse_term(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node;
-    node = parse_fact(tokens, scope);
+    Node *node = parse_fact(tokens, scope);
 
-    while (tokens.front().type == Token::TOK_STAR ||
-           tokens.front().type == Token::TOK_SLASH ||
-           tokens.front().type == Token::TOK_PERCENT ||
+    while (tokens.front().type == Token::TOK_MUL ||
+           tokens.front().type == Token::TOK_DIV ||
+           tokens.front().type == Token::TOK_MOD ||
            tokens.front().type == Token::TOK_SHL ||
            tokens.front().type == Token::TOK_SHR)
     {
@@ -283,13 +161,12 @@ Node *parse_term(std::list<Token> &tokens, Scope &scope)
     return node;
 }
 
-Node *parse_add_sub(std::list<Token> &tokens, Scope &scope)
+static Node *parse_add_sub(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node;
-    node = parse_term(tokens, scope);
+    Node *node = parse_term(tokens, scope);
 
-    while (tokens.front().type == Token::TOK_PLUS ||
-           tokens.front().type == Token::TOK_MINUS)
+    while (tokens.front().type == Token::TOK_ADD ||
+           tokens.front().type == Token::TOK_SUB)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
@@ -300,10 +177,9 @@ Node *parse_add_sub(std::list<Token> &tokens, Scope &scope)
     return node;
 }
 
-Node *parse_lt_gt(std::list<Token> &tokens, Scope &scope)
+static Node *parse_lt_gt(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node;
-    node = parse_add_sub(tokens, scope);
+    Node *node = parse_add_sub(tokens, scope);
 
     while (tokens.front().type == Token::TOK_LT ||
            tokens.front().type == Token::TOK_GT ||
@@ -319,12 +195,11 @@ Node *parse_lt_gt(std::list<Token> &tokens, Scope &scope)
     return node;
 }
 
-Node *parse_eq_neq(std::list<Token> &tokens, Scope &scope)
+static Node *parse_eq_neq(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node;
-    node = parse_lt_gt(tokens, scope);
+    Node *node = parse_lt_gt(tokens, scope);
 
-    while (tokens.front().type == Token::TOK_EQEQ ||
+    while (tokens.front().type == Token::TOK_EQ ||
            tokens.front().type == Token::TOK_NEQ)
     {
         Node *op = new_node(tokens.front());
@@ -336,12 +211,11 @@ Node *parse_eq_neq(std::list<Token> &tokens, Scope &scope)
     return node;
 }
 
-Node *parse_and(std::list<Token> &tokens, Scope &scope)
+static Node *parse_and(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node;
-    node = parse_eq_neq(tokens, scope);
+    Node *node = parse_eq_neq(tokens, scope);
 
-    while (tokens.front().type == Token::TOK_LAND)
+    while (tokens.front().type == Token::TOK_AND)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
@@ -352,12 +226,11 @@ Node *parse_and(std::list<Token> &tokens, Scope &scope)
     return node;
 }
 
-Node *parse_or(std::list<Token> &tokens, Scope &scope)
+static Node *parse_or(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node;
-    node = parse_and(tokens, scope);
+    Node *node = parse_and(tokens, scope);
 
-    while (tokens.front().type == Token::TOK_LOR)
+    while (tokens.front().type == Token::TOK_OR)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
@@ -368,599 +241,164 @@ Node *parse_or(std::list<Token> &tokens, Scope &scope)
     return node;
 }
 
-Node *parse_expr(std::list<Token> &tokens, Scope &scope)
+static Node *parse_in_out(std::list<Token> &tokens, Scope &scope)
 {
-    Node *node = new Node;
+    Node *node = parse_or(tokens, scope);
 
-    switch (tokens.front().type)
-    {
-        case Token::KEY_RETURN:
-        case Token::KEY_DUMP:
-        case Token::KEY_DUMPLN:
-        {
-            node = new_node(tokens.front());
-            tokens.pop_front();
-            node->children.push_back(parse_expr(tokens, scope));
-            node->type = Node::NODE_KEY;
-            break;
-        }
-        case Token::KEY_NEW:
-        {
-            node = new_node(tokens.front());
-            tokens.pop_front();
-
-            std::string type = tokens.front().data;
-            node->children.push_back(parse_fact(tokens, scope));
-
-            for (size_t i = 0; i < types.at(type)->children.front()->children.size(); i++)
-            {
-                node->children.front()->children.push_back(parse_fact(tokens, scope));
-            }
-            break;
-        }
-        case Token::KEY_DELETE:
-        {
-            node = new_node(tokens.front());
-            tokens.pop_front();
-            node->children.push_back(parse_fact(tokens, scope));
-            node->type = Node::NODE_KEY;
-            break;
-        }
-        case Token::KEY_CPP:
-        {
-            node = new_node(tokens.front());
-            tokens.pop_front();
-            node->type = Node::NODE_KEY;
-            break;
-        }
-
-        default:
-        {
-            node = parse_or(tokens, scope);
-
-            if (tokens.front().type == Token::TOK_COL)
-            {
-                tokens.pop_front();
-                if (types.count(tokens.front().data))
-                {
-                    size_t generics = types.at(tokens.front().data)->children.front()->children.size();
-                    node->children.push_back(parse_fact(tokens, scope));
-                    Node *n = node->children.back();
-
-                    for (size_t i = 0; i < generics; i++)
-                    {
-                        n->children.push_back(parse_fact(tokens, scope));
-                    }
-                }
-                else
-                {
-                    node->children.push_back(parse_fact(tokens, scope));
-                }
-
-                // redefinition of already existing variable
-                if (scope.count(node->token.data) || functions.count(node->token.data) || types.count(node->token.data))
-                {
-                    print_error("redefinition of `" + node->token.data + "`", node->token);
-                    print_warning("note: previous definition is here", (scope.count(node->token.data) ? scope.at(node->token.data)->token : functions.count(node->token.data) ? functions.at(node->token.data)->token : types.at(node->token.data)->token));
-                    std::cerr << "Compilation failed\n";
-                    exit(EXIT_FAILURE);
-                }
-
-                node->type = Node::NODE_VAR_DEC;
-                node->arr_dim = node->children.front()->arr_dim;
-                scope.insert({ node->token.data, node });
-            }
-
-            if (tokens.front().type == Token::TOK_EQ)
-            {
-                tokens.pop_front();
-                node->children.push_back(parse_expr(tokens, scope));
-
-                node->type = (node->type == Node::NODE_VAR_DEC ? Node::NODE_VAR_DEC_ASN : Node::NODE_VAR_ASN);
-
-                if (!scope.count(node->token.data) && !functions.count(node->token.data) && !types.count(node->token.data))
-                {
-                    print_error("unknown identifier `" + node->token.data + "`", node->token);
-                    exit(EXIT_FAILURE);
-                }
-            }
-
-            if (tokens.front().type == Token::TOK_INC ||
-                tokens.front().type == Token::TOK_DEC)
-            {
-                Node *op = new_node(tokens.front());
-                op->token.type = (tokens.front().type == Token::TOK_INC ? Token::TOK_POST_INC : Token::TOK_POST_DEC);
-                tokens.pop_front();
-                node = unary(op, node);
-            }
-
-            break;
-        }
-    }
-
-    return node;
-}
-
-Node *parse_statement(std::list<Token> &tokens, Scope &scope)
-{
-    Node *node = new Node();
-
-    if (tokens.front().type != Token::TOK_INT &&
-        tokens.front().type != Token::TOK_ID &&
-        tokens.front().type != Token::KEY_CPP &&
-        tokens.front().type != Token::TOK_INC &&
-        tokens.front().type != Token::TOK_DEC &&
-        !INTRINSICS.count(tokens.front().data) &&
-        tokens.front().type != Token::TOK_LPAREN)
-    {
-        print_error("expected expression", tokens.front());
-        std::cerr << "Compilation failed\n";
-        exit(EXIT_FAILURE);
-    }
-
-    if (tokens.front().type == Token::TOK_EOL)
+    while (tokens.front().type == Token::TOK_READ ||
+           tokens.front().type == Token::TOK_WRITE)
     {
         tokens.pop_front();
-    }
-
-    if (tokens.front().type == Token::KEY_CPP)
-    {
-        node = parse_expr(tokens, scope);
-    }
-    else
-    {
-        node = parse_expr(tokens, scope);
-
-        while (tokens.front().type != Token::TOK_EOL && tokens.front().type != Token::TOK_RBRACE)
-        {
-            node->children.push_back(parse_expr(tokens, scope));
-        }
-
-        if (tokens.front().type == Token::TOK_EOL)
-        {
-            node->semi = true;
-            tokens.pop_front();
-        }
+        node->children.push_back(parse_or(tokens, scope));
     }
 
     return node;
 }
 
-Node *parse_if(std::list<Token> &tokens, Scope &scope)
+static Node *parse_expr(std::list<Token> &tokens, Scope &scope)
 {
-    // TODO: implement single line if statements
-    // expect ? or |
+    Node *node = parse_in_out(tokens, scope);
+
+    return node;
+}
+
+static Node *parse_if(std::list<Token> &tokens, Scope &scope)
+{
     Node *node = new_node(tokens.front());
-    node->scope = scope;
     tokens.pop_front();
 
-    if (tokens.front().type != Token::TOK_LBRACE)
+    /* eat condition */
+    if (node->token.type == Token::TOK_IF || tokens.front().type != Token::TOK_LBRACE)
     {
-        if (node->token.type == Token::TOK_ELSE)
-        {
-            node->token.type = Token::TOK_ELIF;
-        }
-
-        int p = eat_open_parens(tokens);
-        node->children.push_back(parse_expr(tokens, node->scope));
-        eat_close_parens(tokens, p);
+        node->children.push_back(parse_expr(tokens, scope));
     }
 
-    // expect {
+    Node *body = new Node;
+    body->type = Node::NODE_FUN_BODY;
+    node->children.push_back(body);
+
+    /* eat { */
     tokens.pop_front();
-    while (tokens.front().type != Token::TOK_RBRACE)
+    while (tokens.size() && tokens.front().type != Token::TOK_RBRACE)
     {
-        if (tokens.front().type == Token::TOK_EOL)
-        {
-            tokens.pop_front();
-        }
-
-        parse_body(node, tokens, node->scope);
+        body->children.push_back(parse_statement(tokens, node->scope));
     }
+
+    /* eat } */
     tokens.pop_front();
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
 
     if (tokens.front().type == Token::TOK_ELSE)
     {
-        node->children.push_back(parse_if(tokens, scope));
+        Node *els = parse_if(tokens, scope);
+        node->children.push_back(els);
     }
 
     return node;
 }
 
-Node *parse_loop(std::list<Token> &tokens, Scope &scope)
+static Node *parse_loop(std::list<Token> &tokens, Scope &scope)
 {
-    // expect @
-    Node *node = new_node(tokens.front());
-    node->scope = scope;
+    (void)tokens;
+    (void)scope;
+    return nullptr;
+}
+
+static Node *parse_statement(std::list<Token> &tokens, Scope &scope)
+{
+    Node *node;
+    switch (tokens.front().type)
+    {
+        case Token::TOK_LOOP:
+        {
+            node = parse_loop(tokens, scope);
+            break;
+        }
+        case Token::TOK_IF:
+        {
+            node = parse_if(tokens, scope);
+            break;
+        }
+        default:
+        {
+            node = parse_expr(tokens, scope);
+            break;
+        }
+    }
+
+    return node;
+}
+
+static Node *parse_function(std::list<Token> &tokens)
+{
+    /* eat fn */
     tokens.pop_front();
 
-    Node *args = new_node({ .type = Token::TOK_LIST });
+    Node *node = new_node(tokens.front());
+    node->type = Node::NODE_FUN_DEC;
+    tokens.pop_front();
 
-    // expect loop args
-    int p = eat_open_parens(tokens);
+    Node *in = new Node, *out = new Node, *body = new Node;
+    in->type = Node::NODE_FUN_IN;
+    out->type = Node::NODE_FUN_OUT;
+    body->type = Node::NODE_FUN_BODY;
 
-    int count_args = 0;
+    node->children.push_back(in);
+    node->children.push_back(out);
+    node->children.push_back(body);
+
+    /* eat colon */
+    tokens.pop_front();
+
+    /* args */
+    while (tokens.front().type != Token::TOK_ARROW)
+    {
+        in->children.push_back(new_node(tokens.front()));
+        tokens.pop_front();
+    }
+
+    /* eat arrow */
+    tokens.pop_front();
+
+    /* returns */
     while (tokens.front().type != Token::TOK_LBRACE)
     {
-        count_args++;
-        if (count_args > 3)
-        {
-            print_error("too many arguments in loop statement", tokens.front());
-            print_warning("note: loops may accept 0-3 expressions", tokens.front());
-            std::cerr << "Compilation failed\n";
-            exit(EXIT_FAILURE);
-        }
-
-        args->children.push_back(parse_expr(tokens, node->scope));
-
-        if (tokens.front().type == Token::TOK_COM ||
-            tokens.front().type == Token::TOK_EOL)
-        {
-            tokens.pop_front();
-        }
+        out->children.push_back(new_node(tokens.front()));
+        tokens.pop_front();
     }
-    eat_close_parens(tokens, p);
+
+    /* eat { */
     tokens.pop_front();
-
-    if (tokens.front().type == Token::TOK_EOL)
+    while (tokens.size() && tokens.front().type != Token::TOK_RBRACE)
     {
-        tokens.pop_front();
+        body->children.push_back(parse_statement(tokens, node->scope));
     }
 
-    node->children.push_back(args);
-    parse_body(node, tokens, node->scope);
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
+    /* eat } */
     tokens.pop_front();
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
     return node;
 }
 
-
-Node *parse_body(Node *node, std::list<Token> &tokens, Scope &scope)
-{
-    while (tokens.front().type != Token::TOK_RBRACE)
-    {
-        switch (tokens.front().type)
-        {
-            case Token::TOK_LOOP:
-            {
-                node->children.push_back(parse_loop(tokens, scope));
-                break;
-            }
-            case Token::TOK_IF:
-            {
-                node->children.push_back(parse_if(tokens, scope));
-                break;
-            }
-            case Token::TOK_EOL:
-            {
-                tokens.pop_front();
-                break;
-            }
-            default:
-            {
-                node->children.push_back(parse_statement(tokens, scope));
-                break;
-            }
-        }
-    }
-
-    return node;
-}
-
-/*
- * parse_type_def
- *    Purpose: parses a type definition
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_type_def(std::list<Token> &tokens)
-{
-    Token type_name = tokens.front();
-    type_name.type = Token::KEY_TYPE;
-    Node *node = new_node(type_name);
-    node->type = Node::NODE_TYPE_DEF;
-
-    types.insert({ type_name.data, node });
-    tokens.pop_front();
-    node->children.push_back(new_node({ .type = Token::TOK_LIST }));
-
-    while (tokens.front().type != Token::TOK_COL)
-    {
-        node->children.front()->children.push_back(parse_fact(tokens, node->scope));
-    }
-
-    // expect colon
-    tokens.pop_front();
-
-    // expect struct keyword
-    tokens.pop_front();
-
-    // expect = sign
-    tokens.pop_front();
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
-    // LBRACE
-    if (tokens.front().type != Token::TOK_LBRACE)
-    {
-        print_error("expected `{`, found " + tokens.front().data + " instead", tokens.front());
-        std::cerr << "Compilation failed\n";
-        exit(EXIT_FAILURE);
-    }
-
-    tokens.pop_front();
-    parse_body(node, tokens, node->scope);
-
-    if (tokens.front().type == Token::TOK_RBRACE)
-    {
-        tokens.pop_front();
-    }
-    else
-    {
-        print_error("expected `}`, found " + tokens.front().data + " instead", tokens.front());
-        std::cerr << "Compilation failed\n";
-        exit(EXIT_FAILURE);
-    }
-
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
-    return node;
-}
-
-/*
- * parse_function
- *    Purpose: parses a function
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
-Node *parse_function(std::list<Token> &tokens)
-{
-    // function name
-    Token func_name = tokens.front();
-    func_name.type = Token::TOK_FUNC;
-    Node *node = new_node(func_name);
-    node->type = Node::NODE_FUNC_DEC;
-
-    functions.insert({ tokens.front().data, node });
-    tokens.pop_front();
-
-    // conditional expect on function params
-    Node *args = new_node({ .type = Token::TOK_LIST });
-
-    if (tokens.front().type == Token::TOK_LPAREN)
-    {
-        int p = eat_open_parens(tokens);
-
-        while (tokens.front().type != Token::TOK_RPAREN)
-        {
-            if (tokens.front().type == Token::TOK_COM)
-            {
-                tokens.pop_front();
-            }
-            args->children.push_back(parse_expr(tokens, node->scope));
-        }
-
-        eat_close_parens(tokens, p);
-    }
-
-    node->children.push_back(args);
-
-    // conditional expect on function type
-    if (tokens.front().type == Token::TOK_COL)
-    {
-        tokens.pop_front();
-
-        // expect type of function
-        if (tokens.front().type != Token::TOK_ID &&
-            tokens.front().type != Token::TOK_LBRACK &&
-            !INTRINSICS.count(tokens.front().data))
-        {
-            print_error("expected identifier", tokens.front());
-            std::cerr << "Compilation failed\n";
-            exit(EXIT_FAILURE);
-        }
-        node->children.push_back(parse_expr(tokens, node->scope));
-    }
-    else
-    {
-        node->children.push_back(new_node({ .type = Token::KEY_VOID }));
-    }
-
-    // conditional expect EOL
-    if (tokens.front().type == Token::TOK_EOL)
-    {
-        tokens.pop_front();
-    }
-
-    // expect open brace
-    if (tokens.front().type != Token::TOK_LBRACE)
-    {
-        print_error("expected `{`", tokens.front());
-        std::cerr << "Compilation failed\n";
-        exit(EXIT_FAILURE);
-    }
-    tokens.pop_front();
-
-    // parse statements
-    while (tokens.front().type != Token::TOK_RBRACE)
-    {
-        if (tokens.front().type == Token::TOK_EOL)
-        {
-            tokens.pop_front();
-        }
-
-        parse_body(node, tokens, node->scope);
-    }
-    tokens.pop_front();
-
-    return node;
-}
-
-/*
- * parse_program
- *    Purpose: parses a program
- * Parameters: tokens - the list of tokens to parse
- *    Returns: a pointer to the new node
- */
 Node *parse_program(std::list<Token> &tokens)
 {
-    Node *node = new Node();
-    node->token.type = Token::TOK_PROG;
+    (void)parse_if;
+    (void)parse_loop;
+
+    Node *node = new Node;
+    node->type = Node::NODE_PROG;
 
     while (tokens.size())
     {
-        while (tokens.front().type == Token::TOK_EOL || tokens.front().type == Token::TOK_EOF)
+        if (tokens.front().type == Token::KEY_FUN)
         {
-            tokens.pop_front();
+            node->children.push_back(parse_function(tokens));
         }
-
-        if (tokens.size())
+        else
         {
-            if (tokens.front().type == Token::KEY_CPP)
-            {
-                node->children.push_back(new_node(tokens.front()));
-                tokens.pop_front();
-            }
-            else
-            {
-                auto it = tokens.begin();
-                bool is_type = false;
-                while (!is_type && it->type != Token::TOK_LBRACE)
-                {
-                    if (it->type == Token::KEY_TYPE)
-                    {
-                        is_type = true;
-                    }
-
-                    std::advance(it, 1);
-                }
-
-                if (is_type)
-                {
-                    node->children.push_back(parse_type_def(tokens));
-                }
-                else
-                {
-                    node->children.push_back(parse_function(tokens));
-                }
-            }
+            node->children.push_back(parse_statement(tokens, node->scope));
         }
     }
 
     return node;
-}
-
-/*
- * print_warning
- *    Purpose: print a warning message
- * Parameters: message - the message to print, token - the token containing the error
- *    Returns: none
- */
-void print_warning(std::string message, const Token &token)
-{
-    print_location(token, std::cerr);
-    std::cerr << ": " << message << "\n";
-}
-
-/*
- * print_error
- *    Purpose: print an error and exit compilation with a failure exit status
- * Parameters: message - the message to print, token - the token containing the error
- *    Returns: none
- */
-void print_error(std::string message, const Token &token)
-{
-    print_location(token, std::cerr);
-    std::cerr << ": error: " << message << "\n";
-}
-
-
-/*
- * get_node_type
- *    Purpose: print a string representation of the type of a given node
- * Parameters: node - the given node, out - an output stream
- *    Returns: none
- */
-std::string node_type_to_str(Node *node)
-{
-    switch (node->type)
-    {
-        case Node::NODE_LIT:
-        {
-            return "NODE_LIT";
-        }
-        case Node::NODE_OP:
-        {
-            return "NODE_OP";
-        }
-        case Node::NODE_KEY:
-        {
-            return "NODE_KEY";
-        }
-        case Node::NODE_VAR:
-        {
-            return "NODE_VAR";
-        }
-        case Node::NODE_VAR_ASN:
-        {
-            return "NODE_VAR_ASN";
-        }
-        case Node::NODE_VAR_DEC:
-        {
-            return "NODE_VAR_DEC";
-        }
-        case Node::NODE_VAR_DEC_ASN:
-        {
-            return "NODE_VAR_DEC_ASN";
-        }
-        case Node::NODE_LIST:
-        {
-            return "NODE_LIST";
-        }
-        case Node::NODE_TYPE:
-        {
-            return "NODE_TYPE";
-        }
-        case Node::NODE_TYPE_DEF:
-        {
-            return "NODE_TYPE_DEF";
-        }
-        case Node::NODE_FUNC_CALL:
-        {
-            return "NODE_FUNC_CALL";
-        }
-        case Node::NODE_FUNC_DEC:
-        {
-            return "NODE_FUNC_DEC";
-        }
-
-        default:
-        {
-            return "NODE_NONE";
-        }
-    }
 }
 
 /*
@@ -969,19 +407,19 @@ std::string node_type_to_str(Node *node)
  * Parameters: num_tabs - the number of tabs to print
  *    Returns: none
  */
-void pretty_print_tabs(int num_tabs, std::ostream &out)
+static void pretty_print_tabs(int num_tabs)
 {
     for (int i = 0; i < num_tabs - 1; i++)
     {
-        out << "    ";
+        std::cout << "    ";
     }
-    out << "   \u2502\n";
+    std::cout << "   \u2502\n";
 
     for (int i = 0; i < num_tabs - 1; i++)
     {
-        out << "    ";
+        std::cout << "    ";
     }
-    out << "   \u2514";
+    std::cout << "   \u2514";
 }
 
 /*
@@ -991,55 +429,42 @@ void pretty_print_tabs(int num_tabs, std::ostream &out)
  *    Returns: none
  *      Notes: the output stream is defaulted to std::cout
  */
-void pretty_print_helper(Node *node, const Scope &scope, int num_tabs, std::ostream &out)
+static void pretty_print_helper(Node *node, const Scope &scope, int num_tabs)
 {
-    print_token(node->token, out, false);
-
-    if (node->arr_dim)
+    switch (node->type)
     {
-        out << " ";
-        for (size_t i = 0; i < node->arr_dim; i++)
+        case Node::NODE_PROG:
         {
-            out << "[]";
+            std::cout << "program\n";
+            break;
+        }
+        case Node::NODE_FUN_IN:
+        {
+            std::cout << "fn_in\n";
+            break;
+        }
+        case Node::NODE_FUN_OUT:
+        {
+            std::cout << "fn_out\n";
+            break;
+        }
+        case Node::NODE_FUN_BODY:
+        {
+            std::cout << "fn_body\n";
+            break;
+        }
+        default:
+        {
+            std::cout << node->token.data << "\n";
+            break;
         }
     }
 
-    if (node->semi)
-    {
-        out << ";";
-    }
-
-    if (node->type != Node::NODE_NONE)
-    {
-        out << " (" << node_type_to_str(node) << ")";
-    }
-
-    out << " <" << node->datatype << ">";
-
-    if (node->scope.size())
-    {
-        print_scope(node->scope, out);
-    }
-
-    out << "\n";
-    num_tabs++;
-
     for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))
     {
-        pretty_print_tabs(num_tabs, out);
-        pretty_print_helper(*it, scope, num_tabs, out);
+        pretty_print_tabs(num_tabs + 1);
+        pretty_print_helper(*it, scope, num_tabs + 1);
     }
-    num_tabs--;
-}
-
-void print_scope(const Scope &scope, std::ostream &out)
-{
-    out << " { ";
-    for (auto x : scope)
-    {
-        out << x.first << " ";
-    }
-    out << "}";
 }
 
 /*
@@ -1049,8 +474,21 @@ void print_scope(const Scope &scope, std::ostream &out)
  *    Returns: none
  *      Notes: the output stream is defaulted to std::cout
  */
-void pretty_print(Node *node, std::ostream &out)
+void pretty_print(Node *node)
 {
-    pretty_print_helper(node, node->scope, 0, out);
-    out << "\n";
+    Scope scope = node->scope;
+    pretty_print_helper(node, scope, 0);
+    std::cout << "\n";
+}
+
+void free_tree(Node *node)
+{
+    if (node == nullptr) return;
+
+    for (auto child : node->children)
+    {
+        free_tree(child);
+    }
+
+    delete node;
 }

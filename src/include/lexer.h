@@ -1,121 +1,87 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#include <iostream>
 #include <string>
 #include <list>
-#include <vector>
-#include <fstream>
-#include <sstream>
-#include <iostream>
 #include <unordered_map>
-#include <unordered_set>
+#include <fstream>
 
-/*
- * Token
- * contains the type of token and the value of the token, as well as the
- * location the token is found at in the file
- */
-struct Token
-{
-    enum Type
-    {
-        TOK_NONE,
+struct Token {
+    enum Type {
 
-        TOK_ID,
-        TOK_BOOL,
-        TOK_CHAR,
-        TOK_INT,
-        TOK_UINT,
-        TOK_STR,
-        TOK_ARR,
-        TOK_LIST,
-        TOK_FUNC,
-        TOK_PROG,
-
-        // Intrinsic keywords
+        /* Keywords */
+        KEY_NUM,
         KEY_BOOL,
-        KEY_CHAR,
-        KEY_INT,
-        KEY_UINT,
         KEY_STR,
-        KEY_STRUCT,
-        KEY_NEW,
-        KEY_DELETE,
-        KEY_CPP,
-        KEY_RETURN,
-        KEY_DUMP,
-        KEY_DUMPLN,
-        KEY_VOID,
-        KEY_NULL,
-        KEY_TRU,
-        KEY_FLS,
-        KEY_TYPE,
+        KEY_NIL,
 
-        // Unary operators
-        TOK_BANG,
-        TOK_TILDA,
-        TOK_INC,
-        TOK_POST_INC,
-        TOK_DEC,
-        TOK_POST_DEC,
+        KEY_FUN,
 
-        // Binary operators
-        TOK_PLUS,
-        TOK_MINUS,  // also unary
-        TOK_STAR,   // also unary
-        TOK_SLASH,
-        TOK_PERCENT,
-        TOK_LOR,
-        TOK_LAND,
+        KEY_PRINT,
+        KEY_PRINTLN,
+
+        /* Symbols */
+        TOK_LPAREN,
+        TOK_LBRACK,
+        TOK_LBRACE,
+        TOK_RPAREN,
+        TOK_RBRACK,
+        TOK_RBRACE,
+
+        TOK_ARROW,
+        TOK_SEMI,
+        TOK_COLON,
+
+        TOK_ADD,
+        TOK_SUB,
+        TOK_MUL,
+        TOK_DIV,
+        TOK_MOD,
         TOK_SHL,
         TOK_SHR,
 
-        // Boolean operations
-        TOK_EQEQ,
+        TOK_AND,
+        TOK_OR,
+        TOK_NOT,
+
+        TOK_EQ,
         TOK_NEQ,
         TOK_LT,
-        TOK_GT,
         TOK_LTE,
+        TOK_GT,
         TOK_GTE,
 
-        // Accessor
-        TOK_ACCESS,
+        TOK_IN,
+        TOK_OUT,
+        TOK_READ,
+        TOK_WRITE,
 
-        // Single character tokens
-        TOK_LBRACE,
-        TOK_RBRACE,
-        TOK_LPAREN,
-        TOK_RPAREN,
-        TOK_LBRACK,
-        TOK_RBRACK,
-        TOK_COL,
-        TOK_EQ,
-        TOK_COM,
         TOK_LOOP,
+        TOK_TO,
+        TOK_BY,
         TOK_IF,
-        TOK_ELIF,
         TOK_ELSE,
+
+        /* Types */
+        TOK_NUM,
+        TOK_TRU,
+        TOK_FLS,
+        TOK_STR,
+        TOK_ID,
+
         TOK_EOL,
-        TOK_EOF
     };
 
     Type type;
-    std::string data = "";
-    int row = 0;
-    int col = 0;
-    std::string file = "";
+    std::string data;
+
+    int col;
+    int row;
+    std::string file;
 };
 
-extern std::unordered_map<std::string, Token::Type> INTRINSICS;
-extern std::unordered_map<std::string, Token::Type> BUILTIN_TYPES;
-
-Token lex_word(const std::string &word, int row, int col, const std::string &file);
-void lex_line(const std::string &line, std::list<Token> &tokens, int row, const std::string &file);
-std::list<Token> lex(const std::string &input);
-
-std::string token_id_to_str(const Token::Type &type);
-void print_token(const Token &token, std::ostream &out=std::cout, bool new_line=true);
-void print_location(const Token &token, std::ostream &out=std::cout);
-void print_lex(const std::list<Token> &tokens, std::ostream &out=std::cout);
+std::list<Token> lex(const std::string &file);
+void print_token(Token token);
 
 #endif

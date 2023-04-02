@@ -1,29 +1,40 @@
-#include "include/compiler.h"
-#include "include/types.h"
-#include <cstring>
+#include <iostream>
+
+#include "lexer.h"
+#include "parser.h"
+#include "compiler.h"
+
+void usage()
+{
+    std::cerr << "Usage: ./slang executableName inputFile\n";
+    exit(EXIT_FAILURE);
+}
 
 int main(int argc, char **argv)
 {
-    if (argc < 3)
+    if (argc != 2)
     {
-        std::cerr << "Usage: ./slang executableName inputFiles\n";
-        return 0;
+        usage();
     }
 
-    std::list<Token> tokens = lex(argv[2]);
-    print_lex(tokens);
+    std::string file = argv[1];
 
+    /* lex file to tokens */
+    std::list<Token> tokens = lex(file);
+
+    /* parse abstract syntax tree */
     Node *root = parse_program(tokens);
-    root = set_types(root, root->scope);
-    pretty_print(root);
 
-    // if (!check_errors(root, root->scope))
-    // {
-    //     std::cerr << "Compilation failed\n";
-    //     exit(EXIT_FAILURE);
-    // }
+    /* generate assembly based on syntax tree */
+    compile_program(root);
 
-    compile_and_link(argv[1], root);
+    /* assemble and link object files */
+    // std::string assemble = "nasm -felf64 " + file + ".asm";
+    // std::string link = "ld -o " + file + " " + file + ".o";
 
+    // system(assemble.c_str());
+    // system(link.c_str());
+    
+    free_tree(root);
     return 0;
 }
