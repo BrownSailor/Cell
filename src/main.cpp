@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "lexer.h"
+#include "built_in.h"
 #include "parser.h"
 #include "compiler.h"
 
@@ -12,6 +13,9 @@ void usage()
 
 int main(int argc, char **argv)
 {
+    (void)argv;
+    initialize_built_ins();
+
     if (argc != 2)
     {
         usage();
@@ -24,16 +28,14 @@ int main(int argc, char **argv)
 
     /* parse abstract syntax tree */
     Node *root = parse_program(tokens);
+    pretty_print(root);
 
     /* generate assembly based on syntax tree */
-    compile_program(root);
+    compile(root);
 
-    /* assemble and link object files */
-    // std::string assemble = "nasm -felf64 " + file + ".asm";
-    // std::string link = "ld -o " + file + " " + file + ".o";
-
+    /* create a relocatable object file */
+    // std::string assemble = "llc -march=x86_64 -filetype=obj " + file + ".ll -o " + file + ".o";
     // system(assemble.c_str());
-    // system(link.c_str());
     
     free_tree(root);
     return 0;

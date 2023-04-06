@@ -25,4 +25,3 @@ clean:
 	@rm -rf bin
 	@echo Cleaning executable
 	@rm slang
-

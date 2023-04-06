@@ -21,7 +21,7 @@ fn fizzbuzz: num -> nil {
 fn gcd: num num -> num {
     in >> a >> b
     
-    out << ? b == 0 { a } | { gcd b a % b }
+    out << ? b = 0 { a } | { gcd b a % b }
 }
 
 fn divmod: num num -> num num {
@@ -32,3 +32,29 @@ fn divmod: num num -> num num {
 hello
 fizzbuzz 4 * gcd 12 18 
 print divmod 11 4
+
+? 1 > 2 {
+    println 2
+} | {
+    println 3
+}
+
+? 3 > 4 {
+    println 4
+} | 3 != 4 {
+    println 5
+} | {
+    println 6
+}
+
+? 3 > 4 {
+    println 4
+} | 3 = 4 {
+    println 5
+} | 3 < 4 {
+    ? 1 < 2 {
+        println 6
+    } | {
+        println 7
+    }
+}

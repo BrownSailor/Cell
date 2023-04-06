@@ -18,9 +18,6 @@ struct Token {
 
         KEY_FUN,
 
-        KEY_PRINT,
-        KEY_PRINTLN,
-
         /* Symbols */
         TOK_LPAREN,
         TOK_LBRACK,
@@ -81,6 +78,7 @@ struct Token {
     std::string file;
 };
 
+Token new_token(Token::Type type, std::string data, int col, int row, std::string file);
 std::list<Token> lex(const std::string &file);
 void print_token(Token token);
 

@@ -16,8 +16,6 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "fn", Token::KEY_FUN },
     { "in", Token::TOK_IN },
     { "out", Token::TOK_OUT },
-    { "print", Token::KEY_PRINT },
-    { "println", Token::KEY_PRINTLN }
 };
 
 Token new_token(Token::Type type, std::string data, int col, int row, std::string file)
@@ -449,8 +447,6 @@ void print_token(Token token)
             case Token::KEY_FUN: std::cout << "KEY_FUN\t"; break;
             case Token::TOK_IN: std::cout << "TOK_IN\t"; break;
             case Token::TOK_OUT: std::cout << "TOK_OUT\t"; break;
-            case Token::KEY_PRINT: std::cout << "KEY_PRINT"; break;
-            case Token::KEY_PRINTLN: std::cout << "KEY_PRINTLN"; break;
             case Token::TOK_LPAREN: std::cout << "TOK_LPAREN"; break;
             case Token::TOK_LBRACK: std::cout << "TOK_LBRACK"; break;
             case Token::TOK_LBRACE: std::cout << "TOK_LBRACE"; break;

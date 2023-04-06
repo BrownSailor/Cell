@@ -1,7 +1,12 @@
 #include "parser.h"
 
-static Node *parse_expr(std::list<Token> &tokens, Scope &scope);
-static Node *parse_statement(std::list<Token> &tokens, Scope &scope);
+typedef std::unordered_set<std::string> Scope;
+
+std::unordered_map<std::string, Node *> functions;
+std::stack<std::unordered_set<std::string>> scopes;
+
+static Node *parse_expr(std::list<Token> &tokens);
+static Node *parse_statement(std::list<Token> &tokens);
 
 static int eat_open_parens(std::list<Token> &tokens, Token::Type paren_type)
 {
@@ -54,7 +59,7 @@ static Node *binary(Node *left, Node *op, Node *right)
     return op;
 }
 
-static Node *parse_fact(std::list<Token> &tokens, Scope &scope)
+static Node *parse_fact(std::list<Token> &tokens)
 {
     Node *node = nullptr;
 
@@ -101,7 +106,7 @@ static Node *parse_fact(std::list<Token> &tokens, Scope &scope)
         case Token::TOK_LPAREN:
         {
             int p = eat_open_parens(tokens, Token::TOK_LPAREN);
-            node = parse_expr(tokens, scope);
+            node = parse_expr(tokens);
             eat_close_parens(tokens, p, Token::TOK_RPAREN);
             break;
         }
@@ -111,7 +116,7 @@ static Node *parse_fact(std::list<Token> &tokens, Scope &scope)
         {
             Node *op = new_node(tokens.front());
             tokens.pop_front();
-            node = unary(op, parse_expr(tokens, scope));
+            node = unary(op, parse_expr(tokens));
             break;
         }
 
@@ -123,16 +128,6 @@ static Node *parse_fact(std::list<Token> &tokens, Scope &scope)
             break;
         }
 
-        case Token::KEY_PRINT:
-        case Token::KEY_PRINTLN:
-        {
-            node = new_node(tokens.front());
-            tokens.pop_front();
-            node->type = Node::NODE_FUN_CALL;
-            node->children.push_back(parse_expr(tokens, scope));
-            break;
-        }
-
         default:
         {
             break;
@@ -142,9 +137,9 @@ static Node *parse_fact(std::list<Token> &tokens, Scope &scope)
     return node;
 }
 
-static Node *parse_term(std::list<Token> &tokens, Scope &scope)
+static Node *parse_term(std::list<Token> &tokens)
 {
-    Node *node = parse_fact(tokens, scope);
+    Node *node = parse_fact(tokens);
 
     while (tokens.front().type == Token::TOK_MUL ||
            tokens.front().type == Token::TOK_DIV ||
@@ -155,15 +150,15 @@ static Node *parse_term(std::list<Token> &tokens, Scope &scope)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_fact(tokens, scope));
+        node = binary(node, op, parse_fact(tokens));
     }
 
     return node;
 }
 
-static Node *parse_add_sub(std::list<Token> &tokens, Scope &scope)
+static Node *parse_add_sub(std::list<Token> &tokens)
 {
-    Node *node = parse_term(tokens, scope);
+    Node *node = parse_term(tokens);
 
     while (tokens.front().type == Token::TOK_ADD ||
            tokens.front().type == Token::TOK_SUB)
@@ -171,15 +166,15 @@ static Node *parse_add_sub(std::list<Token> &tokens, Scope &scope)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_term(tokens, scope));
+        node = binary(node, op, parse_term(tokens));
     }
 
     return node;
 }
 
-static Node *parse_lt_gt(std::list<Token> &tokens, Scope &scope)
+static Node *parse_lt_gt(std::list<Token> &tokens)
 {
-    Node *node = parse_add_sub(tokens, scope);
+    Node *node = parse_add_sub(tokens);
 
     while (tokens.front().type == Token::TOK_LT ||
            tokens.front().type == Token::TOK_GT ||
@@ -189,15 +184,15 @@ static Node *parse_lt_gt(std::list<Token> &tokens, Scope &scope)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_add_sub(tokens, scope));
+        node = binary(node, op, parse_add_sub(tokens));
     }
 
     return node;
 }
 
-static Node *parse_eq_neq(std::list<Token> &tokens, Scope &scope)
+static Node *parse_eq_neq(std::list<Token> &tokens)
 {
-    Node *node = parse_lt_gt(tokens, scope);
+    Node *node = parse_lt_gt(tokens);
 
     while (tokens.front().type == Token::TOK_EQ ||
            tokens.front().type == Token::TOK_NEQ)
@@ -205,122 +200,158 @@ static Node *parse_eq_neq(std::list<Token> &tokens, Scope &scope)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_lt_gt(tokens, scope));
+        node = binary(node, op, parse_lt_gt(tokens));
     }
 
     return node;
 }
 
-static Node *parse_and(std::list<Token> &tokens, Scope &scope)
+static Node *parse_and(std::list<Token> &tokens)
 {
-    Node *node = parse_eq_neq(tokens, scope);
+    Node *node = parse_eq_neq(tokens);
 
     while (tokens.front().type == Token::TOK_AND)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_eq_neq(tokens, scope));
+        node = binary(node, op, parse_eq_neq(tokens));
     }
 
     return node;
 }
 
-static Node *parse_or(std::list<Token> &tokens, Scope &scope)
+static Node *parse_or(std::list<Token> &tokens)
 {
-    Node *node = parse_and(tokens, scope);
+    Node *node = parse_and(tokens);
 
     while (tokens.front().type == Token::TOK_OR)
     {
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_and(tokens, scope));
+        node = binary(node, op, parse_and(tokens));
     }
 
     return node;
 }
 
-static Node *parse_in_out(std::list<Token> &tokens, Scope &scope)
+static Node *parse_in_out(std::list<Token> &tokens)
 {
-    Node *node = parse_or(tokens, scope);
+    Node *node = parse_or(tokens);
 
     while (tokens.front().type == Token::TOK_READ ||
            tokens.front().type == Token::TOK_WRITE)
     {
         tokens.pop_front();
-        node->children.push_back(parse_or(tokens, scope));
+        node->children.push_back(parse_or(tokens));
     }
 
     return node;
 }
 
-static Node *parse_expr(std::list<Token> &tokens, Scope &scope)
+static Node *parse_expr(std::list<Token> &tokens)
 {
-    Node *node = parse_in_out(tokens, scope);
+    Node *node = parse_in_out(tokens);
+
+    if (functions.count(node->token.data))
+    {
+        node->type = Node::NODE_FUN_CALL;
+        Node *in = functions[node->token.data]->children.front();
+        if (in->children.size() > 1 || in->children.front()->token.type != Token::KEY_NIL)
+        {
+            for (size_t i = 0; i < in->children.size(); i++)
+            {
+                node->children.push_back(parse_expr(tokens));
+            }
+        }
+
+        return node;
+    }
+
+    /* TODO: parse variable assignment syntax */
+    if (tokens.front().type == Token::TOK_COLON)
+    {
+        node->type = Node::NODE_VAR_ASN;
+        tokens.pop_front();
+        node->children.push_back(parse_expr(tokens));
+        scopes.top().insert(node->token.data);
+    }
+    else
+    {
+        if (scopes.top().count(node->token.data))
+        {
+            node->type = Node::NODE_VAR;
+        }
+
+        /* throw an error if we have a variable identifier that is not within scope */
+    }
 
     return node;
 }
 
-static Node *parse_if(std::list<Token> &tokens, Scope &scope)
+static Node *parse_if(std::list<Token> &tokens)
 {
     Node *node = new_node(tokens.front());
+    node->type = Node::NODE_IF;
     tokens.pop_front();
 
     /* eat condition */
     if (node->token.type == Token::TOK_IF || tokens.front().type != Token::TOK_LBRACE)
     {
-        node->children.push_back(parse_expr(tokens, scope));
+        node->children.push_back(parse_expr(tokens));
     }
 
     Node *body = new Node;
-    body->type = Node::NODE_FUN_BODY;
+    body->type = Node::NODE_BODY;
     node->children.push_back(body);
 
     /* eat { */
     tokens.pop_front();
+    scopes.push(Scope());
     while (tokens.size() && tokens.front().type != Token::TOK_RBRACE)
     {
-        body->children.push_back(parse_statement(tokens, node->scope));
+        body->children.push_back(parse_statement(tokens));
     }
 
     /* eat } */
+    scopes.pop();
     tokens.pop_front();
 
     if (tokens.front().type == Token::TOK_ELSE)
     {
-        Node *els = parse_if(tokens, scope);
+        Node *els = parse_if(tokens);
         node->children.push_back(els);
     }
 
     return node;
 }
 
-static Node *parse_loop(std::list<Token> &tokens, Scope &scope)
+static Node *parse_loop(std::list<Token> &tokens)
 {
+    /* TODO: parse loop syntax */
     (void)tokens;
-    (void)scope;
     return nullptr;
 }
 
-static Node *parse_statement(std::list<Token> &tokens, Scope &scope)
+static Node *parse_statement(std::list<Token> &tokens)
 {
     Node *node;
     switch (tokens.front().type)
     {
         case Token::TOK_LOOP:
         {
-            node = parse_loop(tokens, scope);
+            node = parse_loop(tokens);
             break;
         }
         case Token::TOK_IF:
         {
-            node = parse_if(tokens, scope);
+            node = parse_if(tokens);
             break;
         }
         default:
         {
-            node = parse_expr(tokens, scope);
+            node = parse_expr(tokens);
             break;
         }
     }
@@ -340,7 +371,7 @@ static Node *parse_function(std::list<Token> &tokens)
     Node *in = new Node, *out = new Node, *body = new Node;
     in->type = Node::NODE_FUN_IN;
     out->type = Node::NODE_FUN_OUT;
-    body->type = Node::NODE_FUN_BODY;
+    body->type = Node::NODE_BODY;
 
     node->children.push_back(in);
     node->children.push_back(out);
@@ -368,24 +399,26 @@ static Node *parse_function(std::list<Token> &tokens)
 
     /* eat { */
     tokens.pop_front();
+    scopes.push(Scope());
     while (tokens.size() && tokens.front().type != Token::TOK_RBRACE)
     {
-        body->children.push_back(parse_statement(tokens, node->scope));
+        body->children.push_back(parse_statement(tokens));
     }
 
     /* eat } */
+    scopes.pop();
     tokens.pop_front();
     return node;
 }
 
 Node *parse_program(std::list<Token> &tokens)
 {
-    (void)parse_if;
     (void)parse_loop;
 
     Node *node = new Node;
     node->type = Node::NODE_PROG;
 
+    scopes.push(Scope());
     while (tokens.size())
     {
         if (tokens.front().type == Token::KEY_FUN)
@@ -394,7 +427,7 @@ Node *parse_program(std::list<Token> &tokens)
         }
         else
         {
-            node->children.push_back(parse_statement(tokens, node->scope));
+            node->children.push_back(parse_statement(tokens));
         }
     }
 
@@ -411,15 +444,15 @@ static void pretty_print_tabs(int num_tabs)
 {
     for (int i = 0; i < num_tabs - 1; i++)
     {
-        std::cout << "    ";
+        std::cerr << "    ";
     }
-    std::cout << "   \u2502\n";
+    std::cerr << "   \u2502\n";
 
     for (int i = 0; i < num_tabs - 1; i++)
     {
-        std::cout << "    ";
+        std::cerr << "    ";
     }
-    std::cout << "   \u2514";
+    std::cerr << "   \u2514";
 }
 
 /*
@@ -429,33 +462,33 @@ static void pretty_print_tabs(int num_tabs)
  *    Returns: none
  *      Notes: the output stream is defaulted to std::cout
  */
-static void pretty_print_helper(Node *node, const Scope &scope, int num_tabs)
+static void pretty_print_helper(Node *node, int num_tabs)
 {
     switch (node->type)
     {
         case Node::NODE_PROG:
         {
-            std::cout << "program\n";
+            std::cerr << "program\n";
             break;
         }
         case Node::NODE_FUN_IN:
         {
-            std::cout << "fn_in\n";
+            std::cerr << "fn_in\n";
             break;
         }
         case Node::NODE_FUN_OUT:
         {
-            std::cout << "fn_out\n";
+            std::cerr << "fn_out\n";
             break;
         }
-        case Node::NODE_FUN_BODY:
+        case Node::NODE_BODY:
         {
-            std::cout << "fn_body\n";
+            std::cerr << "body\n";
             break;
         }
         default:
         {
-            std::cout << node->token.data << "\n";
+            std::cerr << node->token.data << "\n";
             break;
         }
     }
@@ -463,7 +496,7 @@ static void pretty_print_helper(Node *node, const Scope &scope, int num_tabs)
     for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))
     {
         pretty_print_tabs(num_tabs + 1);
-        pretty_print_helper(*it, scope, num_tabs + 1);
+        pretty_print_helper(*it, num_tabs + 1);
     }
 }
 
@@ -476,9 +509,8 @@ static void pretty_print_helper(Node *node, const Scope &scope, int num_tabs)
  */
 void pretty_print(Node *node)
 {
-    Scope scope = node->scope;
-    pretty_print_helper(node, scope, 0);
-    std::cout << "\n";
+    pretty_print_helper(node, 0);
+    std::cerr << "\n";
 }
 
 void free_tree(Node *node)

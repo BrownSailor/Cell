@@ -2,8 +2,9 @@
 #define COMPILER_H
 
 #include <iostream>
+#include "compiler_utils.h"
 #include "parser.h"
 
-void compile_program(Node *root);
+void compile(Node *root);
 
 #endif
