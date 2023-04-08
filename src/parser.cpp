@@ -2,7 +2,7 @@
 
 typedef std::unordered_set<std::string> Scope;
 
-std::unordered_map<std::string, Node *> functions;
+std::unordered_map<std::string, std::unordered_set<Node *>> functions;
 std::stack<std::unordered_set<std::string>> scopes;
 
 static Node *parse_expr(std::list<Token> &tokens);
@@ -23,6 +23,7 @@ static int eat_open_parens(std::list<Token> &tokens, Token::Type paren_type)
 
 static void eat_close_parens(std::list<Token> &tokens, int num, Token::Type paren_type)
 {
+    std::cout << tokens.front().row << " " << tokens.front().col << " " << tokens.front().data << "\n";
     while (num && tokens.size() && tokens.front().type == paren_type)
     {
         tokens.pop_front();
@@ -122,6 +123,7 @@ static Node *parse_fact(std::list<Token> &tokens)
 
         case Token::TOK_ID:
         {
+            std::cout << tokens.front().data << "\n";
             node = new_node(tokens.front());
             tokens.pop_front();
             node->type = Node::NODE_VAR;
@@ -257,14 +259,16 @@ static Node *parse_expr(std::list<Token> &tokens)
     if (functions.count(node->token.data))
     {
         node->type = Node::NODE_FUN_CALL;
-        Node *in = functions[node->token.data]->children.front();
-        if (in->children.size() > 1 || in->children.front()->token.type != Token::KEY_NIL)
-        {
-            for (size_t i = 0; i < in->children.size(); i++)
-            {
-                node->children.push_back(parse_expr(tokens));
-            }
-        }
+        // Node *in = functions[node->token.data]->children.front();
+        // if (in->children.size() > 1 || in->children.front()->token.type != Token::KEY_NIL)
+        // {
+        //     for (size_t i = 0; i < in->children.size(); i++)
+        //     {
+        //         node->children.push_back(parse_expr(tokens));
+        //     }
+        // }
+
+        node->children.push_back(parse_expr(tokens));
 
         return node;
     }
@@ -365,6 +369,8 @@ static Node *parse_function(std::list<Token> &tokens)
     tokens.pop_front();
 
     Node *node = new_node(tokens.front());
+    functions[tokens.front().data].insert(node);
+
     node->type = Node::NODE_FUN_DEC;
     tokens.pop_front();
 
@@ -434,84 +440,6 @@ Node *parse_program(std::list<Token> &tokens)
     return node;
 }
 
-/*
- * pretty_print_tabs
- *    Purpose: print the number of tabs necessary as well as the ending character
- * Parameters: num_tabs - the number of tabs to print
- *    Returns: none
- */
-static void pretty_print_tabs(int num_tabs)
-{
-    for (int i = 0; i < num_tabs - 1; i++)
-    {
-        std::cerr << "    ";
-    }
-    std::cerr << "   \u2502\n";
-
-    for (int i = 0; i < num_tabs - 1; i++)
-    {
-        std::cerr << "    ";
-    }
-    std::cerr << "   \u2514";
-}
-
-/*
- * pretty_print_helper
- *    Purpose: pretty print a node and its children recursively
- * Parameters: node - the node to start printing from, num_tabs - the number of tabs to print, out - the output stream
- *    Returns: none
- *      Notes: the output stream is defaulted to std::cout
- */
-static void pretty_print_helper(Node *node, int num_tabs)
-{
-    switch (node->type)
-    {
-        case Node::NODE_PROG:
-        {
-            std::cerr << "program\n";
-            break;
-        }
-        case Node::NODE_FUN_IN:
-        {
-            std::cerr << "fn_in\n";
-            break;
-        }
-        case Node::NODE_FUN_OUT:
-        {
-            std::cerr << "fn_out\n";
-            break;
-        }
-        case Node::NODE_BODY:
-        {
-            std::cerr << "body\n";
-            break;
-        }
-        default:
-        {
-            std::cerr << node->token.data << "\n";
-            break;
-        }
-    }
-
-    for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))
-    {
-        pretty_print_tabs(num_tabs + 1);
-        pretty_print_helper(*it, num_tabs + 1);
-    }
-}
-
-/*
- * pretty_print
- *    Purpose: pretty print a tree using the helper function
- * Parameters: node - the node to start printing the tree from, out - the output stream
- *    Returns: none
- *      Notes: the output stream is defaulted to std::cout
- */
-void pretty_print(Node *node)
-{
-    pretty_print_helper(node, 0);
-    std::cerr << "\n";
-}
 
 void free_tree(Node *node)
 {

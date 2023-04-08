@@ -7,9 +7,10 @@
 #include <unordered_map>
 #include <fstream>
 
-struct Token {
-    enum Type {
-
+struct Token
+{
+    enum Type
+    {
         /* Keywords */
         KEY_NUM,
         KEY_BOOL,

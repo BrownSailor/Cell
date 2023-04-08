@@ -20,7 +20,7 @@ fn fizzbuzz: num -> nil {
 
 fn gcd: num num -> num {
     in >> a >> b
-    
+
     out << ? b = 0 { a } | { gcd b a % b }
 }
 
@@ -30,7 +30,7 @@ fn divmod: num num -> num num {
 }
 
 hello
-fizzbuzz 4 * gcd 12 18 
+fizzbuzz 4 * gcd 12 18
 print divmod 11 4
 
 ? 1 > 2 {

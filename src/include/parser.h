@@ -18,6 +18,7 @@ struct Node
         NODE_VAR,
         NODE_VAR_ASN,
         NODE_IF,
+        NODE_ELSE,
         NODE_LOOP,
         NODE_BODY,
         NODE_FUN_CALL,
@@ -30,17 +31,9 @@ struct Node
     Type type = NODE_NONE;
     Token token;
 
-    /*
-     * 64 bits for an identifier for use with LLVM generator
-     * 2 most signicant bits:
-     * 00 -> uninitialized ID
-     * 01 -> temporary ID
-     * 10 -> variable ID
-     * 11 -> label ID
-     *
-     * [2 bit key] [26 bit label ID] [16 bit var ID] [20 bit temp ID]
-     */
-    uint64_t id = 0;
+    /* 32 bits for an identifier for use with LLVM generator */
+    uint32_t id = 0;
+    uint64_t datatype = 0;
     std::vector<Node *> children;
 };
 
@@ -52,10 +45,9 @@ template<> struct std::hash<Node *>
     }
 };
 
-extern std::unordered_map<std::string, Node *> functions;
+extern std::unordered_map<std::string, std::unordered_set<Node *>> functions;
 
 Node *parse_program(std::list<Token> &tokens);
-void pretty_print(Node *node);
 void free_tree(Node *node);
 
 #endif

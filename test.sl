@@ -1,5 +1,11 @@
-var1: 3
-var2: tru
-var3: 14 - 15
-var4: var3 = var1
-var5: var4 = var2
+fn mul: num num -> num {
+    in >> n >> k
+    out << n * k
+}
+
+fn divmod: num num -> num num {
+    in >> n >> k
+    out << n / k << n % k
+}
+
+println (mul 3 4)

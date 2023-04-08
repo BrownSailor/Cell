@@ -1,8 +1,7 @@
 #include "compiler.h"
 
-uint64_t tmp_id = 0;
-uint64_t var_id = 0;
-uint64_t lab_id = 0;
+uint32_t tmp_id = 0;
+uint32_t lab_id = 0;
 
 static void compile_expr(Node *node);
 static void compile_statement(Node *node);
@@ -37,19 +36,19 @@ static void compile_literal(Node *node)
         case Token::TOK_NUM:
         {
             std::cout << "    %t" << tmp_id << " = add i64 0, " << node->token.data << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_TRU:
         {
             std::cout << "    %t" << tmp_id << " = add i1 0, 1\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_FLS:
         {
             std::cout << "    %t" << tmp_id << " = add i1 0, 0\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            node->id = tmp_id++;
             break;
         }
         default:
@@ -69,14 +68,14 @@ static void compile_un_op(Node *node)
     {
         case Token::TOK_NOT:
         {
-            std::cout << "    %t" << tmp_id << " = xor i1 1, %t" << get_id(operand->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = xor i1 1, %t" << operand->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_SUB:
         {
-            std::cout << "    %t" << tmp_id << " = i64 mul -1, %t" << get_id(operand->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = i64 mul -1, %t" << operand->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         default:
@@ -98,86 +97,86 @@ static void compile_bin_op(Node *node)
     {
         case Token::TOK_ADD:
         {
-            std::cout << "    %t" << tmp_id << " = add i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = add i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_SUB:
         {
-            std::cout << "    %t" << tmp_id << " = sub i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = sub i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_MUL:
         {
-            std::cout << "    %t" << tmp_id << " = mul i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = mul i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_DIV:
         {
-            std::cout << "    %t" << tmp_id << " = sdiv i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = sdiv i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_SHL:
         {
-            std::cout << "    %t" << tmp_id << " = shl i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = shl i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_SHR:
         {
-            std::cout << "    %t" << tmp_id << " = ashr i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = ashr i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_EQ:
         {
-            std::cout << "    %t" << tmp_id << " = icmp eq i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = icmp eq i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_NEQ:
         {
-            std::cout << "    %t" << tmp_id << " = icmp ne i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = icmp ne i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_LT:
         {
-            std::cout << "    %t" << tmp_id << " = icmp slt i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = icmp slt i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_LTE:
         {
-            std::cout << "    %t" << tmp_id << " = icmp sle i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = icmp sle i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_GT:
         {
-            std::cout << "    %t" << tmp_id << " = icmp sgt i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = icmp sgt i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_GTE:
         {
-            std::cout << "    %t" << tmp_id << " = icmp sge i64 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = icmp sge i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_AND:
         {
-            std::cout << "    %t" << tmp_id << " = and i1 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = and i1 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         case Token::TOK_OR:
         {
-            std::cout << "    %t" << tmp_id << " = or i1 %t" << get_id(left->id) << ", %t" << get_id(right->id) << "\n";
-            node->id = store_id(node->id, TMP, tmp_id++);
+            std::cout << "    %t" << tmp_id << " = or i1 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
             break;
         }
         default:
@@ -210,7 +209,8 @@ static void compile_op(Node *node)
 
 static void compile_fun_call(Node *node)
 {
-    Node *fn_info = functions[node->token.data];
+    /* TODO: find function declaration node that matches function call type scheme */
+    Node *fn_info = *functions[node->token.data].begin();
 
     Node *in = fn_info->children.front();
     Node *out = fn_info->children[1];
@@ -235,7 +235,7 @@ static void compile_fun_call(Node *node)
     for (size_t i = 0; i < in->children.size(); i++)
     {
         std::cout << get_type(in->children[i]) << " ";
-        std::cout << "%t" << get_id(node->children[i]->id) << " ";
+        std::cout << "%t" << node->children[i]->id << " ";
     }
 
     std::cout << ")\n";
@@ -292,7 +292,7 @@ static void compile_if(Node *node)
             uint64_t start = lab_id++;
             uint64_t end = lab_id++;
 
-            std::cout << "    br i1 %t" << get_id(cond->id) << ", label %l" << start << ", label %l" << end << "\n";
+            std::cout << "    br i1 %t" << cond->id << ", label %l" << start << ", label %l" << end << "\n";
             std::cout << "l" << start << ":\n";
             for (size_t i = 0; i < body->children.size(); i++)
             {
@@ -315,7 +315,7 @@ static void compile_if(Node *node)
             uint64_t mid = lab_id++;
             uint64_t end = lab_id++;
 
-            std::cout << "    br i1 %t" << get_id(cond->id) << ", label %l" << start << ", label %l" << mid << "\n";
+            std::cout << "    br i1 %t" << cond->id << ", label %l" << start << ", label %l" << mid << "\n";
             std::cout << "l" << start << ":\n";
             for (size_t i = 0; i < body->children.size(); i++)
             {

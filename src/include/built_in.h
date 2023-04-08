@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "parser.h"
+#include "types.h"
 
 void initialize_built_ins();
 
