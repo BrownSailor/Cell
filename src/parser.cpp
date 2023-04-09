@@ -23,7 +23,6 @@ static int eat_open_parens(std::list<Token> &tokens, Token::Type paren_type)
 
 static void eat_close_parens(std::list<Token> &tokens, int num, Token::Type paren_type)
 {
-    std::cout << tokens.front().row << " " << tokens.front().col << " " << tokens.front().data << "\n";
     while (num && tokens.size() && tokens.front().type == paren_type)
     {
         tokens.pop_front();
@@ -123,7 +122,6 @@ static Node *parse_fact(std::list<Token> &tokens)
 
         case Token::TOK_ID:
         {
-            std::cout << tokens.front().data << "\n";
             node = new_node(tokens.front());
             tokens.pop_front();
             node->type = Node::NODE_VAR;
@@ -259,16 +257,11 @@ static Node *parse_expr(std::list<Token> &tokens)
     if (functions.count(node->token.data))
     {
         node->type = Node::NODE_FUN_CALL;
-        // Node *in = functions[node->token.data]->children.front();
-        // if (in->children.size() > 1 || in->children.front()->token.type != Token::KEY_NIL)
-        // {
-        //     for (size_t i = 0; i < in->children.size(); i++)
-        //     {
-        //         node->children.push_back(parse_expr(tokens));
-        //     }
-        // }
 
-        node->children.push_back(parse_expr(tokens));
+        while (tokens.size() && tokens.front().type != Token::TOK_RPAREN)
+        {
+            node->children.push_back(parse_expr(tokens));
+        }
 
         return node;
     }
@@ -280,15 +273,6 @@ static Node *parse_expr(std::list<Token> &tokens)
         tokens.pop_front();
         node->children.push_back(parse_expr(tokens));
         scopes.top().insert(node->token.data);
-    }
-    else
-    {
-        if (scopes.top().count(node->token.data))
-        {
-            node->type = Node::NODE_VAR;
-        }
-
-        /* throw an error if we have a variable identifier that is not within scope */
     }
 
     return node;
