@@ -1,4 +1,4 @@
-#include "built_in.h"
+#include "built_in.hpp"
 
 static void built_in_print_bools(bool ln)
 {
@@ -19,6 +19,10 @@ static void built_in_print_bools(bool ln)
 
     in->children.push_back(num);
     out->children.push_back(nil);
+
+    node->type_scheme = TypeScheme(TypeScheme::FUN_TYPE);
+    node->type_scheme.fun_type.first.push_back(type_names["bool"]);
+    node->type_scheme.fun_type.second.push_back(type_names["nil"]);
 
     ln ? functions["println"].insert(node) : functions["print"].insert(node);
 }
@@ -43,6 +47,10 @@ static void built_in_print_nums(bool ln)
     in->children.push_back(num);
     out->children.push_back(nil);
 
+    node->type_scheme = TypeScheme(TypeScheme::FUN_TYPE);
+    node->type_scheme.fun_type.first.push_back(type_names["num"]);
+    node->type_scheme.fun_type.second.push_back(type_names["nil"]);
+
     ln ? functions["println"].insert(node) : functions["print"].insert(node);
 }
 
@@ -53,4 +61,17 @@ void initialize_built_ins()
 
     built_in_print_bools(false);
     built_in_print_bools(true);
+}
+
+void free_built_ins()
+{
+    for (auto node : functions["print"])
+    {
+        free_tree(node);
+    }
+
+    for (auto node : functions["println"])
+    {
+        free_tree(node);
+    }
 }

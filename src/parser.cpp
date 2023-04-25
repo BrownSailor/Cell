@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "parser.hpp"
 
 typedef std::unordered_set<std::string> Scope;
 
@@ -7,34 +7,6 @@ std::stack<std::unordered_set<std::string>> scopes;
 
 static Node *parse_expr(std::list<Token> &tokens);
 static Node *parse_statement(std::list<Token> &tokens);
-
-static int eat_open_parens(std::list<Token> &tokens, Token::Type paren_type)
-{
-    int parens = 0;
-
-    while (tokens.size() && tokens.front().type == paren_type)
-    {
-        parens++;
-        tokens.pop_front();
-    }
-
-    return parens;
-}
-
-static void eat_close_parens(std::list<Token> &tokens, int num, Token::Type paren_type)
-{
-    while (num && tokens.size() && tokens.front().type == paren_type)
-    {
-        tokens.pop_front();
-        num--;
-    }
-
-    if (num)
-    {
-        std::cerr << "Parentheses issue!\n";
-        exit(EXIT_FAILURE);
-    }
-}
 
 static Node *new_node(Token token)
 {
@@ -105,9 +77,17 @@ static Node *parse_fact(std::list<Token> &tokens)
 
         case Token::TOK_LPAREN:
         {
-            int p = eat_open_parens(tokens, Token::TOK_LPAREN);
+            /* pop left paren */
+            tokens.pop_front();
             node = parse_expr(tokens);
-            eat_close_parens(tokens, p, Token::TOK_RPAREN);
+
+            if (tokens.front().type != Token::TOK_RPAREN)
+            {
+                std::cerr << "Parentheses mismatch!\n";
+                exit(EXIT_FAILURE);
+            }
+
+            tokens.pop_front();
             break;
         }
 
@@ -258,7 +238,19 @@ static Node *parse_expr(std::list<Token> &tokens)
     {
         node->type = Node::NODE_FUN_CALL;
 
-        while (tokens.size() && tokens.front().type != Token::TOK_RPAREN)
+        /* more than one function argument */
+        if (tokens.front().type == Token::TOK_LPAREN)
+        {
+            tokens.pop_front();
+            while (tokens.size() && tokens.front().type != Token::TOK_RPAREN)
+            {
+                node->children.push_back(parse_expr(tokens));
+            }
+
+            /* expect ) */
+            tokens.pop_front();
+        }
+        else
         {
             node->children.push_back(parse_expr(tokens));
         }

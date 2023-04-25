@@ -1,10 +1,10 @@
 #include <iostream>
 
-#include "lexer.h"
-#include "built_in.h"
-#include "parser.h"
-#include "types.h"
-#include "compiler.h"
+#include "lexer.hpp"
+#include "built_in.hpp"
+#include "parser.hpp"
+#include "types.hpp"
+#include "compiler.hpp"
 
 /*
  * pretty_print_tabs
@@ -32,7 +32,7 @@ static void pretty_print_tabs(int num_tabs)
  *    Purpose: pretty print a node and its children recursively
  * Parameters: node - the node to start printing from, num_tabs - the number of tabs to print, out - the output stream
  *    Returns: none
- *      Notes: the output stream is defaulted to std::cout
+ *      Notes: the output stream is defaulted to std::cerr
  */
 static void pretty_print_helper(Node *node, int num_tabs)
 {
@@ -60,9 +60,29 @@ static void pretty_print_helper(Node *node, int num_tabs)
         }
         default:
         {
-            uint32_t type_id = node->datatype & ((1 << 20) - 1);
-            uint32_t type_no = (node->datatype & (((1 << 12) - 1) << 20)) >> 20;
-            std::cerr << node->token.data << ": " << type_idens[type_id] << " " << type_no << "\n";
+            std::cerr << node->token.data << ": ";
+            switch (node->type_scheme.type)
+            {
+                case TypeScheme::ALPHA:
+                {
+                    std::cerr << type_idens[node->type_scheme.alpha_type];
+                    break;
+                }
+                case TypeScheme::FUN_TYPE:
+                {
+                    for (auto t : node->type_scheme.fun_type.second)
+                    {
+                        std::cerr << type_idens[t] << " ";
+                    }
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+
+            std::cerr << "\n";
             break;
         }
     }
@@ -77,9 +97,8 @@ static void pretty_print_helper(Node *node, int num_tabs)
 /*
  * pretty_print
  *    Purpose: pretty print a tree using the helper function
- * Parameters: node - the node to start printing the tree from, out - the output stream
+ * Parameters: node - the node to start printing the tree from
  *    Returns: none
- *      Notes: the output stream is defaulted to std::cout
  */
 void pretty_print(Node *node)
 {
@@ -95,8 +114,8 @@ void usage()
 
 int main(int argc, char **argv)
 {
-    initialize_built_ins();
     initialize_types();
+    initialize_built_ins();
 
     if (argc != 2)
     {
@@ -112,16 +131,17 @@ int main(int argc, char **argv)
     Node *root = parse_program(tokens);
 
     /* type check the AST */
-    // type_check(root);
+    type_check(root);
     pretty_print(root);
 
     /* generate assembly based on syntax tree */
-    // compile(root);
+    compile(root);
 
     /* create a relocatable object file */
     // std::string assemble = "llc -march=x86_64 -filetype=obj " + file + ".ll -o " + file + ".o";
     // system(assemble.c_str());
     
+    free_built_ins();
     free_tree(root);
     return 0;
 }

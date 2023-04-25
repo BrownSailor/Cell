@@ -2,7 +2,8 @@
 #define COMPILER_H
 
 #include <iostream>
-#include "parser.h"
+#include "parser.hpp"
+#include "types.hpp"
 
 void compile(Node *root);
 

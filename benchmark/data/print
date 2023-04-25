@@ -1,0 +1,20 @@
+--Slang--
+Compiling to object file
+0m0.087s
+
+Linking executable
+0m0.020s
+
+Running executable
+0m0.001s
+
+--C--
+Compiling to object file
+0m0.112s
+
+Linking executable
+0m0.020s
+
+Running executable
+0m0.001s
+

@@ -3,9 +3,10 @@
 
 #include <string>
 #include <vector>
-#include "parser.h"
-#include "types.h"
+#include "parser.hpp"
+#include "types.hpp"
 
 void initialize_built_ins();
+void free_built_ins();
 
 #endif

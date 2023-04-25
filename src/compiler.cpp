@@ -1,4 +1,4 @@
-#include "compiler.h"
+#include "compiler.hpp"
 
 uint32_t tmp_id = 0;
 uint32_t lab_id = 0;
@@ -210,7 +210,16 @@ static void compile_op(Node *node)
 static void compile_fun_call(Node *node)
 {
     /* TODO: find function declaration node that matches function call type scheme */
-    Node *fn_info = *functions[node->token.data].begin();
+    Node *fn_info;
+
+    for (auto func : functions[node->token.data])
+    {
+        if (node->type_scheme == func->type_scheme)
+        {
+            fn_info = func;
+            break;
+        }
+    }
 
     Node *in = fn_info->children.front();
     Node *out = fn_info->children[1];
@@ -359,8 +368,8 @@ static void compile_program(Node *node)
 {
     std::cout << "target triple = \"x86_64-pc-linux-gnu\"\n\n";
 
-    std::cout << "declare void @print_bool(i64)\n";
-    std::cout << "declare void @println_bool(i64)\n";
+    std::cout << "declare void @print_bool(i1)\n";
+    std::cout << "declare void @println_bool(i1)\n";
     std::cout << "declare void @print_num(i64)\n";
     std::cout << "declare void @println_num(i64)\n\n";
 

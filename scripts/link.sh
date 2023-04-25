@@ -1,13 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
 asm="std/asm"
 lib="std/lib"
 
-make > /dev/null
 mkdir $lib
 
-./slang test.sl > main.ll
-
+echo "Compiling libraries"
 for dir in $asm/*
 do
     for file in $dir/*
@@ -17,13 +15,3 @@ do
 done
 
 ld -o lib.o -r $lib/*.o
-
-clang -c -o main.o main.ll
-clang -o main main.o lib.o
-
-./main
-
-make clean > /dev/null
-rm -rf $lib
-rm lib.o
-rm main.o

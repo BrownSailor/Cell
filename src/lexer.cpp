@@ -1,4 +1,4 @@
-#include "lexer.h"
+#include "lexer.hpp"
 
 std::unordered_map<std::string, Token::Type> INTRINSICS =
 {

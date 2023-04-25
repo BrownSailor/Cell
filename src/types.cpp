@@ -1,5 +1,22 @@
-#include "types.h"
+#include "types.hpp"
 
+/* TypeScheme operator overloading */
+bool operator==(const TypeScheme &left, const TypeScheme &right)
+{
+    if (right.type == TypeScheme::FUN_TYPE)
+    {
+        return left.type == right.type && left.fun_type == right.fun_type;
+    }
+
+    return left.type == right.type && (left.type == TypeScheme::NONE ? true : left.alpha_type == right.alpha_type);
+}
+
+bool operator!=(const TypeScheme &left, const TypeScheme &right)
+{
+    return !(left == right);
+}
+
+/* Types */
 uint32_t type_id = 0;
 
 std::unordered_map<std::string, uint32_t> type_names;
@@ -11,14 +28,16 @@ static void new_type(std::string type)
     type_idens[type_id++] = type;
 }
 
-static uint32_t construct_type(uint32_t num, uint32_t id)
+static TypeScheme construct_type(uint32_t type)
 {
-    id &= ~((1 << 20) - 1);
-    return (num << 20) | id;
+    TypeScheme ts(TypeScheme::ALPHA);
+    ts.alpha_type = type;
+    return ts;
 }
 
 void initialize_types()
 {
+    new_type("nil");
     new_type("num");
     new_type("bool");
     new_type("str");
@@ -33,23 +52,23 @@ static void type_check_literal(Node *root)
     {
         case Token::TOK_NUM:
         {
-            root->datatype = construct_type(1, type_names["num"]);
+            root->type_scheme = construct_type(type_names["num"]);
             break;
         }
         case Token::TOK_TRU:
         case Token::TOK_FLS:
         {
-            root->datatype = construct_type(1, type_names["bool"]);
+            root->type_scheme = construct_type(type_names["bool"]);
             break;
         }
         case Token::TOK_STR:
         {
-            root->datatype = construct_type(1, type_names["str"]);
+            root->type_scheme = construct_type(type_names["str"]);
             break;
         }
         default:
         {
-            root->datatype = 0;
+            root->type_scheme = TypeScheme();
             break;
         }
     }
@@ -64,25 +83,25 @@ static void type_check_un_op(Node *root)
     {
         case Token::TOK_SUB:
         {
-            if (operand->datatype != construct_type(1, type_names["num"]))
+            if (operand->type_scheme != construct_type(type_names["num"]))
             {
                 exit(EXIT_FAILURE);
             }
-            root->datatype = construct_type(1, type_names["num"]);
+            root->type_scheme = construct_type(type_names["num"]);
             break;
         }
         case Token::TOK_NOT:
         {
-            if (operand->datatype != construct_type(1, type_names["bool"]))
+            if (operand->type_scheme != construct_type(type_names["bool"]))
             {
                 exit(EXIT_FAILURE);
             }
-            root->datatype = construct_type(1, type_names["bool"]);
+            root->type_scheme = construct_type(type_names["bool"]);
             break;
         }
         default:
         {
-            root->datatype = 0;
+            root->type_scheme = TypeScheme();
             break;
         }
     }
@@ -104,11 +123,11 @@ static void type_check_bin_op(Node *root)
         case Token::TOK_SHL:
         case Token::TOK_SHR:
         {
-            if (left->datatype != construct_type(1, type_names["num"]) || left->datatype != right->datatype)
+            if (left->type_scheme != construct_type(type_names["num"]) || left->type_scheme != right->type_scheme)
             {
                 exit(EXIT_FAILURE);
             }
-            root->datatype = construct_type(1, type_names["num"]);
+            root->type_scheme = construct_type(type_names["num"]);
             break;
         }
         case Token::TOK_LT:
@@ -116,36 +135,36 @@ static void type_check_bin_op(Node *root)
         case Token::TOK_GT:
         case Token::TOK_GTE:
         {
-            if (left->datatype != construct_type(1, type_names["num"]) || left->datatype != right->datatype)
+            if (left->type_scheme != construct_type(type_names["num"]) || left->type_scheme != right->type_scheme)
             {
                 exit(EXIT_FAILURE);
             }
-            root->datatype = construct_type(1, type_names["bool"]);
+            root->type_scheme = construct_type(type_names["bool"]);
             break;
         }
         case Token::TOK_EQ:
         case Token::TOK_NEQ:
         {
-            if (left->datatype != right->datatype)
+            if (left->type_scheme != right->type_scheme)
             {
                 exit(EXIT_FAILURE);
             }
-            root->datatype = construct_type(1, type_names["bool"]);
+            root->type_scheme = construct_type(type_names["bool"]);
             break;
         }
         case Token::TOK_AND:
         case Token::TOK_OR:
         {
-            if (left->datatype != construct_type(1, type_names["bool"]) || left->datatype != right->datatype)
+            if (left->type_scheme != construct_type(type_names["bool"]) || left->type_scheme != right->type_scheme)
             {
                 exit(EXIT_FAILURE);
             }
-            root->datatype = construct_type(1, type_names["bool"]);
+            root->type_scheme = construct_type(type_names["bool"]);
             break;
         }
         default:
         {
-            root->datatype = 0;
+            root->type_scheme = TypeScheme();
             break;
         }
     }
@@ -174,7 +193,26 @@ static void type_check_op(Node *root)
 
 static void type_check_fun_call(Node *root)
 {
-    (void)root;
+    root->type_scheme = TypeScheme(TypeScheme::FUN_TYPE);
+    for (auto node : root->children)
+    {
+        type_check_expr(node);
+        root->type_scheme.fun_type.first.push_back(node->type_scheme.alpha_type);
+    }
+
+    std::string fun_name = root->token.data;
+    for (auto node : functions[fun_name])
+    {
+        TypeScheme declared = node->type_scheme;
+
+        if (declared.fun_type.first == root->type_scheme.fun_type.first)
+        {
+            root->type_scheme.fun_type.second = declared.fun_type.second;
+            return;
+        }
+    }
+
+    exit(EXIT_FAILURE);
 }
 
 static void type_check_var(Node *root)
