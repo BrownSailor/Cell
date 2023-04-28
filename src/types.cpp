@@ -1,5 +1,8 @@
 #include "types.hpp"
 
+typedef std::unordered_map<std::string, TypeScheme> TypeScope;
+std::stack<TypeScope> type_scopes;
+
 /* TypeScheme operator overloading */
 bool operator==(const TypeScheme &left, const TypeScheme &right)
 {
@@ -41,6 +44,7 @@ void initialize_types()
     new_type("num");
     new_type("bool");
     new_type("str");
+    new_type("num..num");
 }
 
 static void type_check_expr(Node *root);
@@ -130,6 +134,15 @@ static void type_check_bin_op(Node *root)
             root->type_scheme = construct_type(type_names["num"]);
             break;
         }
+        case Token::TOK_RANGE:
+        {
+            if (left->type_scheme != construct_type(type_names["num"]) || left->type_scheme != right->type_scheme)
+            {
+                exit(EXIT_FAILURE);
+            }
+            root->type_scheme = construct_type(type_names["num..num"]);
+            break;
+        }
         case Token::TOK_LT:
         case Token::TOK_LTE:
         case Token::TOK_GT:
@@ -217,27 +230,20 @@ static void type_check_fun_call(Node *root)
 
 static void type_check_var(Node *root)
 {
-    (void)root;
+    root->type_scheme = type_scopes.top()[root->token.data];
 }
 
 static void type_check_var_asn(Node *root)
 {
-    (void)root;
-}
+    type_check_expr(root->children.front());
+    if (type_scopes.top().count(root->token.data) &&
+        root->children.front()->type_scheme != type_scopes.top()[root->token.data])
+    {
+        exit(EXIT_FAILURE);
+    }
 
-static void type_check_if(Node *root)
-{
-    (void)root;
-}
-
-static void type_check_else(Node *root)
-{
-    (void)root;
-}
-
-static void type_check_loop(Node *root)
-{
-    (void)root;
+    type_scopes.top()[root->token.data] = root->children.front()->type_scheme;
+    root->type_scheme = root->children.front()->type_scheme;
 }
 
 static void type_check_expr(Node *root)
@@ -276,6 +282,90 @@ static void type_check_expr(Node *root)
     }
 }
 
+static void type_check_if(Node *root)
+{
+    switch (root->children.size())
+    {
+        /* only body, no condition (else clause) */
+        case 1:
+        {
+            Node *body = root->children.front();
+
+            type_scopes.push(type_scopes.top());
+            for (auto child : body->children)
+            {
+                type_check_statement(child);
+            }
+            type_scopes.pop();
+
+            break;
+        }
+        /* condition and body (if without else clause) */
+        case 2:
+        {
+            Node *cond = root->children.front();
+            Node *body = root->children.back();
+
+            type_check_expr(cond);
+            if (cond->type_scheme != construct_type(type_names["bool"]))
+            {
+                exit(EXIT_FAILURE);
+            }
+
+            type_scopes.push(type_scopes.top());
+            for (auto child : body->children)
+            {
+                type_check_statement(child);
+            }
+            type_scopes.pop();
+
+            break;
+        }
+        /* condition and body (if with else clause) */
+        case 3:
+        {
+            Node *cond = root->children.front();
+            Node *body = root->children[1];
+            Node *els = root->children.back();
+
+            type_check(cond);
+            if (cond->type_scheme != construct_type(type_names["bool"]))
+            {
+                exit(EXIT_FAILURE);
+            }
+            
+            type_scopes.push(type_scopes.top());
+            for (auto child : body->children)
+            {
+                type_check_statement(child);
+            }
+            type_scopes.pop();
+
+            type_check_if(els);
+
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+
+static void type_check_loop(Node *root)
+{
+    type_check_expr(root->children.front());
+    if (root->children.front()->type_scheme != construct_type(type_names["bool"]))
+    {
+        exit(EXIT_FAILURE);
+    }
+
+    for (auto child : root->children.back()->children)
+    {
+        type_check_statement(child);
+    }
+}
+
 static void type_check_statement(Node *root)
 {
     switch (root->type)
@@ -283,11 +373,6 @@ static void type_check_statement(Node *root)
         case Node::NODE_IF:
         {
             type_check_if(root);
-            break;
-        }
-        case Node::NODE_ELSE:
-        {
-            type_check_else(root);
             break;
         }
         case Node::NODE_LOOP:
@@ -305,6 +390,7 @@ static void type_check_statement(Node *root)
 
 void type_check(Node *root)
 {
+    type_scopes.push(TypeScope());
     for (auto child : root->children)
     {
         /* TODO: type check function declarations instead of just statements */

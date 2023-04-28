@@ -5,7 +5,8 @@ fn hello: nil -> nil {
 fn fizzbuzz: num -> nil {
     in >> N
 
-    @ i in 1 to N by 1 {
+    i: 1
+    @ i <= N {
         ? i % 3 = 0 and i % 5 = 0 {
             println "FizzBuzz"
         } | i % 3 = 0 {
@@ -15,46 +16,22 @@ fn fizzbuzz: num -> nil {
         } | {
             println i
         }
+
+        i: i + 1
     }
 }
 
 fn gcd: num num -> num {
     in >> a >> b
 
-    out << ? b = 0 { a } | { gcd b a % b }
+    ? b = 0 {
+        out << a
+    } | {
+        out << gcd (b a % b)
+    }
 }
 
 fn divmod: num num -> num num {
     in >> n >> k
     out << n / k << n % k
-}
-
-hello
-fizzbuzz 4 * gcd 12 18
-print divmod 11 4
-
-? 1 > 2 {
-    println 2
-} | {
-    println 3
-}
-
-? 3 > 4 {
-    println 4
-} | 3 != 4 {
-    println 5
-} | {
-    println 6
-}
-
-? 3 > 4 {
-    println 4
-} | 3 = 4 {
-    println 5
-} | 3 < 4 {
-    ? 1 < 2 {
-        println 6
-    } | {
-        println 7
-    }
 }

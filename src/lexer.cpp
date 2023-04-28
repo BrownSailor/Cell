@@ -16,6 +16,7 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "fn", Token::KEY_FUN },
     { "in", Token::TOK_IN },
     { "out", Token::TOK_OUT },
+    { "by", Token::TOK_BY }
 };
 
 Token new_token(Token::Type type, std::string data, int col, int row, std::string file)
@@ -64,6 +65,25 @@ static void lex_line(const std::string &line, std::list<Token> &tokens, int row,
                 }
 
                 col = col_end;
+                break;
+            }
+            
+            case '.':
+            {
+                if (curr.size())
+                {
+                    tokens.push_back(lex_word(curr, col, row, file));
+                    curr = "";
+                }
+
+                col = col_end;
+
+                if (line[i + 1] == '.')
+                {
+                    tokens.push_back(new_token(Token::TOK_RANGE, "..", col, row, file));
+                    i++;
+                    col_end += 2;
+                }
                 break;
             }
 
@@ -472,7 +492,7 @@ void print_token(Token token)
             case Token::TOK_READ: std::cout << "TOK_READ"; break;
             case Token::TOK_WRITE: std::cout << "TOK_WRITE"; break;
             case Token::TOK_LOOP: std::cout << "TOK_LOOP"; break;
-            case Token::TOK_TO: std::cout << "TOK_TO\t"; break;
+            case Token::TOK_RANGE: std::cout << "TOK_RANGE\t"; break;
             case Token::TOK_BY: std::cout << "TOK_BY\t"; break;
             case Token::TOK_IF: std::cout << "TOK_IF\t"; break;
             case Token::TOK_ELSE: std::cout << "TOK_ELSE"; break;

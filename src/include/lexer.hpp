@@ -56,7 +56,7 @@ struct Token
         TOK_WRITE,
 
         TOK_LOOP,
-        TOK_TO,
+        TOK_RANGE,
         TOK_BY,
         TOK_IF,
         TOK_ELSE,

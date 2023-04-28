@@ -13,11 +13,11 @@ do
 
     echo "--Slang--" > $data/$file
     echo "Compiling to object file" >> $data/$file
-    (time ./slang $f | llc -filetype=obj - -o main.o) |& grep 'real' | awk '{ print $2 }' >> $data/$file
+    (time ./slang $f | llc -O2 -filetype=obj - -o main.o) |& grep 'real' | awk '{ print $2 }' >> $data/$file
     echo "" >> $data/$file
     
     echo "Linking executable" >> $data/$file
-    (time clang -o main main.o lib.o) |& grep 'real' | awk '{ print $2 }' >> $data/$file
+    (time clang -O2 -o main main.o lib.o) |& grep 'real' | awk '{ print $2 }' >> $data/$file
     echo "" >> $data/$file
     
     echo "Running executable" >> $data/$file
@@ -26,11 +26,11 @@ do
 
     echo "--C--" >> $data/$file
     echo "Compiling to object file" >> $data/$file
-    (time clang -Ofast -c $c/${f:13:-3}.c -o main.o 2> /dev/null) |& grep 'real' | awk '{ print $2 }' >> $data/$file
+    (time clang -O0 -c $c/${f:13:-3}.c -o main.o 2> /dev/null) |& grep 'real' | awk '{ print $2 }' >> $data/$file
     echo "" >> $data/$file
     
     echo "Linking executable" >> $data/$file
-    (time clang -Ofast -o main main.o) |& grep 'real' | awk '{ print $2 }' >> $data/$file
+    (time clang -O0 -o main main.o) |& grep 'real' | awk '{ print $2 }' >> $data/$file
     echo "" >> $data/$file
     
     echo "Running executable" >> $data/$file

@@ -132,7 +132,7 @@ int main(int argc, char **argv)
 
     /* type check the AST */
     type_check(root);
-    pretty_print(root);
+    // pretty_print(root);
 
     /* generate assembly based on syntax tree */
     compile(root);
@@ -143,5 +143,6 @@ int main(int argc, char **argv)
     
     free_built_ins();
     free_tree(root);
+
     return 0;
 }

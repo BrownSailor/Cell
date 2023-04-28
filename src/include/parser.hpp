@@ -85,7 +85,6 @@ struct Node
         NODE_VAR,
         NODE_VAR_ASN,
         NODE_IF,
-        NODE_ELSE,
         NODE_LOOP,
         NODE_BODY,
         NODE_FUN_CALL,

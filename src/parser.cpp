@@ -1,9 +1,9 @@
 #include "parser.hpp"
 
 typedef std::unordered_set<std::string> Scope;
+std::stack<Scope> scopes;
 
 std::unordered_map<std::string, std::unordered_set<Node *>> functions;
-std::stack<std::unordered_set<std::string>> scopes;
 
 static Node *parse_expr(std::list<Token> &tokens);
 static Node *parse_statement(std::list<Token> &tokens);
@@ -84,6 +84,7 @@ static Node *parse_fact(std::list<Token> &tokens)
             if (tokens.front().type != Token::TOK_RPAREN)
             {
                 std::cerr << "Parentheses mismatch!\n";
+                std::cout << tokens.front().file << ":" << tokens.front().row << ":" << tokens.front().col << "\n";
                 exit(EXIT_FAILURE);
             }
 
@@ -152,9 +153,24 @@ static Node *parse_add_sub(std::list<Token> &tokens)
     return node;
 }
 
-static Node *parse_lt_gt(std::list<Token> &tokens)
+static Node *parse_range(std::list<Token> &tokens)
 {
     Node *node = parse_add_sub(tokens);
+    
+    if (tokens.front().type == Token::TOK_RANGE)
+    {
+        Node *op = new_node(tokens.front());
+        tokens.pop_front();
+
+        node = binary(node, op, parse_add_sub(tokens));
+    }
+
+    return node;
+}
+
+static Node *parse_lt_gt(std::list<Token> &tokens)
+{
+    Node *node = parse_range(tokens);
 
     while (tokens.front().type == Token::TOK_LT ||
            tokens.front().type == Token::TOK_GT ||
@@ -224,7 +240,7 @@ static Node *parse_in_out(std::list<Token> &tokens)
            tokens.front().type == Token::TOK_WRITE)
     {
         tokens.pop_front();
-        node->children.push_back(parse_or(tokens));
+        node->children.push_back(parse_expr(tokens));
     }
 
     return node;
@@ -288,7 +304,7 @@ static Node *parse_if(std::list<Token> &tokens)
 
     /* eat { */
     tokens.pop_front();
-    scopes.push(Scope());
+    scopes.push(scopes.top());
     while (tokens.size() && tokens.front().type != Token::TOK_RBRACE)
     {
         body->children.push_back(parse_statement(tokens));
@@ -309,9 +325,36 @@ static Node *parse_if(std::list<Token> &tokens)
 
 static Node *parse_loop(std::list<Token> &tokens)
 {
-    /* TODO: parse loop syntax */
-    (void)tokens;
-    return nullptr;
+    Node *loop = new_node(tokens.front());
+    loop->type = Node::NODE_LOOP;
+    tokens.pop_front();
+    scopes.push(scopes.top());
+
+    /* 
+     * loop (conditional while loop)
+     * @ cond {
+     *     ;; do something
+     * }
+     */
+    loop->children.push_back(parse_expr(tokens));
+
+    Node *body = new Node;
+    body->type = Node::NODE_BODY;
+
+    /* eat { */
+    tokens.pop_front();
+    while (tokens.size() && tokens.front().type != Token::TOK_RBRACE)
+    {
+        body->children.push_back(parse_statement(tokens));
+    }
+
+    /* eat } */
+    scopes.pop();
+    tokens.pop_front();
+
+    loop->children.push_back(body);
+
+    return loop;
 }
 
 static Node *parse_statement(std::list<Token> &tokens)
