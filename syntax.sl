@@ -1,9 +1,9 @@
 fn hello: nil -> nil {
-    println "Hello, World!"
+    println "Hello, world!"
 }
 
 fn fizzbuzz: num -> nil {
-    in >> N
+    N
 
     i: 1
     @ i <= N {
@@ -22,16 +22,16 @@ fn fizzbuzz: num -> nil {
 }
 
 fn gcd: num num -> num {
-    in >> a >> b
-
-    ? b = 0 {
-        out << a
-    } | {
-        out << gcd (b a % b)
-    }
+    a b
+    ? b = 0 { a } | { gcd (b a % b) }
 }
 
 fn divmod: num num -> num num {
-    in >> n >> k
-    out << n / k << n % k
+    n k
+
+    n / k
+    n % k
 }
+
+table: 20 * num
+table[1]: 34

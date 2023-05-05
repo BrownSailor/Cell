@@ -5,11 +5,9 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
 
-    int i = 0;
-    while (i < 1000000)
+    for (int i = 0; i < 100000000; i++)
     {
         printf("%d\n", i);
-        i = i + 1;
     }
     
     return 0;

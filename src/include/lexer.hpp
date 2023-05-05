@@ -50,10 +50,10 @@ struct Token
         TOK_GT,
         TOK_GTE,
 
-        TOK_IN,
-        TOK_OUT,
-        TOK_READ,
-        TOK_WRITE,
+        // TOK_IN,
+        // TOK_OUT,
+        // TOK_READ,
+        // TOK_WRITE,
 
         TOK_LOOP,
         TOK_RANGE,

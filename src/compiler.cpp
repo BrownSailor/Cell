@@ -1,10 +1,11 @@
 #include "compiler.hpp"
 
-typedef std::unordered_set<std::string> CompScope;
+typedef std::unordered_map<std::string, uint64_t> CompScope;
 std::stack<CompScope> comp_scopes;
+std::unordered_set<uint64_t> func_param_ids;
 
-uint32_t tmp_id = 0;
-uint32_t lab_id = 0;
+uint64_t tmp_id = 0;
+uint64_t lab_id = 0;
 
 static void compile_expr(Node *node);
 static void compile_statement(Node *node);
@@ -24,6 +25,10 @@ static std::string get_type(Node *node)
         case Token::KEY_BOOL:
         {
             return "i1";
+        }
+        case Token::KEY_STR:
+        {
+            return "i8*";
         }
         default:
         {
@@ -54,9 +59,18 @@ static void compile_literal(Node *node)
             node->id = tmp_id++;
             break;
         }
+        case Token::TOK_STR:
+        {
+            size_t str_size = node->token.data.size() + 1;
+            std::cout << "    %t" << tmp_id << " = alloca [";
+            std::cout << str_size << " x i8], align 1\n";
+            std::cout << "    store [" << str_size  << " x i8] c\"" << node->token.data;
+            std::cout << "\\00\", [" << str_size << " x i8]* %t" << tmp_id << "\n";
+            node->id = tmp_id++;
+            break;
+        }
         default:
         {
-            /* TODO: implement string literals */
             break;
         }
     }
@@ -119,6 +133,12 @@ static void compile_bin_op(Node *node)
         case Token::TOK_DIV:
         {
             std::cout << "    %t" << tmp_id << " = sdiv i64 %t" << left->id << ", %t" << right->id << "\n";
+            node->id = tmp_id++;
+            break;
+        }
+        case Token::TOK_MOD:
+        {
+            std::cout << "    %t" << tmp_id << " = srem i64 %t" << left->id << ", %t" << right->id << "\n";
             node->id = tmp_id++;
             break;
         }
@@ -232,8 +252,16 @@ static void compile_fun_call(Node *node)
     }
 
     /* TODO: get_type needs to be modified for functions that output more than 1 value */
-    std::cout << "    call " << get_type(out->children.front()) << " @";
-    std::cout << node->token.data;
+    if (out->children.front()->token.type != Token::KEY_NIL)
+    {
+        std::cout << "    %t" << tmp_id << " = call ";
+        node->id = tmp_id++;
+    }
+    else
+    {
+        std::cout << "    call ";
+    }
+    std::cout << get_type(out->children.front()) << " @" << node->token.data;
 
     /* support function overloading by creating unique identifiers based on param types */
     for (auto child : in->children)
@@ -243,57 +271,71 @@ static void compile_fun_call(Node *node)
 
     std::cout << "(";
 
-    for (size_t i = 0; i < in->children.size(); i++)
+    if (in->children.size() && in->children.front()->token.type != Token::KEY_NIL)
     {
-        std::cout << get_type(in->children[i]) << " ";
-        std::cout << "%t" << node->children[i]->id << " ";
+        for (size_t i = 0; i < in->children.size() - 1; i++)
+        {
+            std::cout << get_type(in->children[i]) << " ";
+            std::cout << "%t" << node->children[i]->id << ", ";
+        }
+        std::cout << get_type(in->children.back()) << " ";
+        std::cout << "%t" << node->children.back()->id;
     }
-
     std::cout << ")\n";
 }
 
 static void compile_var(Node *node)
 {
-    std::cout << "    %t" << tmp_id << " = load ";
-
-    switch (node->type_scheme.type)
+    bool fun_arg = func_param_ids.count(comp_scopes.top()[node->token.data]) != 0;
+    if (!fun_arg)
     {
-        case TypeScheme::ALPHA:
+        std::cout << "    %t" << tmp_id << " = load ";
+
+        switch (node->type_scheme.type)
         {
-            uint32_t alpha = node->type_scheme.alpha_type;
-            if (alpha == type_names["num"])
+            case TypeScheme::ALPHA:
             {
-                std::cout << "i64, i64* %";
+                uint32_t alpha = node->type_scheme.alpha_type;
+                if (alpha == type_names["num"])
+                {
+                    std::cout << "i64, i64*";
+                }
+                else if (alpha == type_names["bool"])
+                {
+                    std::cout << "i1, i1*";
+                }
+                break;
             }
-            else if (alpha == type_names["bool"])
+            case TypeScheme::FUN_TYPE:
             {
-                std::cout << "i1, i1* %";
+                break;
             }
-            break;
+            default:
+            {
+                break;
+            }
         }
-        case TypeScheme::FUN_TYPE:
-        {
-            break;
-        }
-        default:
-        {
-            break;
-        }
+
+        std::cout << " %t" << comp_scopes.top()[node->token.data] << "\n";
+        node->id = tmp_id++;
     }
-    std::cout << node->token.data << "\n";
-    node->id = tmp_id++;
+    else
+    {
+        node->id = comp_scopes.top()[node->token.data];
+    }
 }
 
 static void compile_var_asn(Node *node)
 {
-    compile_expr(node->children.front());
+    compile_statement(node->children.front());
     std::string type;
 
-    switch (node->type_scheme.type)
+    TypeScheme ts = node->children.front()->type_scheme;
+    switch (ts.type)
     {
         case TypeScheme::ALPHA:
         {
-            uint32_t alpha = node->type_scheme.alpha_type;
+            uint32_t alpha = ts.alpha_type;
             if (alpha == type_names["num"])
             {
                 type = "i64";
@@ -301,6 +343,10 @@ static void compile_var_asn(Node *node)
             else if (alpha == type_names["bool"])
             {
                 type = "i1";
+            }
+            else if (alpha == type_names["str"])
+            {
+                type = "[14 x i8]";
             }
         }
         case TypeScheme::FUN_TYPE:
@@ -315,27 +361,19 @@ static void compile_var_asn(Node *node)
 
     if (!comp_scopes.top().count(node->token.data))
     {
-        std::cout << "    %" << node->token.data << " = alloca " << type << "\n";
-        comp_scopes.top().insert(node->token.data);
+        std::cout << "    %t" << tmp_id << " = alloca " << type;
+
+        if (ts.alpha_type == type_names["str"])
+        {
+            std::cout << ", align 1";
+        }
+        std::cout << "\n";
+
+        comp_scopes.top()[node->token.data] = tmp_id;
+        node->id = tmp_id++;
     }
 
-    std::cout << "    store " << type;
-
-    switch (node->children.front()->type)
-    {
-        case Node::NODE_VAR:
-        {
-            std::cout << " %" << node->children.front()->token.data;
-            break;
-        }
-        default:
-        {
-            std::cout << " %t" << node->children.front()->id;
-            break;
-        }
-    }
-
-    std::cout << ", " << type << "* %" << node->token.data << "\n";
+    std::cout << "    store " << type << " %t" << node->children.front()->id << ", " << type << "* %t" << comp_scopes.top()[node->token.data] << "\n";
 }
 
 static void compile_expr(Node *node)
@@ -409,6 +447,7 @@ static void compile_if(Node *node)
 
             std::cout << "    br label %l" << end << "\n";
             std::cout << "l" << end << ":\n";
+
             break;
         }
         /* condition and body (if with else clause) */
@@ -439,6 +478,16 @@ static void compile_if(Node *node)
 
             std::cout << "    br label %l" << end << "\n";
             std::cout << "l" << end << ":\n";
+
+            if (node->type_scheme.alpha_type != type_names["nil"])
+            {
+                node->id = tmp_id;
+                std::cout << "    %t" << tmp_id++ << " = select i1 %t" << cond->id;
+                std::cout << ", i64 %t" << body->children.back()->id;
+                std::cout << ", i64 %t" << els->children.back()->children.back()->id << "\n";
+                /* %2 = select i1 %1, [4 x i8]* @.fls, [4 x i8]* @.tru\n"; */
+            }
+
             break;
         }
         default:
@@ -493,14 +542,115 @@ static void compile_statement(Node *node)
     }
 }
 
+static void compile_fun_dec(Node *node)
+{
+    comp_scopes.push(CompScope());
+
+    Node *in = node->children.front();
+    Node *out = node->children[1];
+    Node *body = node->children.back();
+
+    /* TODO: multiple return types */
+    std::cout << "define " << get_type(out->children.front()) << " @" << node->token.data;
+
+    for (auto child : in->children)
+    {
+        std::cout << "_" << child->token.data;
+    }
+
+    std::cout << "(";
+
+    if (in->children.size() && in->children.front()->token.type != Token::KEY_NIL)
+    {
+        for (size_t i = 0; i < in->children.size() - 1; i++)
+        {
+            auto child = in->children[i];
+            std::cout << get_type(child) << " %t" << tmp_id << ", ";
+            comp_scopes.top()[body->children[i]->token.data] = tmp_id;
+
+            func_param_ids.insert(tmp_id);
+            body->children[i]->id = tmp_id++;
+        }
+        std::cout << get_type(in->children.back()) << " %t" << tmp_id;
+        comp_scopes.top()[body->children[in->children.size() - 1]->token.data] = tmp_id;
+
+        func_param_ids.insert(tmp_id);
+        body->children[in->children.size() - 1]->id = tmp_id++;
+    }
+    std::cout << ") {\n";
+
+    size_t i = in->children.front()->token.type != Token::KEY_NIL ? in->children.size() : 0;
+    for (; i < body->children.size(); i++)
+    {
+        auto child = body->children[i];
+        compile_statement(child);
+    }
+
+    if (node->type_scheme.fun_type.second.front() != type_names["nil"])
+    {
+        std::cout << "    ret " << get_type(out->children.front()) << " %t" << body->children.back()->id;
+    }
+    else
+    {
+        std::cout << "    ret void";
+    }
+    std::cout << "\n}\n\n";
+    comp_scopes.pop();
+    func_param_ids.clear();
+}
+
 static void compile_program(Node *node)
 {
-    std::cout << "target triple = \"x86_64-pc-linux-gnu\"\n\n";
+    (void)compile_fun_dec;
 
-    std::cout << "declare void @print_bool(i1)\n";
-    std::cout << "declare void @println_bool(i1)\n";
-    std::cout << "declare void @print_num(i64)\n";
-    std::cout << "declare void @println_num(i64)\n\n";
+    std::cout << "target triple = \"x86_64-pc-linux-gnu\"\n";
+
+    std::cout << "@.tru = private unnamed_addr constant [4 x i8] c\"tru\\00\", align 1\n";
+    std::cout << "@.fls = private unnamed_addr constant [4 x i8] c\"fls\\00\", align 1\n";
+    std::cout << "@.truln = private unnamed_addr constant [5 x i8] c\"tru\\0A\\00\", align 1\n";
+    std::cout << "@.flsln = private unnamed_addr constant [5 x i8] c\"fls\\0A\\00\", align 1\n";
+
+    std::cout << "@.llu = private unnamed_addr constant [5 x i8] c\"%llu\\00\", align 1\n";
+    std::cout << "@.lluln = private unnamed_addr constant [6 x i8] c\"%llu\\0A\\00\", align 1\n";
+
+    std::cout << "declare i32 @printf(i8*, ...)\n";
+
+    std::cout << "define void @print_bool(i1 %val) {\n";
+    std::cout << "    %1 = icmp eq i1 %val, 0 \n";
+    std::cout << "    %2 = select i1 %1, [4 x i8]* @.fls, [4 x i8]* @.tru\n";
+    std::cout << "    %3 = bitcast [4 x i8]* %2 to i8*\n";
+    std::cout << "    %4 = call i32 (i8*, ...) @printf(i8* %3)\n";
+    std::cout << "    ret void\n";
+    std::cout << "}\n";
+
+    std::cout << "define void @println_bool(i1 %val) {\n";
+    std::cout << "    %1 = icmp eq i1 %val, 0\n";
+    std::cout << "    %2 = select i1 %1, [5 x i8]* @.flsln, [5 x i8]* @.truln\n";
+    std::cout << "    %3 = bitcast [5 x i8]* %2 to i8*\n";
+    std::cout << "    %4 = call i32 (i8*, ...) @printf(i8* %3)\n";
+    std::cout << "    ret void\n";
+    std::cout << "}\n";
+
+    std::cout << "define void @print_num(i64 %val) {\n";
+    std::cout << "    %1 = bitcast [5 x i8]* @.llu to i8*\n";
+    std::cout << "    %2 = call i32 (i8*, ...) @printf(i8* %1, i64 %val)\n";
+    std::cout << "    ret void\n";
+    std::cout << "}\n";
+
+    std::cout << "define void @println_num(i64 %val) {\n";
+    std::cout << "    %1 = bitcast [6 x i8]* @.lluln to i8*\n";
+    std::cout << "    %2 = call i32 (i8*, ...) @printf(i8* %1, i64 %val)\n";
+    std::cout << "    ret void\n";
+    std::cout << "}\n\n";
+
+    /* compile all functions first */
+    for (auto child : node->children)
+    {
+        if (child->type == Node::NODE_FUN_DEC)
+        {
+            compile_fun_dec(child);
+        }
+    }
 
     std::cout << "define i32 @main(i32, i8**) {\n";
     std::cout << "entry:\n";
@@ -508,23 +658,15 @@ static void compile_program(Node *node)
     comp_scopes.push(CompScope());
     for (auto child : node->children)
     {
-        switch (child->type)
+        if (child->type != Node::NODE_FUN_DEC)
         {
-            case Node::NODE_FUN_DEC:
-            {
-                /* TODO: compile function */
-                break;
-            }
-            default:
-            {
-                compile_statement(child);
-                break;
-            }
+            compile_statement(child);
         }
     }
 
     std::cout << "    ret i32 0\n";
     std::cout << "}\n\n";
+    comp_scopes.pop();
 }
 
 void compile(Node *node)

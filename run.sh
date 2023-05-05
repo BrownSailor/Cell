@@ -1,3 +1,3 @@
-./slang $1 | llc -filetype=obj - -o main.o && clang -o main main.o lib.o && ./main
-rm main.o
+(./slang $1) | clang -O3 -x ir - -o main
+./main
 rm main
