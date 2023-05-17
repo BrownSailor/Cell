@@ -4,6 +4,9 @@ typedef std::unordered_map<std::string, uint64_t> CompScope;
 std::stack<CompScope> comp_scopes;
 std::unordered_set<uint64_t> func_param_ids;
 
+/* map tmp_ids of arrays to tmp_id of size */
+std::unordered_map<uint64_t, uint64_t> array_data;
+
 uint64_t tmp_id = 0;
 uint64_t lab_id = 0;
 
@@ -26,12 +29,56 @@ static std::string get_type(Node *node)
         {
             return "i1";
         }
-        case Token::KEY_STR:
-        {
-            return "i8*";
-        }
         default:
         {
+            switch (node->type_scheme.type)
+            {
+                case TypeScheme::ALPHA:
+                {
+                    uint32_t alpha = node->type_scheme.alpha;
+                    alpha &= ~(0b1111 << 28);
+                    // if (alpha >> 28)
+                    // {
+                    //     alpha &= ~(0b1111 << 28);
+                    //     if (alpha == type_names["num"])
+                    //     {
+                    //         return "i64, i64 %t" + std::to_string(array_data[node->id]) + ", align 16";
+                    //     }
+                    //     if (alpha == type_names["bool"])
+                    //     {
+                    //         return "i1, i64 %t" + std::to_string(array_data[node->id]) + ", align 16";
+                    //     }
+                    // }
+                    if (alpha == type_names["num"])
+                    {
+                        return "i64";
+                    }
+                    if (alpha == type_names["bool"])
+                    {
+                        return "i1";
+                    }
+                }
+                case TypeScheme::FUN_TYPE:
+                {
+                    uint32_t alpha = node->type_scheme.fun_type.second.front();
+                    if (alpha >> 28)
+                    {
+                        return "%__array";
+                    }
+                    if (alpha == type_names["num"])
+                    {
+                        return "i64";
+                    }
+                    if (alpha == type_names["bool"])
+                    {
+                        return "i1";
+                    }
+                }
+                default:
+                {
+                    break;
+                }
+            }
             return "";
         }
     }
@@ -59,21 +106,35 @@ static void compile_literal(Node *node)
             node->id = tmp_id++;
             break;
         }
-        case Token::TOK_STR:
-        {
-            size_t str_size = node->token.data.size() + 1;
-            std::cout << "    %t" << tmp_id << " = alloca [";
-            std::cout << str_size << " x i8], align 1\n";
-            std::cout << "    store [" << str_size  << " x i8] c\"" << node->token.data;
-            std::cout << "\\00\", [" << str_size << " x i8]* %t" << tmp_id << "\n";
-            node->id = tmp_id++;
-            break;
-        }
         default:
         {
             break;
         }
     }
+}
+
+static void compile_key(Node *node)
+{
+    (void)node;
+    // switch (node->token.type)
+    // {
+    //     case Token::KEY_NUM:
+    //     {
+    //         std::cout << "    %t" << tmp_id << " = add i64 0, 8\n";
+    //         node->id = tmp_id++;
+    //         break;
+    //     }
+    //     case Token::KEY_BOOL:
+    //     {
+    //         std::cout << "    %t" << tmp_id << " = add i64 0, 8\n";
+    //         node->id = tmp_id++;
+    //         break;
+    //     }
+    //     default:
+    //     {
+    //         break;
+    //     }
+    // }
 }
 
 static void compile_un_op(Node *node)
@@ -126,8 +187,30 @@ static void compile_bin_op(Node *node)
         }
         case Token::TOK_MUL:
         {
-            std::cout << "    %t" << tmp_id << " = mul i64 %t" << left->id << ", %t" << right->id << "\n";
-            node->id = tmp_id++;
+            if (right->type == Node::NODE_KEY || (right->type_scheme.type == TypeScheme::ALPHA && right->type_scheme.alpha >> 28))
+            {
+                array_data[tmp_id] = left->id;
+                // std::cout << "    %t" << tmp_id << " = alloca i64, i64 %t" << left->id << ", align 16\n";
+                // node->id = tmp_id++;
+    
+                // uint32_t real_size_tmp = tmp_id;
+                // std::cout << "    %t" << tmp_id++ << " = mul i64 %t" << left->id << ", %t" << right->id << "\n";
+
+                // uint32_t zero_tmp = tmp_id;
+                // std::cout << "    %t" << tmp_id++ << " = alloca i8, i64 %t" << real_size_tmp << "\n";
+                // std::cout << "    call void @llvm.memset.p0i8.i64(i8* %t" << zero_tmp << ", i8 0, i64 %t" << real_size_tmp << ", i32 0, i1 false)\n";
+                // 
+                // std::cout << "    %t" << tmp_id++ << " = insertvalue %__array undef, i8* %t" << zero_tmp << ", 0\n";
+                // std::cout << "    %t" << tmp_id++ << " = insertvalue %__array %t" << tmp_id - 2 << ", i64 %t" << left->id << ", 1\n";
+
+                // node->id = tmp_id;
+                // std::cout << "    %t" << tmp_id++ << " = insertvalue %__array %t" << tmp_id - 2 << ", i64 %t" << right->id << ", 2\n";
+            }
+            else
+            {
+                node->id = tmp_id;
+                std::cout << "    %t" << tmp_id++ << " = mul i64 %t" << left->id << ", %t" << right->id << "\n";
+            }
             break;
         }
         case Token::TOK_DIV:
@@ -282,6 +365,13 @@ static void compile_fun_call(Node *node)
         std::cout << "%t" << node->children.back()->id;
     }
     std::cout << ")\n";
+
+    if (node->type_scheme.fun_type.second.size() == 1)
+    {
+        uint32_t alpha = node->type_scheme.fun_type.second.front();
+        node->type_scheme = TypeScheme(TypeScheme::ALPHA);
+        node->type_scheme.alpha = alpha;
+    }
 }
 
 static void compile_var(Node *node)
@@ -289,34 +379,21 @@ static void compile_var(Node *node)
     bool fun_arg = func_param_ids.count(comp_scopes.top()[node->token.data]) != 0;
     if (!fun_arg)
     {
-        std::cout << "    %t" << tmp_id << " = load ";
+        std::string type = get_type(node);
+        uint32_t source = comp_scopes.top()[node->token.data];
 
-        switch (node->type_scheme.type)
+        if (node->children.size())
         {
-            case TypeScheme::ALPHA:
-            {
-                uint32_t alpha = node->type_scheme.alpha_type;
-                if (alpha == type_names["num"])
-                {
-                    std::cout << "i64, i64*";
-                }
-                else if (alpha == type_names["bool"])
-                {
-                    std::cout << "i1, i1*";
-                }
-                break;
-            }
-            case TypeScheme::FUN_TYPE:
-            {
-                break;
-            }
-            default:
-            {
-                break;
-            }
+            compile_statement(node->children.front());
+            std::cout << "    %t" << tmp_id++ << " = sub i64 %t" << tmp_id - 2 << ", 1\n";
+            std::cout << "    %t" << tmp_id << " = getelementptr " << type << ", " << type << "* %t" << source << ", i64 %t" << tmp_id - 1 << "\n";
+
+            // std::cout << "    %t" << tmp_id++ << " = call i8* @__array_at(%__array* %t" << source << ", i64 %t" << tmp_id - 2 << ")\n";
+            // std::cout << "    %t" << tmp_id << " = bitcast i8* %t" << tmp_id - 1 << " to " << type << "*\n";
+            source = tmp_id++;
         }
 
-        std::cout << " %t" << comp_scopes.top()[node->token.data] << "\n";
+        std::cout << "    %t" << tmp_id << " = load " << type << ", " << type << "* %t" << source << "\n";
         node->id = tmp_id++;
     }
     else
@@ -327,27 +404,64 @@ static void compile_var(Node *node)
 
 static void compile_var_asn(Node *node)
 {
-    compile_statement(node->children.front());
-    std::string type;
+    Node *left = node->children.front();
+    Node *right = node->children.back();
 
-    TypeScheme ts = node->children.front()->type_scheme;
+    compile_statement(right);
+    std::string type = get_type(right);
+
+    TypeScheme ts = right->type_scheme;
     switch (ts.type)
     {
         case TypeScheme::ALPHA:
         {
-            uint32_t alpha = ts.alpha_type;
-            if (alpha == type_names["num"])
+            uint32_t alpha = ts.alpha;
+            uint32_t arr_size = alpha >> 28;
+            
+            if (arr_size)
             {
-                type = "i64";
+                alpha &= ~(0b1111 << 28);
             }
-            else if (alpha == type_names["bool"])
+            /* TODO: handle multi-dimensional arrays */
+            /* TODO: handle non-zero initialization */
+
+            if (!comp_scopes.top().count(left->token.data))
             {
-                type = "i1";
+                if (arr_size)
+                {
+                    std::cout << "    %t" << tmp_id << " = alloca " << type << ", i64 %t" << array_data[tmp_id] << "\n";
+                    comp_scopes.top()[left->token.data] = tmp_id;
+                    node->id = tmp_id++;
+
+                    /* TODO: change for bools */
+                    std::cout << "    %t" << tmp_id++ << " = mul i64 %t" << array_data[node->id] << ", 8\n";
+                    std::cout << "    %t" << tmp_id << " = bitcast " << type << "* %t" << node->id << " to i8*\n";
+
+                    std::cout << "    call void @llvm.memset.p0i8.i64(i8* %t" << tmp_id++ << ", i8 0, i64 %t" << tmp_id - 2 << ", i32 0, i1 false)\n";
+
+                    return;
+                }
+                else
+                {
+                    std::cout << "    %t" << tmp_id << " = alloca " << type << "\n";
+                }
+                comp_scopes.top()[left->token.data] = tmp_id;
+                node->id = tmp_id++;
             }
-            else if (alpha == type_names["str"])
+
+            uint32_t source = comp_scopes.top()[left->token.data];
+            if (left->children.size())
             {
-                type = "[14 x i8]";
+                compile_statement(left->children.front());
+                std::cout << "    %t" << tmp_id++ << " = sub i64 %t" << tmp_id - 2 << ", 1\n";
+                std::cout << "    %t" << tmp_id << " = getelementptr " << type << ", " << type << "* %t" << source << ", i64 %t" << tmp_id - 1 << "\n";
+
+                // std::cout << "    %t" << tmp_id++ << " = call i8* @__array_at(%__array* %t" << source << ", i64 %t" << tmp_id - 2 << ")\n";
+                // std::cout << "    %t" << tmp_id << " = bitcast i8* %t" << tmp_id - 1 << " to " << type << "*\n";
+                source = tmp_id++;
             }
+
+            std::cout << "    store " << type << " %t" << right->id << ", " << type << "* %t" << source << "\n";
         }
         case TypeScheme::FUN_TYPE:
         {
@@ -358,22 +472,6 @@ static void compile_var_asn(Node *node)
             break;
         }
     }
-
-    if (!comp_scopes.top().count(node->token.data))
-    {
-        std::cout << "    %t" << tmp_id << " = alloca " << type;
-
-        if (ts.alpha_type == type_names["str"])
-        {
-            std::cout << ", align 1";
-        }
-        std::cout << "\n";
-
-        comp_scopes.top()[node->token.data] = tmp_id;
-        node->id = tmp_id++;
-    }
-
-    std::cout << "    store " << type << " %t" << node->children.front()->id << ", " << type << "* %t" << comp_scopes.top()[node->token.data] << "\n";
 }
 
 static void compile_expr(Node *node)
@@ -388,6 +486,11 @@ static void compile_expr(Node *node)
         case Node::NODE_OP:
         {
             compile_op(node);
+            break;
+        }
+        case Node::NODE_KEY:
+        {
+            compile_key(node);
             break;
         }
         case Node::NODE_FUN_CALL:
@@ -479,7 +582,7 @@ static void compile_if(Node *node)
             std::cout << "    br label %l" << end << "\n";
             std::cout << "l" << end << ":\n";
 
-            if (node->type_scheme.alpha_type != type_names["nil"])
+            if (node->type_scheme.alpha != type_names["nil"])
             {
                 node->id = tmp_id;
                 std::cout << "    %t" << tmp_id++ << " = select i1 %t" << cond->id;
@@ -610,8 +713,8 @@ static void compile_program(Node *node)
     std::cout << "@.truln = private unnamed_addr constant [5 x i8] c\"tru\\0A\\00\", align 1\n";
     std::cout << "@.flsln = private unnamed_addr constant [5 x i8] c\"fls\\0A\\00\", align 1\n";
 
-    std::cout << "@.llu = private unnamed_addr constant [5 x i8] c\"%llu\\00\", align 1\n";
-    std::cout << "@.lluln = private unnamed_addr constant [6 x i8] c\"%llu\\0A\\00\", align 1\n";
+    std::cout << "@.lld = private unnamed_addr constant [5 x i8] c\"%lld\\00\", align 1\n";
+    std::cout << "@.lldln = private unnamed_addr constant [6 x i8] c\"%lld\\0A\\00\", align 1\n";
 
     std::cout << "declare i32 @printf(i8*, ...)\n";
 
@@ -632,16 +735,30 @@ static void compile_program(Node *node)
     std::cout << "}\n";
 
     std::cout << "define void @print_num(i64 %val) {\n";
-    std::cout << "    %1 = bitcast [5 x i8]* @.llu to i8*\n";
+    std::cout << "    %1 = bitcast [5 x i8]* @.lld to i8*\n";
     std::cout << "    %2 = call i32 (i8*, ...) @printf(i8* %1, i64 %val)\n";
     std::cout << "    ret void\n";
     std::cout << "}\n";
 
     std::cout << "define void @println_num(i64 %val) {\n";
-    std::cout << "    %1 = bitcast [6 x i8]* @.lluln to i8*\n";
+    std::cout << "    %1 = bitcast [6 x i8]* @.lldln to i8*\n";
     std::cout << "    %2 = call i32 (i8*, ...) @printf(i8* %1, i64 %val)\n";
     std::cout << "    ret void\n";
     std::cout << "}\n\n";
+
+    std::cout << "declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)\n\n";
+
+    // std::cout << "%__array = type { i8*, i64, i64 }\n";
+    // std::cout << "define i8* @__array_at(%__array* %0, i64 %1) {\n";
+    // std::cout << "    %3 = getelementptr %__array, %__array* %0, i32 0, i32 2\n";
+    // std::cout << "    %4 = load i64, i64* %3\n";
+    // std::cout << "    %5 = sub i64 %1, 1\n";
+    // std::cout << "    %6 = mul i64 %5, %4\n";
+    // std::cout << "    %7 = getelementptr %__array, %__array* %0, i32 0, i32 0\n";
+    // std::cout << "    %8 = load i8*, i8** %7\n";
+    // std::cout << "    %9 = getelementptr i8, i8* %8, i64 %6\n";
+    // std::cout << "    ret i8* %9\n";
+    // std::cout << "}\n\n";
 
     /* compile all functions first */
     for (auto child : node->children)

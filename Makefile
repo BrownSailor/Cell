@@ -11,7 +11,7 @@ INCLUDES = $(shell echo $(INC)/*.hpp)
 SOURCES = $(shell echo $(SRC)/*.cpp)
 OBJECTS = $(SOURCES:$(SRC)/%.cpp=$(BIN)/%.o)
 
-slang: $(OBJECTS)
+slangc: $(OBJECTS)
 	@echo Generating executable
 	@$(CXX) $(LDFLAGS) -o $@ $^
 	@echo Linking external dependencies
@@ -26,4 +26,4 @@ clean:
 	@rm -rf bin
 	@rm -rf *.o
 	@echo Cleaning executable
-	@rm slang
+	@rm slangc

@@ -11,6 +11,7 @@ extern std::unordered_map<std::string, uint32_t> type_names;
 extern std::unordered_map<uint32_t, std::string> type_idens;
 
 void initialize_types();
+TypeScheme construct_type(uint32_t type);
 void type_check(Node *root);
 
 #endif

@@ -21,6 +21,7 @@ static void built_in_print_bools(bool ln)
     out->children.push_back(nil);
 
     node->type_scheme = TypeScheme(TypeScheme::FUN_TYPE);
+
     node->type_scheme.fun_type.first.push_back(type_names["bool"]);
     node->type_scheme.fun_type.second.push_back(type_names["nil"]);
 
@@ -48,9 +49,10 @@ static void built_in_print_nums(bool ln)
     out->children.push_back(nil);
 
     node->type_scheme = TypeScheme(TypeScheme::FUN_TYPE);
+
     node->type_scheme.fun_type.first.push_back(type_names["num"]);
     node->type_scheme.fun_type.second.push_back(type_names["nil"]);
-
+    
     ln ? functions["println"].insert(node) : functions["print"].insert(node);
 }
 
@@ -67,11 +69,11 @@ void free_built_ins()
 {
     for (auto node : functions["print"])
     {
-        free_tree(node);
+        if (node) free_tree(node);
     }
 
     for (auto node : functions["println"])
     {
-        free_tree(node);
+        if (node) free_tree(node);
     }
 }

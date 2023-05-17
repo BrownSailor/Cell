@@ -1,6 +1,7 @@
-fn gcd: num num -> num {
-    a b
-    ? b = 0 { a } | { gcd (b a % b) }
-}
+table: 20 * num
 
-println gcd (16 36)
+i: 1
+@ i <= 20 {
+    println table[i]
+    i: i + 1
+}

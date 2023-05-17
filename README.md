@@ -9,17 +9,18 @@
 
 ```
 ; hello.sl
-fn hello {
+fn hello: nil -> nil {
     println "Hello, world!"
 }
 ```
 
 ```
 ; fizzubuzz.sl
-fn fizzbuzz: num {
-    in >> n
+fn fizzbuzz: num -> nil {
+    n
 
-    @ i in 1 to n by 1 {
+    i: 1
+    @ i <= n {
         ? i % 3 = 0 and i % 5 = 0 {
             print "FizzBuzz"
         } | i % 3 = 0 {
@@ -29,6 +30,8 @@ fn fizzbuzz: num {
         } | {
             print i
         }
+
+        i: i + 1
     }
 }
 ```

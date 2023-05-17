@@ -53,29 +53,11 @@ static Node *parse_fact(std::list<Token> &tokens)
         case Token::KEY_STR:
         case Token::KEY_NIL:
         {
-            std::cout << tokens.size() << "\n";
-            print_token(tokens.front());
             node = new_node(tokens.front());
             node->type = Node::NODE_KEY;
             tokens.pop_front();
             break;
         }
-
-        // case Token::TOK_IN:
-        // {
-        //     node = new_node(tokens.front());
-        //     node->type = Node::NODE_KEY;
-        //     tokens.pop_front();
-        //     break;
-        // }
-
-        // case Token::TOK_OUT:
-        // {
-        //     node = new_node(tokens.front());
-        //     node->type = Node::NODE_KEY;
-        //     tokens.pop_front();
-        //     break;
-        // }
 
         case Token::TOK_LPAREN:
         {
@@ -86,6 +68,7 @@ static Node *parse_fact(std::list<Token> &tokens)
             if (tokens.front().type != Token::TOK_RPAREN)
             {
                 std::cerr << "Parentheses mismatch!\n";
+                print_location(tokens.front());
                 std::cout << tokens.front().file << ":" << tokens.front().row << ":" << tokens.front().col << "\n";
                 exit(EXIT_FAILURE);
             }
@@ -108,6 +91,59 @@ static Node *parse_fact(std::list<Token> &tokens)
             node = new_node(tokens.front());
             tokens.pop_front();
             node->type = Node::NODE_VAR;
+
+            if (tokens.front().type == Token::TOK_LBRACK)
+            {
+                tokens.pop_front();
+
+                while (tokens.front().type != Token::TOK_RBRACK)
+                {
+                    node->children.push_back(parse_expr(tokens));
+                }
+
+                /* expect ] */
+                tokens.pop_front();
+            }
+
+            if (functions.count(node->token.data))
+            {
+                node->type = Node::NODE_FUN_CALL;
+
+                /* more than one function argument */
+                if (tokens.front().type == Token::TOK_LPAREN)
+                {
+                    tokens.pop_front();
+                    while (tokens.size() && tokens.front().type != Token::TOK_RPAREN)
+                    {
+                        node->children.push_back(parse_expr(tokens));
+                    }
+
+                    /* expect ) */
+                    tokens.pop_front();
+                }
+                else if (tokens.size())
+                {
+                    node->children.push_back(parse_expr(tokens));
+                }
+            }
+
+            break;
+        }
+
+        case Token::TOK_LBRACK:
+        {
+            node = new_node(tokens.front());
+            node->token.data = "[]";
+            node->type = Node::NODE_LIT;
+            tokens.pop_front();
+
+            while (tokens.front().type != Token::TOK_RBRACK)
+            {
+                node->children.push_back(parse_expr(tokens));
+            }
+
+            /* expect ] */
+            tokens.pop_front();
             break;
         }
 
@@ -133,7 +169,7 @@ static Node *parse_term(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_fact(tokens));
+        node = binary(node, op, parse_term(tokens));
     }
 
     return node;
@@ -149,21 +185,6 @@ static Node *parse_add_sub(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_term(tokens));
-    }
-
-    return node;
-}
-
-static Node *parse_range(std::list<Token> &tokens)
-{
-    Node *node = parse_add_sub(tokens);
-    
-    if (tokens.front().type == Token::TOK_RANGE)
-    {
-        Node *op = new_node(tokens.front());
-        tokens.pop_front();
-
         node = binary(node, op, parse_add_sub(tokens));
     }
 
@@ -172,7 +193,7 @@ static Node *parse_range(std::list<Token> &tokens)
 
 static Node *parse_lt_gt(std::list<Token> &tokens)
 {
-    Node *node = parse_range(tokens);
+    Node *node = parse_add_sub(tokens);
 
     while (tokens.front().type == Token::TOK_LT ||
            tokens.front().type == Token::TOK_GT ||
@@ -182,7 +203,7 @@ static Node *parse_lt_gt(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_add_sub(tokens));
+        node = binary(node, op, parse_lt_gt(tokens));
     }
 
     return node;
@@ -198,7 +219,7 @@ static Node *parse_eq_neq(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_lt_gt(tokens));
+        node = binary(node, op, parse_eq_neq(tokens));
     }
 
     return node;
@@ -213,7 +234,7 @@ static Node *parse_and(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_eq_neq(tokens));
+        node = binary(node, op, parse_and(tokens));
     }
 
     return node;
@@ -228,62 +249,7 @@ static Node *parse_or(std::list<Token> &tokens)
         Node *op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(node, op, parse_and(tokens));
-    }
-
-    return node;
-}
-
-// static Node *parse_in_out(std::list<Token> &tokens)
-// {
-//     Node *node = parse_or(tokens);
-// 
-//     while (tokens.front().type == Token::TOK_READ ||
-//            tokens.front().type == Token::TOK_WRITE)
-//     {
-//         tokens.pop_front();
-//         node->children.push_back(parse_expr(tokens));
-//     }
-// 
-//     return node;
-// }
-
-static Node *parse_expr(std::list<Token> &tokens)
-{
-    Node *node = parse_or(tokens);
-
-    if (functions.count(node->token.data))
-    {
-        node->type = Node::NODE_FUN_CALL;
-
-        /* more than one function argument */
-        if (tokens.front().type == Token::TOK_LPAREN)
-        {
-            tokens.pop_front();
-            while (tokens.size() && tokens.front().type != Token::TOK_RPAREN)
-            {
-                node->children.push_back(parse_expr(tokens));
-            }
-
-            /* expect ) */
-            tokens.pop_front();
-        }
-        else if (tokens.size())
-        {
-            node->children.push_back(parse_expr(tokens));
-        }
-
-        return node;
-    }
-
-    /* TODO: parse variable assignment syntax */
-    if (tokens.front().type == Token::TOK_COLON)
-    {
-        node->type = Node::NODE_VAR_ASN;
-        tokens.pop_front();
-        
-        node->children.push_back(parse_statement(tokens));
-        scopes.top().insert(node->token.data);
+        node = binary(node, op, parse_or(tokens));
     }
 
     return node;
@@ -321,6 +287,33 @@ static Node *parse_if(std::list<Token> &tokens)
     {
         Node *els = parse_if(tokens);
         node->children.push_back(els);
+    }
+
+    return node;
+}
+
+static Node *parse_expr(std::list<Token> &tokens)
+{
+    if (tokens.front().type == Token::TOK_IF)
+    {
+        return parse_if(tokens);
+    }
+
+    Node *node = parse_or(tokens);
+
+
+    /* TODO: parse variable assignment syntax */
+    if (tokens.front().type == Token::TOK_COLON)
+    {
+        Node *asn = new Node;
+        asn->type = Node::NODE_VAR_ASN;
+        asn->children.push_back(node);
+        tokens.pop_front();
+
+        asn->children.push_back(parse_expr(tokens));
+        
+        scopes.top().insert(node->token.data);
+        node = asn;
     }
 
     return node;
@@ -368,11 +361,6 @@ static Node *parse_statement(std::list<Token> &tokens)
         case Token::TOK_LOOP:
         {
             node = parse_loop(tokens);
-            break;
-        }
-        case Token::TOK_IF:
-        {
-            node = parse_if(tokens);
             break;
         }
         default:
@@ -479,8 +467,9 @@ void free_tree(Node *node)
 
     for (auto child : node->children)
     {
-        free_tree(child);
+        if (child) free_tree(child);
     }
 
     delete node;
+    node = nullptr;
 }
