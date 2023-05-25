@@ -1,10 +1,4 @@
-#include <iostream>
-
-#include "lexer.hpp"
-#include "built_in.hpp"
 #include "parser.hpp"
-#include "types.hpp"
-#include "compiler.hpp"
 
 /*
  * pretty_print_tabs
@@ -34,7 +28,7 @@ static void pretty_print_tabs(int num_tabs)
  *    Returns: none
  *      Notes: the output stream is defaulted to std::cerr
  */
-static void pretty_print_helper(Node *node, int num_tabs)
+static void pretty_print_helper(std::unique_ptr<Node> node, int num_tabs)
 {
     switch (node->type)
     {
@@ -58,31 +52,14 @@ static void pretty_print_helper(Node *node, int num_tabs)
             std::cerr << "body\n";
             break;
         }
+        case Node::NODE_VAR_ASN:
+        {
+            std::cerr << "set\n";
+            break;
+        }
         default:
         {
-            std::cerr << node->token.data << ": ";
-            switch (node->type_scheme.type)
-            {
-                case TypeScheme::ALPHA:
-                {
-                    std::cerr << type_idens[node->type_scheme.alpha_type];
-                    break;
-                }
-                case TypeScheme::FUN_TYPE:
-                {
-                    for (auto t : node->type_scheme.fun_type.second)
-                    {
-                        std::cerr << type_idens[t] << " ";
-                    }
-                    break;
-                }
-                default:
-                {
-                    break;
-                }
-            }
-
-            std::cerr << "\n";
+            std::cerr << node->token.data << "\n";
             break;
         }
     }
@@ -90,7 +67,7 @@ static void pretty_print_helper(Node *node, int num_tabs)
     for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))
     {
         pretty_print_tabs(num_tabs + 1);
-        pretty_print_helper(*it, num_tabs + 1);
+        pretty_print_helper(std::move(*it), num_tabs + 1);
     }
 }
 
@@ -100,23 +77,21 @@ static void pretty_print_helper(Node *node, int num_tabs)
  * Parameters: node - the node to start printing the tree from
  *    Returns: none
  */
-void pretty_print(Node *node)
+void pretty_print(std::unique_ptr<Node> node)
 {
-    pretty_print_helper(node, 0);
+    pretty_print_helper(std::move(node), 0);
     std::cerr << "\n";
 }
 
 void usage()
 {
-    std::cerr << "Usage: ./slang executableName inputFile\n";
+    std::cerr << "slang compiler\n";
+    std::cerr << "Usage: ./slang file\n";
     exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv)
 {
-    initialize_types();
-    initialize_built_ins();
-
     if (argc != 2)
     {
         usage();
@@ -127,22 +102,9 @@ int main(int argc, char **argv)
     /* lex file to tokens */
     std::list<Token> tokens = lex(file);
 
-    /* parse abstract syntax tree */
-    Node *root = parse_program(tokens);
+    std::unique_ptr<Node> root = parse_program(tokens);
 
-    /* type check the AST */
-    type_check(root);
-    // pretty_print(root);
-
-    /* generate assembly based on syntax tree */
-    compile(root);
-
-    /* create a relocatable object file */
-    // std::string assemble = "llc -march=x86_64 -filetype=obj " + file + ".ll -o " + file + ".o";
-    // system(assemble.c_str());
-    
-    free_built_ins();
-    free_tree(root);
+    pretty_print(std::move(root));
 
     return 0;
 }

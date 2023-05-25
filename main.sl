@@ -1,15 +1,43 @@
-var0: 3
-var1: tru
-var2: 3 >= 4
-var3: not (not var1) and (not var2)
+; Problem 1
+; print the sum of all numbers under 1000 divisible by 3 or 5
 
-println var0
-println var1
-println var2
-println var3
+; fn solve: nil -> nil {
+;     sum: 0
+;     i: 0
+; 
+;     @ i < 1000 {
+;         ? i % 3 = 0 or i % 5 = 0 {
+;             sum: sum + i
+;         }
+; 
+;         i: i + 1
+;     }
+; 
+;     println sum
+; }
+; 
+; solve
 
-i: 3
-@ i < 10 {
-    println i
-    i: i + 1
+; Problem 5
+; print the smallest number divisible by every number between 1 and 20 (inclusive)
+
+fn gcd: num num -> num {
+    a b
+    ? b = 0 { a } | { gcd (b a % b) }
 }
+
+fn solve: nil -> nil {
+    N: 20
+
+    ans: 2
+
+    i: 3
+    @ i <= N {
+        ans: ans * i / gcd (ans i)
+        i: i + 1
+    }
+    
+    println ans
+}
+
+solve

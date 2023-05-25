@@ -14,9 +14,6 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "or", Token::TOK_OR },
     { "not", Token::TOK_NOT },
     { "fn", Token::KEY_FUN },
-    { "in", Token::TOK_IN },
-    { "out", Token::TOK_OUT },
-    { "by", Token::TOK_BY }
 };
 
 Token new_token(Token::Type type, std::string data, int col, int row, std::string file)
@@ -68,23 +65,9 @@ static void lex_line(const std::string &line, std::list<Token> &tokens, int row,
                 break;
             }
             
-            case '.':
+            case ';':
             {
-                if (curr.size())
-                {
-                    tokens.push_back(lex_word(curr, col, row, file));
-                    curr = "";
-                }
-
-                col = col_end;
-
-                if (line[i + 1] == '.')
-                {
-                    tokens.push_back(new_token(Token::TOK_RANGE, "..", col, row, file));
-                    i++;
-                    col_end += 2;
-                }
-                break;
+                return;
             }
 
             case '\'':
@@ -187,12 +170,6 @@ static void lex_line(const std::string &line, std::list<Token> &tokens, int row,
                     i++;
                     col_end += 2;
                 }
-                else if (line[i + 1] == '<')
-                {
-                    tokens.push_back(new_token(Token::TOK_WRITE, "<<", col, row, file));
-                    i++;
-                    col_end += 2;
-                }
                 else
                 {
                     tokens.push_back(new_token(Token::TOK_LT, "<", col, row, file));
@@ -214,12 +191,6 @@ static void lex_line(const std::string &line, std::list<Token> &tokens, int row,
                 if (line[i + 1] == '=')
                 {
                     tokens.push_back(new_token(Token::TOK_GTE, ">=", col, row, file));
-                    i++;
-                    col_end += 2;
-                }
-                else if (line[i + 1] == '>')
-                {
-                    tokens.push_back(new_token(Token::TOK_READ, ">>", col, row, file));
                     i++;
                     col_end += 2;
                 }
@@ -305,19 +276,6 @@ static void lex_line(const std::string &line, std::list<Token> &tokens, int row,
 
                 col = col_end++;
                 tokens.push_back(new_token(Token::TOK_MOD, "%", col, row, file));
-                break;
-            }
-
-            case ';':
-            {
-                if (curr.size())
-                {
-                    tokens.push_back(lex_word(curr, col, row, file));
-                    curr = "";
-                }
-
-                col = col_end++;
-                tokens.push_back(new_token(Token::TOK_SEMI, ";", col, row, file));
                 break;
             }
 
@@ -451,55 +409,49 @@ std::list<Token> lex(const std::string &file)
 
 void print_token(Token token)
 {
-        std::cout << token.file << ":" << token.row << ":" << token.col << "\t";
+    std::cout << token.file << ":" << token.row << ":" << token.col << "\t";
 
-        switch (token.type)
-        {
-            case Token::KEY_NUM: std::cout << "KEY_NUM\t"; break;
-            case Token::KEY_BOOL: std::cout << "KEY_BOOL"; break;
-            case Token::TOK_TRU: std::cout << "KEY_TRU\t"; break;
-            case Token::TOK_FLS: std::cout << "KEY_FLS\t"; break;
-            case Token::KEY_STR: std::cout << "KEY_STR\t"; break;
-            case Token::KEY_NIL: std::cout << "KEY_NIL\t"; break;
-            case Token::TOK_AND: std::cout << "TOK_AND\t"; break;
-            case Token::TOK_OR: std::cout << "TOK_OR\t"; break;
-            case Token::TOK_NOT: std::cout << "TOK_NOT\t"; break;
-            case Token::KEY_FUN: std::cout << "KEY_FUN\t"; break;
-            case Token::TOK_IN: std::cout << "TOK_IN\t"; break;
-            case Token::TOK_OUT: std::cout << "TOK_OUT\t"; break;
-            case Token::TOK_LPAREN: std::cout << "TOK_LPAREN"; break;
-            case Token::TOK_LBRACK: std::cout << "TOK_LBRACK"; break;
-            case Token::TOK_LBRACE: std::cout << "TOK_LBRACE"; break;
-            case Token::TOK_RPAREN: std::cout << "TOK_RPAREN"; break;
-            case Token::TOK_RBRACK: std::cout << "TOK_RBRACK"; break;
-            case Token::TOK_RBRACE: std::cout << "TOK_RBRACE"; break;
-            case Token::TOK_ARROW: std::cout << "TOK_ARROW"; break;
-            case Token::TOK_SEMI: std::cout << "TOK_SEMI"; break;
-            case Token::TOK_COLON: std::cout << "TOK_COLON"; break;
-            case Token::TOK_ADD: std::cout << "TOK_ADD\t"; break;
-            case Token::TOK_SUB: std::cout << "TOK_SUB\t"; break;
-            case Token::TOK_MUL: std::cout << "TOK_MUL\t"; break;
-            case Token::TOK_DIV: std::cout << "TOK_DIV\t"; break;
-            case Token::TOK_MOD: std::cout << "TOK_MOD\t"; break;
-            case Token::TOK_SHL: std::cout << "TOK_SHL\t"; break;
-            case Token::TOK_SHR: std::cout << "TOK_SHR\t"; break;
-            case Token::TOK_EQ: std::cout << "TOK_EQ\t"; break;
-            case Token::TOK_NEQ: std::cout << "TOK_NEQ\t"; break;
-            case Token::TOK_LT: std::cout << "TOK_LT\t"; break;
-            case Token::TOK_LTE: std::cout << "TOK_LTE\t"; break;
-            case Token::TOK_GT: std::cout << "TOK_GT\t"; break;
-            case Token::TOK_GTE: std::cout << "TOK_GTE\t"; break;
-            case Token::TOK_READ: std::cout << "TOK_READ"; break;
-            case Token::TOK_WRITE: std::cout << "TOK_WRITE"; break;
-            case Token::TOK_LOOP: std::cout << "TOK_LOOP"; break;
-            case Token::TOK_RANGE: std::cout << "TOK_RANGE\t"; break;
-            case Token::TOK_BY: std::cout << "TOK_BY\t"; break;
-            case Token::TOK_IF: std::cout << "TOK_IF\t"; break;
-            case Token::TOK_ELSE: std::cout << "TOK_ELSE"; break;
-            case Token::TOK_NUM: std::cout << "TOK_NUM\t"; break;
-            case Token::TOK_STR: std::cout << "TOK_STR\t"; break;
-            case Token::TOK_ID: std::cout << "TOK_ID\t"; break;
-            case Token::TOK_EOL: std::cout << "TOK_EOL\t"; break;
-        }
-        std::cout << "\t" << token.data << "\n";
+    switch (token.type)
+    {
+        case Token::KEY_NUM: std::cout << "KEY_NUM\t"; break;
+        case Token::KEY_BOOL: std::cout << "KEY_BOOL"; break;
+        case Token::TOK_TRU: std::cout << "KEY_TRU\t"; break;
+        case Token::TOK_FLS: std::cout << "KEY_FLS\t"; break;
+        case Token::KEY_STR: std::cout << "KEY_STR\t"; break;
+        case Token::KEY_NIL: std::cout << "KEY_NIL\t"; break;
+        case Token::TOK_AND: std::cout << "TOK_AND\t"; break;
+        case Token::TOK_OR: std::cout << "TOK_OR\t"; break;
+        case Token::TOK_NOT: std::cout << "TOK_NOT\t"; break;
+        case Token::KEY_FUN: std::cout << "KEY_FUN\t"; break;
+        case Token::TOK_LPAREN: std::cout << "TOK_LPAREN"; break;
+        case Token::TOK_LBRACK: std::cout << "TOK_LBRACK"; break;
+        case Token::TOK_LBRACE: std::cout << "TOK_LBRACE"; break;
+        case Token::TOK_RPAREN: std::cout << "TOK_RPAREN"; break;
+        case Token::TOK_RBRACK: std::cout << "TOK_RBRACK"; break;
+        case Token::TOK_RBRACE: std::cout << "TOK_RBRACE"; break;
+        case Token::TOK_ARROW: std::cout << "TOK_ARROW"; break;
+        case Token::TOK_SEMI: std::cout << "TOK_SEMI"; break;
+        case Token::TOK_COLON: std::cout << "TOK_COLON"; break;
+        case Token::TOK_ADD: std::cout << "TOK_ADD\t"; break;
+        case Token::TOK_SUB: std::cout << "TOK_SUB\t"; break;
+        case Token::TOK_MUL: std::cout << "TOK_MUL\t"; break;
+        case Token::TOK_DIV: std::cout << "TOK_DIV\t"; break;
+        case Token::TOK_MOD: std::cout << "TOK_MOD\t"; break;
+        case Token::TOK_SHL: std::cout << "TOK_SHL\t"; break;
+        case Token::TOK_SHR: std::cout << "TOK_SHR\t"; break;
+        case Token::TOK_EQ: std::cout << "TOK_EQ\t"; break;
+        case Token::TOK_NEQ: std::cout << "TOK_NEQ\t"; break;
+        case Token::TOK_LT: std::cout << "TOK_LT\t"; break;
+        case Token::TOK_LTE: std::cout << "TOK_LTE\t"; break;
+        case Token::TOK_GT: std::cout << "TOK_GT\t"; break;
+        case Token::TOK_GTE: std::cout << "TOK_GTE\t"; break;
+        case Token::TOK_LOOP: std::cout << "TOK_LOOP"; break;
+        case Token::TOK_IF: std::cout << "TOK_IF\t"; break;
+        case Token::TOK_ELSE: std::cout << "TOK_ELSE"; break;
+        case Token::TOK_NUM: std::cout << "TOK_NUM\t"; break;
+        case Token::TOK_STR: std::cout << "TOK_STR\t"; break;
+        case Token::TOK_ID: std::cout << "TOK_ID\t"; break;
+    }
+
+    std::cout << "\t" << token.data << "\n";
 }

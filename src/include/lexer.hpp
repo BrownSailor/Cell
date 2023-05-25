@@ -50,25 +50,17 @@ struct Token
         TOK_GT,
         TOK_GTE,
 
-        TOK_IN,
-        TOK_OUT,
-        TOK_READ,
-        TOK_WRITE,
-
         TOK_LOOP,
-        TOK_RANGE,
-        TOK_BY,
         TOK_IF,
         TOK_ELSE,
 
-        /* Types */
+        /* Literals */
         TOK_NUM,
         TOK_TRU,
         TOK_FLS,
         TOK_STR,
-        TOK_ID,
 
-        TOK_EOL,
+        TOK_ID,
     };
 
     Type type;

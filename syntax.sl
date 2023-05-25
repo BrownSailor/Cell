@@ -3,7 +3,7 @@ fn hello: nil -> nil {
 }
 
 fn fizzbuzz: num -> nil {
-    in >> N
+    N
 
     i: 1
     @ i <= N {
@@ -22,16 +22,40 @@ fn fizzbuzz: num -> nil {
 }
 
 fn gcd: num num -> num {
-    in >> a >> b
+    a b
 
     ? b = 0 {
-        out << a
+        a
     } | {
-        out << gcd (b a % b)
+        gcd (b a % b)
     }
 }
 
 fn divmod: num num -> num num {
-    in >> n >> k
-    out << n / k << n % k
+    n k
+
+    n / k
+    n % k
+}
+
+fn prime: num -> bool {
+    N
+
+    not_primes: N * bool
+    not_primes[1]: tru
+
+    i: 2
+    @ i <= N {
+
+        j: i * 2
+        @ j <= N {
+            not_primes[j]: tru
+
+            j: j + i
+        }
+
+        i: i + 1
+    }
+
+    not not_primes[N]
 }

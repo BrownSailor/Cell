@@ -1,78 +1,13 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <cstdint>
 #include "lexer.hpp"
 #include <string>
 #include <vector>
 #include <stack>
 #include <unordered_set>
-
-struct TypeScheme
-{
-    enum Type
-    {
-        ALPHA,
-        FUN_TYPE,
-        NONE
-    };
-    
-    Type type;
-    union
-    {
-        uint32_t alpha_type;
-        std::pair<std::vector<uint32_t>, std::vector<uint32_t>> fun_type;
-    };
-
-    TypeScheme()
-    {
-        type = NONE;
-    }
-
-    TypeScheme(Type t)
-    {
-        if (t == FUN_TYPE)
-        {
-            new (&fun_type) std::pair<std::vector<uint32_t>, std::vector<uint32_t>>();
-        }
-        type = t;
-    }
-
-    TypeScheme(const TypeScheme &other)
-    {
-        type = other.type;
-        if (type == ALPHA)
-        {
-            alpha_type = other.alpha_type;
-        }
-        else if (type == FUN_TYPE)
-        {
-            new (&fun_type) std::pair<std::vector<uint32_t>, std::vector<uint32_t>>(other.fun_type);
-        }
-    }
-
-    TypeScheme operator=(const TypeScheme &other)
-    {
-        type = other.type;
-        if (type == ALPHA)
-        {
-            alpha_type = other.alpha_type;
-        }
-        else if (type == FUN_TYPE)
-        {
-            new (&fun_type) std::pair<std::vector<uint32_t>, std::vector<uint32_t>>(other.fun_type);
-        }
-
-        return *this;
-    }
-
-    ~TypeScheme()
-    {
-        if (type == FUN_TYPE)
-        {
-            fun_type.~pair();
-        }
-    }
-};
+#include <memory>
 
 struct Node
 {
@@ -83,7 +18,7 @@ struct Node
         NODE_OP,
         NODE_KEY,
         NODE_VAR,
-        NODE_VAR_ASN,
+        NODE_VAR_ASN,   // SET
         NODE_IF,
         NODE_LOOP,
         NODE_BODY,
@@ -97,23 +32,10 @@ struct Node
     Type type = NODE_NONE;
     Token token;
 
-    /* 32 bits for an identifier for use with LLVM generator */
-    uint32_t id = 0;
-    TypeScheme type_scheme;
-    std::vector<Node *> children;
+    std::vector<std::unique_ptr<Node>> children;
 };
 
-template<> struct std::hash<Node *>
-{
-    size_t operator()(const Node *node) const
-    {
-        return reinterpret_cast<uintptr_t>(node);
-    }
-};
-
-extern std::unordered_map<std::string, std::unordered_set<Node *>> functions;
-
-Node *parse_program(std::list<Token> &tokens);
-void free_tree(Node *node);
+extern std::unordered_set<std::string> functions;
+std::unique_ptr<Node> parse_program(std::list<Token> &tokens);
 
 #endif
