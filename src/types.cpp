@@ -20,7 +20,7 @@ bool operator==(const TypeScheme &left, const TypeScheme &right)
             }
             case TypeScheme::FUN_TYPE:
             {
-                return left.fun_type == right.fun_type;
+                return left.params == right.params && left.alpha == right.alpha;
             }
             default:
             {
@@ -28,18 +28,14 @@ bool operator==(const TypeScheme &left, const TypeScheme &right)
             }
         }
     }
-
-    if (left.type == TypeScheme::ALPHA && right.type == TypeScheme::FUN_TYPE)
+    else
     {
-        return right.fun_type.second == left.alpha;
+        if (left.type == TypeScheme::NONE || right.type == TypeScheme::NONE)
+        {
+            return false;
+        }
+        return left.alpha == right.alpha;
     }
-
-    if (right.type == TypeScheme::ALPHA && left.type == TypeScheme::FUN_TYPE)
-    {
-        return left.fun_type.second == right.alpha;
-    }
-
-    return false;
 }
 
 bool operator!=(const TypeScheme &left, const TypeScheme &right)
@@ -154,13 +150,9 @@ static std::unique_ptr<Node> type_check_literal(std::unique_ptr<Node> root)
             switch (ts.type)
             {
                 case TypeScheme::ALPHA:
-                {
-                    root->type_scheme.alpha |= ts.alpha;
-                    break;
-                }
                 case TypeScheme::FUN_TYPE:
                 {
-                    root->type_scheme.alpha |= ts.fun_type.second;
+                    root->type_scheme.alpha |= ts.alpha;
                     break;
                 }
                 default:
@@ -253,7 +245,7 @@ static std::unique_ptr<Node> type_check_bin_op(std::unique_ptr<Node> root)
             }
             else if (right->type_scheme == construct_type(type_names["num"]))
             {
-                uint32_t r_alpha = right->type_scheme.type == TypeScheme::FUN_TYPE ? right->type_scheme.fun_type.second : right->type_scheme.alpha;
+                uint32_t r_alpha = right->type_scheme.alpha;
                 uint32_t arr_size = r_alpha >> 28;
                 if (arr_size)
                 {
@@ -378,13 +370,9 @@ static std::unique_ptr<Node> type_check_fun_call(std::unique_ptr<Node> root)
             switch (node->type_scheme.type)
             {
                 case TypeScheme::ALPHA:
-                {
-                    root->type_scheme.fun_type.first.push_back(node->type_scheme.alpha);
-                    break;
-                }
                 case TypeScheme::FUN_TYPE:
                 {
-                    root->type_scheme.fun_type.first.push_back(node->type_scheme.fun_type.second);
+                    root->type_scheme.params.push_back(node->type_scheme.alpha);
                     break;
                 }
                 default:
@@ -396,13 +384,13 @@ static std::unique_ptr<Node> type_check_fun_call(std::unique_ptr<Node> root)
             root->children[i] = std::move(node);
         }
         
-        root->type_scheme.fun_type.second = functions[root->token.data].fun_type.second;
+        root->type_scheme.alpha = functions[root->token.data].alpha;
         return root;
     }
     else
     {
-        root->type_scheme.fun_type.first.push_back(type_names["nil"]);
-        root->type_scheme.fun_type.second = functions[root->token.data].fun_type.second;
+        root->type_scheme.params.push_back(type_names["nil"]);
+        root->type_scheme.alpha = functions[root->token.data].alpha;
         return root;
     }
 
@@ -485,7 +473,7 @@ static std::unique_ptr<Node> type_check_var_asn(std::unique_ptr<Node> root)
                 }
                 case TypeScheme::FUN_TYPE:
                 {
-                    auto ret = root->children[i]->type_scheme.fun_type.second;
+                    auto ret = root->children[i]->type_scheme.alpha;
                     if (ret != type_names["num"])
                     {
                         print_location(root->children[i]->token);
@@ -643,7 +631,6 @@ static std::unique_ptr<Node> type_check_if(std::unique_ptr<Node> root)
             {
                 print_location(cond->token);
                 std::cerr << "Type of conditional in if-else-clause does not match type `bool`\n";
-                std::cerr << type_idens[cond->type_scheme.alpha] << "\n";
                 exit(EXIT_FAILURE);
             }
             
@@ -696,13 +683,9 @@ static std::unique_ptr<Node> type_check_if(std::unique_ptr<Node> root)
         switch (root->children.back()->children.back()->type_scheme.type)
         {
             case TypeScheme::ALPHA:
-            {
-                root->type_scheme.fun_type.second = root->children.back()->children.back()->type_scheme.alpha;
-                break;
-            }
             case TypeScheme::FUN_TYPE:
             {
-                root->type_scheme.fun_type.second = root->children.back()->children.back()->type_scheme.fun_type.second;
+                root->type_scheme.alpha = root->children.back()->children.back()->type_scheme.alpha;
                 break;
             }
             default:
@@ -806,11 +789,11 @@ static std::unique_ptr<Node> type_check_fun_dec(std::unique_ptr<Node> root)
     for (size_t i = 0; i < in->children.size(); i++)
     {
         /* TODO: handle array types as parameters as well */
-        root->type_scheme.fun_type.first.push_back(type_names[in->children[i]->token.data]);
+        root->type_scheme.params.push_back(type_names[in->children[i]->token.data]);
     }
 
     /* TODO: handle array types as returns as well */
-    root->type_scheme.fun_type.second = type_names[out->children.front()->token.data];
+    root->type_scheme.alpha = type_names[out->children.front()->token.data];
 
     root->children.front() = std::move(in);
 
@@ -823,7 +806,7 @@ static std::unique_ptr<Node> type_check_fun_dec(std::unique_ptr<Node> root)
         for (; i < root->children.front()->children.size(); i++)
         {
             TypeScheme ts = TypeScheme(TypeScheme::ALPHA);
-            ts.alpha = root->type_scheme.fun_type.first[i];
+            ts.alpha = root->type_scheme.params[i];
             type_scopes.top()[body->children[i]->token.data] = ts;
             body->children[i]->type_scheme = ts;
         }

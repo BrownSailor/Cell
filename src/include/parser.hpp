@@ -21,14 +21,8 @@ struct TypeScheme
     };
     
     Type type;
-    union
-    {
-        /* use first 4 bits for arrays (i.e. max dimension is 15) */
-        uint32_t alpha;
-
-        /* [ input types, output type ] */
-        std::pair<std::vector<uint32_t>, uint32_t> fun_type;
-    };
+    uint32_t alpha;
+    std::vector<uint32_t> params;
 
     TypeScheme()
     {
@@ -39,7 +33,7 @@ struct TypeScheme
     {
         if (t == FUN_TYPE)
         {
-            new (&fun_type) std::pair<std::vector<uint32_t>, uint32_t>();
+            new (&params) std::vector<uint32_t>();
         }
 
         type = t;
@@ -48,37 +42,23 @@ struct TypeScheme
     TypeScheme(const TypeScheme &other)
     {
         type = other.type;
-        if (type == ALPHA)
+        alpha = other.alpha;
+        if (type == FUN_TYPE)
         {
-            alpha = other.alpha;
-        }
-        else if (type == FUN_TYPE)
-        {
-            new (&fun_type) std::pair<std::vector<uint32_t>, uint32_t>(other.fun_type);
+            new (&params) std::vector<uint32_t>(other.params);
         }
     }
 
     TypeScheme operator=(const TypeScheme &other)
     {
         type = other.type;
-        if (type == ALPHA)
+        alpha = other.alpha;
+        if (type == FUN_TYPE)
         {
-            alpha = other.alpha;
-        }
-        else if (type == FUN_TYPE)
-        {
-            new (&fun_type) std::pair<std::vector<uint32_t>, uint32_t>(other.fun_type);
+            new (&params) std::vector<uint32_t>(other.params);
         }
 
         return *this;
-    }
-
-    ~TypeScheme()
-    {
-        if (type == FUN_TYPE)
-        {
-            fun_type.~pair();
-        }
     }
 };
 

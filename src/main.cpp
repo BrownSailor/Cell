@@ -81,7 +81,7 @@ static void pretty_print_helper(std::unique_ptr<Node> node, int num_tabs)
                 }
                 case TypeScheme::FUN_TYPE:
                 {
-                    std::cerr << type_idens[node->type_scheme.fun_type.second];
+                    std::cerr << type_idens[node->type_scheme.alpha];
                     break;
                 }
                 default:
@@ -132,8 +132,8 @@ int main(int argc, char **argv)
     /* lex file to tokens */
     std::list<Token> tokens = lex(file);
 
-    // std::unique_ptr<Node> root = type_check(parse_program(tokens));
-    // pretty_print(std::move(root));
+    //std::unique_ptr<Node> root = type_check(parse_program(tokens));
+    //pretty_print(std::move(root));
     
     compile(type_check(parse_program(tokens)));
 
