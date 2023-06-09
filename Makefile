@@ -5,7 +5,7 @@ BIN = bin
 CXX      = clang++
 IFLAGS   = -I$(INC)
 CXXFLAGS = -g3 -std=c++20 -Wall -Wextra -Wpedantic -Wshadow -Werror $(IFLAGS)
-LDFLAGS  = -g3 -Wc
+LDFLAGS  = -g3 -Wc -lLLVM
 
 INCLUDES = $(shell echo $(INC)/*.hpp)
 SOURCES = $(shell echo $(SRC)/*.cpp)

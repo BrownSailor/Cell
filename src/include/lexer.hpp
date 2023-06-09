@@ -16,6 +16,7 @@ struct Token
         KEY_BOOL,
         KEY_STR,
         KEY_NIL,
+        KEY_PRINT,
 
         KEY_FUN,
 

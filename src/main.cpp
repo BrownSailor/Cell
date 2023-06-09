@@ -1,4 +1,6 @@
 #include "parser.hpp"
+#include "types.hpp"
+#include "compiler.hpp"
 
 /*
  * pretty_print_tabs
@@ -59,15 +61,43 @@ static void pretty_print_helper(std::unique_ptr<Node> node, int num_tabs)
         }
         default:
         {
-            std::cerr << node->token.data << "\n";
+            std::cerr << node->token.data << ": ";
+            switch (node->type_scheme.type)
+            {
+                case TypeScheme::ALPHA:
+                {
+                    uint32_t arr_size = node->type_scheme.alpha >> 28;
+
+                    if (arr_size)
+                    {
+                        std::cerr << "[ " << arr_size << " ";
+                        std::cerr << type_idens[arr_size << 28 ^ node->type_scheme.alpha] << " ]";
+                    }
+                    else
+                    {
+                        std::cerr << type_idens[node->type_scheme.alpha];
+                    }
+                    break;
+                }
+                case TypeScheme::FUN_TYPE:
+                {
+                    std::cerr << type_idens[node->type_scheme.fun_type.second];
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+            std::cerr << "\n";
             break;
         }
     }
 
-    for (auto it = node->children.begin(); it != node->children.end(); std::advance(it, 1))
+    for (size_t i = 0; i < node->children.size(); i++)
     {
         pretty_print_tabs(num_tabs + 1);
-        pretty_print_helper(std::move(*it), num_tabs + 1);
+        pretty_print_helper(std::move(node->children[i]), num_tabs + 1);
     }
 }
 
@@ -102,9 +132,10 @@ int main(int argc, char **argv)
     /* lex file to tokens */
     std::list<Token> tokens = lex(file);
 
-    std::unique_ptr<Node> root = parse_program(tokens);
-
-    pretty_print(std::move(root));
+    // std::unique_ptr<Node> root = type_check(parse_program(tokens));
+    // pretty_print(std::move(root));
+    
+    compile(type_check(parse_program(tokens)));
 
     return 0;
 }

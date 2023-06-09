@@ -3,14 +3,12 @@
 typedef std::unordered_set<std::string> Scope;
 std::stack<Scope> scopes;
 
-std::unordered_set<std::string> functions;
-
+static std::unordered_map<std::string, uint64_t> functions;
 static std::unique_ptr<Node> parse_expr(std::list<Token> &tokens);
-static std::unique_ptr<Node> parse_statement(std::list<Token> &tokens);
 
 static std::unique_ptr<Node> new_node(Token token)
 {
-    std::unique_ptr<Node> node(new Node);
+    std::unique_ptr<Node> node = std::make_unique<Node>();
     node->token = token;
 
     return node;
@@ -59,16 +57,25 @@ static std::unique_ptr<Node> parse_fact(std::list<Token> &tokens)
             break;
         }
 
+        case Token::KEY_PRINT:
+        {
+            node = new_node(tokens.front());
+            node->type = Node::NODE_BUILT_IN;
+            tokens.pop_front();
+            node->children.push_back(parse_expr(tokens));
+            break;
+        }
+
         case Token::TOK_LPAREN:
         {
             /* pop left paren */
             tokens.pop_front();
             node = parse_expr(tokens);
-
+            
             if (tokens.front().type != Token::TOK_RPAREN)
             {
                 std::cerr << "Parentheses mismatch!\n";
-                std::cout << tokens.front().file << ":" << tokens.front().row << ":" << tokens.front().col << "\n";
+                print_location(tokens.front());
                 exit(EXIT_FAILURE);
             }
 
@@ -91,6 +98,17 @@ static std::unique_ptr<Node> parse_fact(std::list<Token> &tokens)
             tokens.pop_front();
             node->type = Node::NODE_VAR;
 
+            if (functions.count(node->token.data))
+            {
+                node->type = Node::NODE_FUN_CALL;
+
+                /* more than one function argument */
+                for (size_t i = 0; i < functions[node->token.data]; i++)
+                {
+                    node->children.push_back(parse_expr(tokens));
+                }
+            }
+
             if (tokens.front().type == Token::TOK_LBRACK)
             {
                 tokens.pop_front();
@@ -103,29 +121,6 @@ static std::unique_ptr<Node> parse_fact(std::list<Token> &tokens)
                 /* expect ] */
                 tokens.pop_front();
             }
-
-            if (functions.count(node->token.data))
-            {
-                node->type = Node::NODE_FUN_CALL;
-
-                /* more than one function argument */
-                if (tokens.front().type == Token::TOK_LPAREN)
-                {
-                    tokens.pop_front();
-                    while (tokens.size() && tokens.front().type != Token::TOK_RPAREN)
-                    {
-                        node->children.push_back(parse_expr(tokens));
-                    }
-
-                    /* expect ) */
-                    tokens.pop_front();
-                }
-                else if (tokens.size())
-                {
-                    node->children.push_back(parse_expr(tokens));
-                }
-            }
-
             break;
         }
 
@@ -168,7 +163,7 @@ static std::unique_ptr<Node> parse_term(std::list<Token> &tokens)
         std::unique_ptr<Node> op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(std::move(node), std::move(op), parse_term(tokens));
+        node = binary(std::move(node), std::move(op), parse_fact(tokens));
     }
 
     return node;
@@ -184,7 +179,7 @@ static std::unique_ptr<Node> parse_add_sub(std::list<Token> &tokens)
         std::unique_ptr<Node> op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(std::move(node), std::move(op), parse_add_sub(tokens));
+        node = binary(std::move(node), std::move(op), parse_term(tokens));
     }
 
     return node;
@@ -202,7 +197,7 @@ static std::unique_ptr<Node> parse_lt_gt(std::list<Token> &tokens)
         std::unique_ptr<Node> op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(std::move(node), std::move(op), parse_lt_gt(tokens));
+        node = binary(std::move(node), std::move(op), parse_add_sub(tokens));
     }
 
     return node;
@@ -218,7 +213,7 @@ static std::unique_ptr<Node> parse_eq_neq(std::list<Token> &tokens)
         std::unique_ptr<Node> op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(std::move(node), std::move(op), parse_eq_neq(tokens));
+        node = binary(std::move(node), std::move(op), parse_lt_gt(tokens));
     }
 
     return node;
@@ -233,7 +228,7 @@ static std::unique_ptr<Node> parse_and(std::list<Token> &tokens)
         std::unique_ptr<Node> op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(std::move(node), std::move(op), parse_and(tokens));
+        node = binary(std::move(node), std::move(op), parse_eq_neq(tokens));
     }
 
     return node;
@@ -248,7 +243,7 @@ static std::unique_ptr<Node> parse_or(std::list<Token> &tokens)
         std::unique_ptr<Node> op = new_node(tokens.front());
         tokens.pop_front();
 
-        node = binary(std::move(node), std::move(op), parse_or(tokens));
+        node = binary(std::move(node), std::move(op), parse_and(tokens));
     }
 
     return node;
@@ -266,7 +261,7 @@ static std::unique_ptr<Node> parse_if(std::list<Token> &tokens)
         node->children.push_back(parse_expr(tokens));
     }
 
-    std::unique_ptr<Node> body(new Node);
+    std::unique_ptr<Node> body = std::make_unique<Node>();
     body->type = Node::NODE_BODY;
 
     /* eat { */
@@ -274,8 +269,10 @@ static std::unique_ptr<Node> parse_if(std::list<Token> &tokens)
     scopes.push(scopes.top());
     while (tokens.size() && tokens.front().type != Token::TOK_RBRACE)
     {
-        body->children.push_back(parse_statement(tokens));
+        body->children.push_back(parse_expr(tokens));
     }
+
+    node->children.push_back(std::move(body));
 
     /* eat } */
     scopes.pop();
@@ -284,35 +281,6 @@ static std::unique_ptr<Node> parse_if(std::list<Token> &tokens)
     if (tokens.front().type == Token::TOK_ELSE)
     {
         node->children.push_back(parse_if(tokens));
-    }
-
-    node->children.push_back(std::move(body));
-
-    return node;
-}
-
-static std::unique_ptr<Node> parse_expr(std::list<Token> &tokens)
-{
-    if (tokens.front().type == Token::TOK_IF)
-    {
-        return parse_if(tokens);
-    }
-
-    std::unique_ptr<Node> node = parse_or(tokens);
-
-    /* TODO: parse variable assignment syntax */
-    if (tokens.front().type == Token::TOK_COLON)
-    {
-        scopes.top().insert(node->token.data);
-
-        std::unique_ptr<Node> asn(new Node);
-        asn->type = Node::NODE_VAR_ASN;
-        asn->children.push_back(std::move(node));
-        tokens.pop_front();
-
-        asn->children.push_back(parse_expr(tokens));
-        
-        return asn;
     }
 
     return node;
@@ -333,14 +301,14 @@ static std::unique_ptr<Node> parse_loop(std::list<Token> &tokens)
      */
     loop->children.push_back(parse_expr(tokens));
 
-    std::unique_ptr<Node> body(new Node);
+    std::unique_ptr<Node> body = std::make_unique<Node>();
     body->type = Node::NODE_BODY;
 
     /* eat { */
     tokens.pop_front();
     while (tokens.size() && tokens.front().type != Token::TOK_RBRACE)
     {
-        body->children.push_back(parse_statement(tokens));
+        body->children.push_back(parse_expr(tokens));
     }
 
     /* eat } */
@@ -352,19 +320,42 @@ static std::unique_ptr<Node> parse_loop(std::list<Token> &tokens)
     return loop;
 }
 
-static std::unique_ptr<Node> parse_statement(std::list<Token> &tokens)
+static std::unique_ptr<Node> parse_expr(std::list<Token> &tokens)
 {
-    switch (tokens.front().type)
+    if (tokens.front().type == Token::TOK_IF)
     {
-        case Token::TOK_LOOP:
-        {
-            return parse_loop(tokens);
-        }
-        default:
-        {
-            return parse_expr(tokens);
-        }
+        return parse_if(tokens);
     }
+
+    if (tokens.front().type == Token::TOK_LOOP)
+    {
+        return parse_loop(tokens);
+    }
+
+    std::unique_ptr<Node> node = parse_or(tokens);
+
+    /* TODO: parse variable assignment syntax */
+    if (tokens.front().type == Token::TOK_COLON)
+    {
+        if (node->type != Node::NODE_VAR)
+        {
+            print_location(node->token);
+            std::cerr << "Cannot assign expression to non-variable type\n";
+            exit(EXIT_FAILURE);
+        }
+        scopes.top().insert(node->token.data);
+
+        std::unique_ptr<Node> asn = std::make_unique<Node>();
+        asn->type = Node::NODE_VAR_ASN;
+        asn->children.push_back(std::move(node));
+        tokens.pop_front();
+
+        asn->children.push_back(parse_expr(tokens));
+        
+        return asn;
+    }
+
+    return node;
 }
 
 static std::unique_ptr<Node> parse_function(std::list<Token> &tokens)
@@ -373,12 +364,15 @@ static std::unique_ptr<Node> parse_function(std::list<Token> &tokens)
     tokens.pop_front();
 
     std::unique_ptr<Node> node = new_node(tokens.front());
-    functions.insert(tokens.front().data);
 
     node->type = Node::NODE_FUN_DEC;
     tokens.pop_front();
 
-    std::unique_ptr<Node> in(new Node), out(new Node), body(new Node);
+    std::unique_ptr<Node> in, out, body;
+    in = std::make_unique<Node>();
+    out = std::make_unique<Node>();
+    body = std::make_unique<Node>();
+
     in->type = Node::NODE_FUN_IN;
     out->type = Node::NODE_FUN_OUT;
     body->type = Node::NODE_BODY;
@@ -393,14 +387,20 @@ static std::unique_ptr<Node> parse_function(std::list<Token> &tokens)
         tokens.pop_front();
     }
 
+    bool nil_input = in->children.front()->token.type == Token::KEY_NIL;
+    functions[node->token.data] = !nil_input ? in->children.size() : 0;
+
     /* eat arrow */
     tokens.pop_front();
 
-    /* returns */
-    while (tokens.front().type != Token::TOK_LBRACE)
+    /* return */
+    out->children.push_back(new_node(tokens.front()));
+    tokens.pop_front();
+
+    if (tokens.front().type != Token::TOK_LBRACE)
     {
-        out->children.push_back(new_node(tokens.front()));
-        tokens.pop_front();
+        std::cerr << "Expected `{`\n";
+        exit(EXIT_FAILURE);
     }
 
     /* eat { */
@@ -408,7 +408,7 @@ static std::unique_ptr<Node> parse_function(std::list<Token> &tokens)
     scopes.push(Scope());
 
     /* parse input declarations (has to be first in function) */
-    for (size_t i = 0; i < in->children.size() && in->children[i]->token.type != Token::KEY_NIL; i++)
+    for (size_t i = 0; i < in->children.size() && !nil_input; i++)
     {
         std::unique_ptr<Node> arg = new_node(tokens.front());
         tokens.pop_front();
@@ -420,7 +420,7 @@ static std::unique_ptr<Node> parse_function(std::list<Token> &tokens)
 
     while (tokens.size() && tokens.front().type != Token::TOK_RBRACE)
     {
-        body->children.push_back(parse_statement(tokens));
+        body->children.push_back(parse_expr(tokens));
     }
 
     node->children.push_back(std::move(in));
@@ -435,7 +435,7 @@ static std::unique_ptr<Node> parse_function(std::list<Token> &tokens)
 
 std::unique_ptr<Node> parse_program(std::list<Token> &tokens)
 {
-    std::unique_ptr<Node> node(new Node);
+    std::unique_ptr<Node> node = std::make_unique<Node>();
     node->type = Node::NODE_PROG;
 
     scopes.push(Scope());
@@ -447,9 +447,10 @@ std::unique_ptr<Node> parse_program(std::list<Token> &tokens)
         }
         else
         {
-            node->children.push_back(parse_statement(tokens));
+            node->children.push_back(parse_expr(tokens));
         }
     }
+    scopes.pop();
 
     return node;
 }
