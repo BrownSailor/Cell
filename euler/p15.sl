@@ -12,7 +12,7 @@ fn choose: num num -> num {
     }
 }
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     print (choose 4 2)
 }
 

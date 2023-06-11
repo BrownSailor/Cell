@@ -7,6 +7,7 @@ std::unordered_map<std::string, Token::Type> INTRINSICS =
     { "tru", Token::TOK_TRU },
     { "fls", Token::TOK_FLS },
     { "str", Token::KEY_STR },
+    { "unit", Token::KEY_UNIT },
     { "nil", Token::KEY_NIL },
     { "shl", Token::TOK_SHL },
     { "shr", Token::TOK_SHR },
@@ -438,6 +439,7 @@ void print_token(Token token)
         case Token::TOK_TRU: std::cout << "KEY_TRU\t"; break;
         case Token::TOK_FLS: std::cout << "KEY_FLS\t"; break;
         case Token::KEY_STR: std::cout << "KEY_STR\t"; break;
+        case Token::KEY_UNIT: std::cout << "KEY_UNIT\t"; break;
         case Token::KEY_NIL: std::cout << "KEY_NIL\t"; break;
         case Token::KEY_PRINT: std::cout << "KEY_PRINT\t"; break;
         case Token::TOK_AND: std::cout << "TOK_AND\t"; break;

@@ -1,6 +1,6 @@
 ; Find the product abc of the pythagorean triplet where a + b + c = 1000
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     ans: 0
 
     a: 1

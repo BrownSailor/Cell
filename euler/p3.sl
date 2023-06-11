@@ -16,7 +16,7 @@ fn is_prime: num -> bool {
     b
 }
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     n: 600851475143
     p: 2
     

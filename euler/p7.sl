@@ -15,7 +15,7 @@ fn is_prime: num -> bool {
     b
 }
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     p_idx: 1
     p: 1
     @ p_idx <= 10001 {

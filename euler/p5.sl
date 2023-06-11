@@ -5,7 +5,7 @@ fn gcd: num num -> num {
     ? b = 0 { a } | { (gcd b a % b) }
 }
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     ans: 1
 
     i: 2

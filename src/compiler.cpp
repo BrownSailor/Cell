@@ -79,9 +79,9 @@ static void initialize_built_ins()
     builder->CreateRetVoid();
 }
 
-static llvm::Value *compile_expr(std::unique_ptr<Node> root);
+static llvm::Value *compile_expr(std::unique_ptr<Node> &root);
 
-static llvm::Value *compile_literal(std::unique_ptr<Node> root)
+static llvm::Value *compile_literal(std::unique_ptr<Node> &root)
 {
     switch (root->token.type)
     {
@@ -106,9 +106,9 @@ static llvm::Value *compile_literal(std::unique_ptr<Node> root)
     return nullptr;
 }
 
-static llvm::Value *compile_un_op(std::unique_ptr<Node> root)
+static llvm::Value *compile_un_op(std::unique_ptr<Node> &root)
 {
-    llvm::Value *operand = compile_expr(std::move(root->children.front()));
+    llvm::Value *operand = compile_expr(root->children.front());
     if (operand)
     {
         switch (root->token.type)
@@ -131,10 +131,10 @@ static llvm::Value *compile_un_op(std::unique_ptr<Node> root)
     return nullptr;
 }
 
-static llvm::Value *compile_bin_op(std::unique_ptr<Node> root)
+static llvm::Value *compile_bin_op(std::unique_ptr<Node> &root)
 {
-    llvm::Value *left = compile_expr(std::move(root->children.front()));
-    llvm::Value *right = compile_expr(std::move(root->children.back()));
+    llvm::Value *left = compile_expr(root->children.front());
+    llvm::Value *right = compile_expr(root->children.back());
 
     if (!left || !right)
     {
@@ -210,17 +210,17 @@ static llvm::Value *compile_bin_op(std::unique_ptr<Node> root)
     }
 }
 
-static llvm::Value *compile_op(std::unique_ptr<Node> root)
+static llvm::Value *compile_op(std::unique_ptr<Node> &root)
 {
     switch (root->children.size())
     {
         case 1:
         {
-            return compile_un_op(std::move(root));
+            return compile_un_op(root);
         }
         case 2:
         {
-            return compile_bin_op(std::move(root));
+            return compile_bin_op(root);
         }
         default:
         {
@@ -229,7 +229,7 @@ static llvm::Value *compile_op(std::unique_ptr<Node> root)
     }
 }
 
-static llvm::Value *compile_fun_call(std::unique_ptr<Node> root)
+static llvm::Value *compile_fun_call(std::unique_ptr<Node> &root)
 {
     llvm::Function *fun = module->getFunction(root->token.data);
 
@@ -238,7 +238,7 @@ static llvm::Value *compile_fun_call(std::unique_ptr<Node> root)
         std::vector<llvm::Value *> args;
         for (size_t i = 0; i < root->children.size(); i++)
         {
-            args.push_back(compile_expr(std::move(root->children[i])));
+            args.push_back(compile_expr(root->children[i]));
         }
 
         return builder->CreateCall(fun, args);
@@ -247,7 +247,7 @@ static llvm::Value *compile_fun_call(std::unique_ptr<Node> root)
     return builder->CreateCall(fun);
 }
 
-static llvm::Value *compile_built_in(std::unique_ptr<Node> root)
+static llvm::Value *compile_built_in(std::unique_ptr<Node> &root)
 {
     switch (root->token.type)
     {
@@ -256,17 +256,17 @@ static llvm::Value *compile_built_in(std::unique_ptr<Node> root)
             if (root->children.front()->type_scheme == construct_type(type_names["num"]))
             {
                 root->token.data = "print_num";
-                return compile_fun_call(std::move(root));
+                return compile_fun_call(root);
             }
             else if (root->children.front()->type_scheme == construct_type(type_names["bool"]))
             {
                 root->token.data = "print_bool";
-                return compile_fun_call(std::move(root));
+                return compile_fun_call(root);
             }
             else if (root->children.front()->type_scheme == construct_type(type_names["str"]))
             {
                 root->token.data = "print_str";
-                return compile_fun_call(std::move(root));
+                return compile_fun_call(root);
             }
             return nullptr;
         }
@@ -277,15 +277,15 @@ static llvm::Value *compile_built_in(std::unique_ptr<Node> root)
     }
 }
 
-static llvm::Value *compile_var(std::unique_ptr<Node> root)
+static llvm::Value *compile_var(std::unique_ptr<Node> &root)
 {
     llvm::AllocaInst *alloc = values[root->token.data];
     return builder->CreateLoad(alloc->getAllocatedType(), alloc, root->token.data.c_str());
 }
 
-static llvm::Value *compile_var_asn(std::unique_ptr<Node> root)
+static llvm::Value *compile_var_asn(std::unique_ptr<Node> &root)
 {
-    llvm::Value *rhs = compile_expr(std::move(root->children.back()));
+    llvm::Value *rhs = compile_expr(root->children.back());
 
     if (!values[root->children.front()->token.data])
     {
@@ -299,13 +299,13 @@ static llvm::Value *compile_var_asn(std::unique_ptr<Node> root)
     return nullptr;
 }
 
-static llvm::Value *compile_lone_if(std::unique_ptr<Node> root)
+static llvm::Value *compile_lone_if(std::unique_ptr<Node> &root)
 {
-    std::unique_ptr<Node> cond = std::move(root->children.front());
-    std::unique_ptr<Node> body = std::move(root->children.back());
+    std::unique_ptr<Node> &cond = root->children.front();
+    std::unique_ptr<Node> &body = root->children.back();
 
     llvm::Function *fun = builder->GetInsertBlock()->getParent();
-    llvm::Value *cond_val = compile_expr(std::move(cond));
+    llvm::Value *cond_val = compile_expr(cond);
 
     llvm::BasicBlock *then_blk = llvm::BasicBlock::Create(*context, "", fun);
     llvm::BasicBlock *end_blk = llvm::BasicBlock::Create(*context, "", fun);
@@ -315,18 +315,15 @@ static llvm::Value *compile_lone_if(std::unique_ptr<Node> root)
 
     for (size_t i = 0; i < body->children.size(); i++)
     {
-        compile_expr(std::move(body->children[i]));
+        compile_expr(body->children[i]);
     }
     builder->CreateBr(end_blk);
     builder->SetInsertPoint(end_blk);
 
-    root->children.back() = std::move(body);
-    root->children.front() = std::move(cond);
-
     return llvm::Constant::getNullValue(llvm::Type::getVoidTy(*context));
 }
 
-static void compile_if_else(std::unique_ptr<Node> root,
+static void compile_if_else(std::unique_ptr<Node> &root,
                             llvm::Function *fun,
                             llvm::BasicBlock *merge_blk,
                             std::vector<llvm::Value *> &phis,
@@ -336,23 +333,21 @@ static void compile_if_else(std::unique_ptr<Node> root,
     {
         case 1:
         {
-            std::unique_ptr<Node> body = std::move(root->children.front());
+            std::unique_ptr<Node> &body = root->children.front();
             for (size_t i = 0; i < body->children.size() - 1; i++)
             {
-                compile_expr(std::move(body->children[i]));
+                compile_expr(body->children[i]);
             }
-            phis.push_back(compile_expr(std::move(body->children.back())));
-
-            root->children.front() = std::move(body);
+            phis.push_back(compile_expr(body->children.back()));
             break;
         }
         case 3:
         {
-            std::unique_ptr<Node> cond = std::move(root->children.front());
-            std::unique_ptr<Node> then = std::move(root->children[1]);
-            std::unique_ptr<Node> els = std::move(root->children.back());
+            std::unique_ptr<Node> &cond = root->children.front();
+            std::unique_ptr<Node> &then = root->children[1];
+            std::unique_ptr<Node> &els = root->children.back();
 
-            llvm::Value *cond_val = compile_expr(std::move(cond));
+            llvm::Value *cond_val = compile_expr(cond);
 
             llvm::BasicBlock *then_blk = llvm::BasicBlock::Create(*context, "", fun);
             llvm::BasicBlock *else_blk = llvm::BasicBlock::Create(*context, "", fun);
@@ -362,19 +357,16 @@ static void compile_if_else(std::unique_ptr<Node> root,
 
             for (size_t i = 0; i < then->children.size() - 1; i++)
             {
-                compile_expr(std::move(then->children[i]));
+                compile_expr(then->children[i]);
             }
-            phis.push_back(compile_expr(std::move(then->children.back())));
+            phis.push_back(compile_expr(then->children.back()));
             blks.push_back(then_blk);
 
             builder->CreateBr(merge_blk);
             builder->SetInsertPoint(else_blk);
-            compile_if_else(std::move(els), fun, merge_blk, phis, blks);
+            compile_if_else(els, fun, merge_blk, phis, blks);
             blks.push_back(else_blk);
 
-            root->children.front() = std::move(cond);
-            root->children[1] = std::move(then);
-            root->children.back() = std::move(els);
             break;
         }
         default:
@@ -385,13 +377,13 @@ static void compile_if_else(std::unique_ptr<Node> root,
 
 }
 
-static llvm::Value *compile_if(std::unique_ptr<Node> root)
+static llvm::Value *compile_if(std::unique_ptr<Node> &root)
 {
     switch (root->children.size())
     {
         case 2:
         {
-            return compile_lone_if(std::move(root));
+            return compile_lone_if(root);
         }
         case 3:
         {
@@ -401,12 +393,12 @@ static llvm::Value *compile_if(std::unique_ptr<Node> root)
             std::vector<llvm::BasicBlock *> blks;
 
             TypeScheme ts = root->type_scheme;
-            bool nil_statement = ts == construct_type(type_names["nil"]);
-            compile_if_else(std::move(root), fun, merge_blk, phis, blks);
+            bool unit_statement = ts == construct_type(type_names["unit"]);
+            compile_if_else(root, fun, merge_blk, phis, blks);
 
             builder->CreateBr(merge_blk);
             builder->SetInsertPoint(merge_blk);
-            if (!nil_statement)
+            if (!unit_statement)
             {
                 llvm::PHINode *phi_node = builder->CreatePHI(get_llvm_type(ts), phis.size());
                 for (size_t i = 0; i < phis.size(); i++)
@@ -425,10 +417,10 @@ static llvm::Value *compile_if(std::unique_ptr<Node> root)
     }
 }
 
-static llvm::Value *compile_loop(std::unique_ptr<Node> root)
+static llvm::Value *compile_loop(std::unique_ptr<Node> &root)
 {
-    std::unique_ptr<Node> cond = std::move(root->children.front());
-    std::unique_ptr<Node> body = std::move(root->children.back());
+    std::unique_ptr<Node> &cond = root->children.front();
+    std::unique_ptr<Node> &body = root->children.back();
 
     llvm::Function *fun = builder->GetInsertBlock()->getParent();
 
@@ -438,58 +430,55 @@ static llvm::Value *compile_loop(std::unique_ptr<Node> root)
 
     builder->CreateBr(cond_blk);
     builder->SetInsertPoint(cond_blk);
-    llvm::Value *cond_val = compile_expr(std::move(cond));
+    llvm::Value *cond_val = compile_expr(cond);
     builder->CreateCondBr(cond_val, body_blk, exit_blk);
 
     builder->SetInsertPoint(body_blk);
     for (size_t i = 0; i < body->children.size(); i++)
     {
-        compile_expr(std::move(body->children[i]));
+        compile_expr(body->children[i]);
     }
     builder->CreateBr(cond_blk);
     builder->SetInsertPoint(exit_blk);
 
-    root->children.back() = std::move(body);
-    root->children.front() = std::move(cond);
-
     return llvm::Constant::getNullValue(llvm::Type::getVoidTy(*context));
 }
 
-static llvm::Value *compile_expr(std::unique_ptr<Node> root)
+static llvm::Value *compile_expr(std::unique_ptr<Node> &root)
 {
     switch (root->type)
     {
         case Node::NODE_LIT:
         {
-            return compile_literal(std::move(root));
+            return compile_literal(root);
         }
         case Node::NODE_OP:
         {
-            return compile_op(std::move(root));
+            return compile_op(root);
         }
         case Node::NODE_FUN_CALL:
         {
-            return compile_fun_call(std::move(root));
+            return compile_fun_call(root);
         } 
         case Node::NODE_BUILT_IN:
         {
-            return compile_built_in(std::move(root));
+            return compile_built_in(root);
         }
         case Node::NODE_VAR:
         {
-            return compile_var(std::move(root));
+            return compile_var(root);
         }
         case Node::NODE_VAR_ASN:
         {
-            return compile_var_asn(std::move(root));
+            return compile_var_asn(root);
         }
         case Node::NODE_IF:
         {
-            return compile_if(std::move(root));
+            return compile_if(root);
         }
         case Node::NODE_LOOP:
         {
-            return compile_loop(std::move(root));
+            return compile_loop(root);
         }
         default:
         {
@@ -498,41 +487,41 @@ static llvm::Value *compile_expr(std::unique_ptr<Node> root)
     }
 }
 
-static std::unique_ptr<Node> compile_fun_dec(std::unique_ptr<Node> root)
+static void compile_fun_dec(std::unique_ptr<Node> &root)
 {
-    std::unique_ptr<Node> in = std::move(root->children.front());
-    std::unique_ptr<Node> out = std::move(root->children[1]);
-    std::unique_ptr<Node> body = std::move(root->children.back());
+    std::unique_ptr<Node> &in = root->children.front();
+    std::unique_ptr<Node> &out = root->children[1];
+    std::unique_ptr<Node> &body = root->children.back();
 
-    bool nil_input = in->children.front()->token.type == Token::KEY_NIL;
-    bool nil_output = out->children.front()->token.type == Token::KEY_NIL;
+    bool unit_input = in->children.front()->token.type == Token::KEY_UNIT;
+    bool unit_output = out->children.front()->token.type == Token::KEY_UNIT;
 
     llvm::FunctionType *fun_type;
 
-    if (!nil_input)
+    if (!unit_input)
     {
         std::vector<llvm::Type *> arg_types;
-        for (size_t i = 0; i < in->children.size() && !nil_input; i++)
+        for (size_t i = 0; i < in->children.size() && !unit_input; i++)
         {
             arg_types.push_back(get_llvm_type(body->children[i]->type_scheme));
         }
 
         fun_type = llvm::FunctionType::get(
-            !nil_output ? get_llvm_type(body->children.back()->type_scheme) : llvm::Type::getVoidTy(*context), 
+            !unit_output ? get_llvm_type(body->children.back()->type_scheme) : llvm::Type::getVoidTy(*context), 
             arg_types, false
         );
     }
     else
     {
         fun_type = llvm::FunctionType::get(
-            !nil_output ? get_llvm_type(body->children.back()->type_scheme) : llvm::Type::getVoidTy(*context),
+            !unit_output ? get_llvm_type(body->children.back()->type_scheme) : llvm::Type::getVoidTy(*context),
             false
         );
     }
 
     llvm::Function *fun = llvm::Function::Create(fun_type, llvm::Function::ExternalLinkage, root->token.data, module.get());
 
-    if (!nil_input)
+    if (!unit_input)
     {
         size_t i = 0;
         for (auto &arg : fun->args())
@@ -545,7 +534,7 @@ static std::unique_ptr<Node> compile_fun_dec(std::unique_ptr<Node> root)
     builder->SetInsertPoint(bb);
     values.clear();
 
-    if (!nil_input)
+    if (!unit_input)
     {
         for (auto &arg : fun->args())
         {
@@ -555,17 +544,17 @@ static std::unique_ptr<Node> compile_fun_dec(std::unique_ptr<Node> root)
         }
     }
 
-    size_t i = !nil_input ? in->children.size() : 0;
+    size_t i = !unit_input ? in->children.size() : 0;
     if (body->children.size())
     {
-        for (; i < body->children.size() - !nil_output; i++)
+        for (; i < body->children.size() - !unit_output; i++)
         {
-            compile_expr(std::move(body->children[i]));
+            compile_expr(body->children[i]);
         }
 
-        if (!nil_output)
+        if (!unit_output)
         {
-            builder->CreateRet(compile_expr(std::move(body->children.back())));
+            builder->CreateRet(compile_expr(body->children.back()));
         }
         else
         {
@@ -578,21 +567,15 @@ static std::unique_ptr<Node> compile_fun_dec(std::unique_ptr<Node> root)
     }
 
     llvm::verifyFunction(*fun);
-
-    root->children.front() = std::move(in);
-    root->children[1] = std::move(out);
-    root->children.back() = std::move(body);
-
-    return root;
 }
 
-static void compile_program(std::unique_ptr<Node> root)
+static void compile_program(std::unique_ptr<Node> &root)
 {
     for (size_t i = 0; i < root->children.size(); i++)
     {
         if (root->children[i]->type == Node::NODE_FUN_DEC)
         {
-            root->children[i] = compile_fun_dec(std::move(root->children[i]));
+            compile_fun_dec(root->children[i]);
         }
     }
 
@@ -605,7 +588,7 @@ static void compile_program(std::unique_ptr<Node> root)
     {
         if (root->children[i]->type != Node::NODE_FUN_DEC)
         {
-            compile_expr(std::move(root->children[i]));
+            compile_expr(root->children[i]);
         }
     }
 
@@ -615,14 +598,14 @@ static void compile_program(std::unique_ptr<Node> root)
     llvm::verifyFunction(*f);
 }
 
-void compile(std::unique_ptr<Node> root)
+void compile(std::unique_ptr<Node> &root)
 {
     context = std::make_unique<llvm::LLVMContext>();
     module = std::make_unique<llvm::Module>("", *context);
     builder = std::make_unique<llvm::IRBuilder<>>(*context);
 
     initialize_built_ins();
-    compile_program(std::move(root));
+    compile_program(root);
 
     /* executable generation */
     llvm::InitializeAllTargetInfos();

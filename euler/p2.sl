@@ -1,6 +1,6 @@
 ; Find the sum of the even Fibonacci terms that are less than 4 million
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     sum: 0
     t1: 1
     t2: 2

@@ -11,6 +11,8 @@
 
 #include "error.hpp"
 
+struct TypeScheme;
+
 struct TypeScheme
 {
     enum Type
@@ -22,15 +24,19 @@ struct TypeScheme
     
     Type type;
     uint32_t alpha;
+    uint32_t arr_dim;
     std::vector<uint32_t> params;
 
     TypeScheme()
     {
         type = NONE;
+        arr_dim = 0;
     }
 
     TypeScheme(Type t)
     {
+        arr_dim = 0;
+
         if (t == FUN_TYPE)
         {
             new (&params) std::vector<uint32_t>();
@@ -43,6 +49,8 @@ struct TypeScheme
     {
         type = other.type;
         alpha = other.alpha;
+        arr_dim = other.arr_dim;
+
         if (type == FUN_TYPE)
         {
             new (&params) std::vector<uint32_t>(other.params);
@@ -53,6 +61,8 @@ struct TypeScheme
     {
         type = other.type;
         alpha = other.alpha;
+        arr_dim = other.arr_dim;
+
         if (type == FUN_TYPE)
         {
             new (&params) std::vector<uint32_t>(other.params);

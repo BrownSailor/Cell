@@ -30,7 +30,7 @@ static void pretty_print_tabs(int num_tabs)
  *    Returns: none
  *      Notes: the output stream is defaulted to std::cerr
  */
-static void pretty_print_helper(std::unique_ptr<Node> node, int num_tabs)
+static void pretty_print_helper(std::unique_ptr<Node> &node, int num_tabs)
 {
     switch (node->type)
     {
@@ -66,12 +66,12 @@ static void pretty_print_helper(std::unique_ptr<Node> node, int num_tabs)
             {
                 case TypeScheme::ALPHA:
                 {
-                    uint32_t arr_size = node->type_scheme.alpha >> 28;
+                    uint32_t arr_dim = node->type_scheme.arr_dim;
 
-                    if (arr_size)
+                    if (arr_dim)
                     {
-                        std::cerr << "[ " << arr_size << " ";
-                        std::cerr << type_idens[arr_size << 28 ^ node->type_scheme.alpha] << " ]";
+                        std::cerr << "[ " << arr_dim << " ";
+                        std::cerr << type_idens[node->type_scheme.alpha] << " ]";
                     }
                     else
                     {
@@ -97,7 +97,7 @@ static void pretty_print_helper(std::unique_ptr<Node> node, int num_tabs)
     for (size_t i = 0; i < node->children.size(); i++)
     {
         pretty_print_tabs(num_tabs + 1);
-        pretty_print_helper(std::move(node->children[i]), num_tabs + 1);
+        pretty_print_helper(node->children[i], num_tabs + 1);
     }
 }
 
@@ -107,9 +107,9 @@ static void pretty_print_helper(std::unique_ptr<Node> node, int num_tabs)
  * Parameters: node - the node to start printing the tree from
  *    Returns: none
  */
-void pretty_print(std::unique_ptr<Node> node)
+void pretty_print(std::unique_ptr<Node> &node)
 {
-    pretty_print_helper(std::move(node), 0);
+    pretty_print_helper(node, 0);
     std::cerr << "\n";
 }
 
@@ -131,11 +131,12 @@ int main(int argc, char **argv)
 
     /* lex file to tokens */
     std::list<Token> tokens = lex(file);
-
-    // std::unique_ptr<Node> root = type_check(parse_program(tokens));
-    // pretty_print(std::move(root));
+    std::unique_ptr<Node> root = parse_program(tokens);
+    type_check(root);
+    pretty_print(root);
     
-    compile(type_check(parse_program(tokens)));
+    compile(root);
+    //compile(type_check(parse_program(tokens)));
 
     return 0;
 }

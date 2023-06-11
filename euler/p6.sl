@@ -1,6 +1,6 @@
 ; Find the difference between the sum of the squares of the first one hundred natural numbers and the square of the sum.
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     sq_sum: 50 * 50 * 101 * 101
     sum_sq: 0
 

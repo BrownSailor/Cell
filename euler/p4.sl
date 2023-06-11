@@ -1,4 +1,4 @@
-; Find the largest palindrome made from the product of two 3 digit numbers
+unit; Find the largest palindrome made from the product of two 3 digit numbers
 
 fn max: num num -> num {
     a b
@@ -19,7 +19,7 @@ fn is_palindrome: num -> bool {
     rev = n
 }
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     ans: 0
 
     i: 100

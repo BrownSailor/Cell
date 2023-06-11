@@ -1,6 +1,6 @@
 ; Find the sum of all multiples of 3 or 5 below 1000
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     i: 3
     sum: 0
     @ i < 1000 {

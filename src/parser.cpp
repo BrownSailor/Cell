@@ -49,7 +49,7 @@ static std::unique_ptr<Node> parse_fact(std::list<Token> &tokens)
         case Token::KEY_NUM:
         case Token::KEY_BOOL:
         case Token::KEY_STR:
-        case Token::KEY_NIL:
+        case Token::KEY_UNIT:
         {
             node = new_node(tokens.front());
             node->type = Node::NODE_KEY;
@@ -387,7 +387,7 @@ static std::unique_ptr<Node> parse_function(std::list<Token> &tokens)
         tokens.pop_front();
     }
 
-    bool nil_input = in->children.front()->token.type == Token::KEY_NIL;
+    bool nil_input = in->children.front()->token.type == Token::KEY_UNIT;
     functions[node->token.data] = !nil_input ? in->children.size() : 0;
 
     /* eat arrow */

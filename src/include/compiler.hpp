@@ -21,6 +21,6 @@
 #include "parser.hpp"
 #include "types.hpp"
 
-void compile(std::unique_ptr<Node> root);
+void compile(std::unique_ptr<Node> &root);
 
 #endif

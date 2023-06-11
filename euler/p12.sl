@@ -15,7 +15,7 @@ fn num_factors: num -> num {
     f
 }
 
-fn solve: nil -> nil {
+fn solve: unit -> unit {
     tri: 6
     del_tri: 4
 
