@@ -132,8 +132,8 @@ int main(int argc, char **argv)
     /* lex file to tokens */
     std::list<Token> tokens = lex(file);
 
-    //std::unique_ptr<Node> root = type_check(parse_program(tokens));
-    //pretty_print(std::move(root));
+    // std::unique_ptr<Node> root = type_check(parse_program(tokens));
+    // pretty_print(std::move(root));
     
     compile(type_check(parse_program(tokens)));
 

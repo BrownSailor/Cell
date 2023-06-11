@@ -299,37 +299,63 @@ static llvm::Value *compile_var_asn(std::unique_ptr<Node> root)
     return nullptr;
 }
 
-static llvm::Value *compile_if(std::unique_ptr<Node> root)
+static llvm::Value *compile_lone_if(std::unique_ptr<Node> root)
+{
+    std::unique_ptr<Node> cond = std::move(root->children.front());
+    std::unique_ptr<Node> body = std::move(root->children.back());
+
+    llvm::Function *fun = builder->GetInsertBlock()->getParent();
+    llvm::Value *cond_val = compile_expr(std::move(cond));
+
+    llvm::BasicBlock *then_blk = llvm::BasicBlock::Create(*context, "", fun);
+    llvm::BasicBlock *end_blk = llvm::BasicBlock::Create(*context, "", fun);
+
+    builder->CreateCondBr(cond_val, then_blk, end_blk);
+    builder->SetInsertPoint(then_blk);
+
+    for (size_t i = 0; i < body->children.size(); i++)
+    {
+        compile_expr(std::move(body->children[i]));
+    }
+    builder->CreateBr(end_blk);
+    builder->SetInsertPoint(end_blk);
+
+    root->children.back() = std::move(body);
+    root->children.front() = std::move(cond);
+
+    return llvm::Constant::getNullValue(llvm::Type::getVoidTy(*context));
+}
+
+static void compile_if_else(std::unique_ptr<Node> root,
+                            llvm::Function *fun,
+                            llvm::BasicBlock *merge_blk,
+                            std::vector<llvm::Value *> &phis,
+                            std::vector<llvm::BasicBlock *> &blks)
 {
     switch (root->children.size())
     {
         case 1:
         {
-            for (size_t i = 0; i < root->children.size() - 1; i++)
+            std::unique_ptr<Node> body = std::move(root->children.front());
+            for (size_t i = 0; i < body->children.size() - 1; i++)
             {
-                compile_expr(std::move(root->children[i]));
+                compile_expr(std::move(body->children[i]));
             }
-            return compile_expr(std::move(root->children.back()));
-        }
-        case 2:
-        {
-            /* TODO: handle single if's with no else */
-            return nullptr;
+            phis.push_back(compile_expr(std::move(body->children.back())));
+
+            root->children.front() = std::move(body);
+            break;
         }
         case 3:
         {
-            bool nil_statement = root->type_scheme == construct_type(type_names["nil"]);
-
             std::unique_ptr<Node> cond = std::move(root->children.front());
             std::unique_ptr<Node> then = std::move(root->children[1]);
-            std::unique_ptr<Node> els = std::move(root->children.back()->children.back());
+            std::unique_ptr<Node> els = std::move(root->children.back());
 
             llvm::Value *cond_val = compile_expr(std::move(cond));
-            llvm::Function *fun = builder->GetInsertBlock()->getParent();
 
             llvm::BasicBlock *then_blk = llvm::BasicBlock::Create(*context, "", fun);
             llvm::BasicBlock *else_blk = llvm::BasicBlock::Create(*context, "", fun);
-            llvm::BasicBlock *merge_blk = llvm::BasicBlock::Create(*context, "", fun);
 
             builder->CreateCondBr(cond_val, then_blk, else_blk);
             builder->SetInsertPoint(then_blk);
@@ -338,31 +364,55 @@ static llvm::Value *compile_if(std::unique_ptr<Node> root)
             {
                 compile_expr(std::move(then->children[i]));
             }
-            llvm::Value *then_val = compile_expr(std::move(then->children.back()));
+            phis.push_back(compile_expr(std::move(then->children.back())));
+            blks.push_back(then_blk);
 
             builder->CreateBr(merge_blk);
-            then_blk = builder->GetInsertBlock();
-
-            fun->getBasicBlockList().push_back(else_blk);
             builder->SetInsertPoint(else_blk);
-
-            llvm::Value *else_val = compile_if(std::move(els));
-
-            builder->CreateBr(merge_blk);
-            else_blk = builder->GetInsertBlock();
-
-            fun->getBasicBlockList().push_back(merge_blk);
-            builder->SetInsertPoint(merge_blk);
+            compile_if_else(std::move(els), fun, merge_blk, phis, blks);
+            blks.push_back(else_blk);
 
             root->children.front() = std::move(cond);
             root->children[1] = std::move(then);
             root->children.back() = std::move(els);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
 
+}
+
+static llvm::Value *compile_if(std::unique_ptr<Node> root)
+{
+    switch (root->children.size())
+    {
+        case 2:
+        {
+            return compile_lone_if(std::move(root));
+        }
+        case 3:
+        {
+            llvm::Function *fun = builder->GetInsertBlock()->getParent();
+            llvm::BasicBlock *merge_blk = llvm::BasicBlock::Create(*context, "", fun);
+            std::vector<llvm::Value *> phis;
+            std::vector<llvm::BasicBlock *> blks;
+
+            TypeScheme ts = root->type_scheme;
+            bool nil_statement = ts == construct_type(type_names["nil"]);
+            compile_if_else(std::move(root), fun, merge_blk, phis, blks);
+
+            builder->CreateBr(merge_blk);
+            builder->SetInsertPoint(merge_blk);
             if (!nil_statement)
             {
-                llvm::PHINode *phi_node = builder->CreatePHI(get_llvm_type(root->type_scheme), 2);
-                phi_node->addIncoming(then_val, then_blk);
-                phi_node->addIncoming(else_val, else_blk);
+                llvm::PHINode *phi_node = builder->CreatePHI(get_llvm_type(ts), phis.size());
+                for (size_t i = 0; i < phis.size(); i++)
+                {
+                    phi_node->addIncoming(phis[i], blks[i]);
+                }
 
                 return phi_node;
             }
@@ -382,20 +432,25 @@ static llvm::Value *compile_loop(std::unique_ptr<Node> root)
 
     llvm::Function *fun = builder->GetInsertBlock()->getParent();
 
-    llvm::BasicBlock *loop_blk = llvm::BasicBlock::Create(*context, "", fun);
+    llvm::BasicBlock *body_blk = llvm::BasicBlock::Create(*context, "", fun);
+    llvm::BasicBlock *cond_blk = llvm::BasicBlock::Create(*context, "", fun);
+    llvm::BasicBlock *exit_blk = llvm::BasicBlock::Create(*context, "", fun);
 
-    builder->CreateBr(loop_blk);
-    builder->SetInsertPoint(loop_blk);
+    builder->CreateBr(cond_blk);
+    builder->SetInsertPoint(cond_blk);
+    llvm::Value *cond_val = compile_expr(std::move(cond));
+    builder->CreateCondBr(cond_val, body_blk, exit_blk);
 
+    builder->SetInsertPoint(body_blk);
     for (size_t i = 0; i < body->children.size(); i++)
     {
         compile_expr(std::move(body->children[i]));
     }
+    builder->CreateBr(cond_blk);
+    builder->SetInsertPoint(exit_blk);
 
-    llvm::Value *cond_val = compile_expr(std::move(cond));
-    llvm::BasicBlock *end_blk = llvm::BasicBlock::Create(*context, "", fun);
-    builder->CreateCondBr(cond_val, loop_blk, end_blk);
-    builder->SetInsertPoint(end_blk);
+    root->children.back() = std::move(body);
+    root->children.front() = std::move(cond);
 
     return llvm::Constant::getNullValue(llvm::Type::getVoidTy(*context));
 }

@@ -154,6 +154,25 @@ static void lex_line(const std::string &line, std::list<Token> &tokens, int row,
                 tokens.push_back(new_token(Token::TOK_EQ, "=", col, row, file));
                 break;
             }
+            
+            case '!':
+            {
+                if (curr.size())
+                {
+                    tokens.push_back(lex_word(curr, col, row, file));
+                }
+
+                col = col_end;
+
+                if (line[i + 1] == '=')
+                {
+                    tokens.push_back(new_token(Token::TOK_NEQ, "!=", col, row, file));
+                    i++;
+                    col_end += 2;
+                }
+
+                break;
+            }
 
             case '<':
             {
