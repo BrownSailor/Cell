@@ -1,3 +1,5 @@
 fn arr_test: unit -> unit {
-    arr: 2 * 3 * 4 * num
+    arr: [ 1 2 3 4 5 ]
+    arr2: arr
+    arr: 17 * num
 }

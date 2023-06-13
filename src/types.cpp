@@ -207,6 +207,13 @@ static void type_check_un_op(std::unique_ptr<Node> &root)
     }
 }
 
+static unsigned height(std::unique_ptr<Node> &root)
+{
+    if (root == nullptr) return 0;
+    if (!root->children.size()) return 1;
+    return 1 + std::max(height(root->children.front()), height(root->children.back()));
+}
+
 static void type_check_bin_op(std::unique_ptr<Node> &root)
 {
     std::unique_ptr<Node> &left = root->children.front(); 
@@ -228,7 +235,7 @@ static void type_check_bin_op(std::unique_ptr<Node> &root)
                 }
 
                 root->type_scheme = TypeScheme(TypeScheme::ALPHA);
-                root->type_scheme.arr_dim = 1;
+                root->type_scheme.arr_dim = height(left);
                 root->type_scheme.alpha = type_names[right->token.data];
 
                 break;

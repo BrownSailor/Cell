@@ -5,8 +5,10 @@ static std::unique_ptr<llvm::Module> module;
 static std::unique_ptr<llvm::IRBuilder<>> builder;
 
 static std::unordered_map<std::string, llvm::AllocaInst *> values;
+static llvm::Constant *compile_literal(std::unique_ptr<Node> &root);
+static llvm::Value *compile_expr(std::unique_ptr<Node> &root);
 
-llvm::Type *get_llvm_type(TypeScheme ts)
+static llvm::Type *get_llvm_type(TypeScheme ts)
 {
     if (ts == construct_type(type_names["num"]))
     {
@@ -21,6 +23,31 @@ llvm::Type *get_llvm_type(TypeScheme ts)
         return llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(*context));
     }
     return llvm::Type::getVoidTy(*context);
+}
+
+static void get_arr_sizes(std::unique_ptr<Node> &arr_sizes, std::list<uint64_t> &sizes)
+{
+    if (arr_sizes == nullptr) return;
+    if (!arr_sizes->children.size())
+    {
+        sizes.push_back(std::stoi(arr_sizes->token.data));
+        return;
+    }
+    get_arr_sizes(arr_sizes->children.front(), sizes);
+    get_arr_sizes(arr_sizes->children.back(), sizes);
+}
+
+static llvm::Type *get_llvm_type(TypeScheme ts, std::list<uint64_t> &arr_sizes)
+{
+    if (ts.arr_dim == 0)
+    {
+        return get_llvm_type(ts);
+    }
+
+    ts.arr_dim--;
+    uint64_t size = arr_sizes.front();
+    arr_sizes.pop_front();
+    return llvm::ArrayType::get(get_llvm_type(ts, arr_sizes), size);
 }
 
 static llvm::AllocaInst *allocate_var(llvm::Function *fun, const std::string &name, llvm::Type *ty)
@@ -79,29 +106,45 @@ static void initialize_built_ins()
     builder->CreateRetVoid();
 }
 
-static llvm::Value *compile_expr(std::unique_ptr<Node> &root);
-
-static llvm::Value *compile_literal(std::unique_ptr<Node> &root)
+static llvm::ArrayType *get_llvm_type_array_literal(std::unique_ptr<Node> &root)
 {
-    switch (root->token.type)
+    if (root->type_scheme.arr_dim == 1)
     {
-        case Token::TOK_NUM:
+        return llvm::ArrayType::get(get_llvm_type(root->children.front()->type_scheme), root->children.size());
+    }
+
+    return llvm::ArrayType::get(get_llvm_type_array_literal(root->children.front()), root->children.size());
+}
+
+static llvm::Constant *compile_literal(std::unique_ptr<Node> &root)
+{
+    if (root->type_scheme.arr_dim)
+    {
+        std::vector<llvm::Constant *> vals;
+        for (size_t i = 0; i < root->children.size(); i++)
         {
-            return llvm::ConstantInt::get(*context, llvm::APInt(64, llvm::StringRef(root->token.data), 10));
+            vals.push_back(compile_literal(root->children[i]));
         }
-        case Token::TOK_TRU:
-        case Token::TOK_FLS:
-        {
-            return llvm::ConstantInt::get(*context, llvm::APInt(1, root->token.type == Token::TOK_TRU));
-        }
-        case Token::TOK_STR:
-        {
-            return builder->CreateGlobalString(root->token.data);
-        }
-        default:
-        {
-            break;
-        }
+
+        llvm::ArrayType *arr_type = get_llvm_type_array_literal(root);
+        llvm::GlobalVariable *array = new llvm::GlobalVariable(
+            *module.get(), arr_type, true, llvm::GlobalVariable::PrivateLinkage,
+            llvm::ConstantArray::get(arr_type, vals)
+        );
+        return array;
+    }
+
+    if (root->type_scheme == construct_type(type_names["num"]))
+    {
+        return llvm::ConstantInt::get(*context, llvm::APInt(64, llvm::StringRef(root->token.data), 10));
+    }
+    if (root->type_scheme == construct_type(type_names["bool"]))
+    {
+        return llvm::ConstantInt::get(*context, llvm::APInt(1, root->token.type == Token::TOK_TRU));
+    }
+    if (root->type_scheme == construct_type(type_names["str"]))
+    {
+        return builder->CreateGlobalString(root->token.data);
     }
     return nullptr;
 }
@@ -285,16 +328,46 @@ static llvm::Value *compile_var(std::unique_ptr<Node> &root)
 
 static llvm::Value *compile_var_asn(std::unique_ptr<Node> &root)
 {
-    llvm::Value *rhs = compile_expr(root->children.back());
-
-    if (!values[root->children.front()->token.data])
+    if (root->children.back()->token.type == Token::TOK_MUL && root->children.back()->type_scheme.arr_dim)
     {
-        llvm::Function *f = builder->GetInsertBlock()->getParent();
-        llvm::AllocaInst *alloc = allocate_var(f, root->children.front()->token.data, get_llvm_type(root->children.front()->type_scheme));
-        values[root->children.front()->token.data] = alloc;
-    }
+        if (!values[root->children.front()->token.data])
+        {
+            llvm::Function *f = builder->GetInsertBlock()->getParent();
+            std::list<uint64_t> sizes;
+            get_arr_sizes(root->children.back()->children.front(), sizes);
 
-    builder->CreateStore(rhs, values[root->children.front()->token.data]);
+            llvm::AllocaInst *alloc = allocate_var(f, root->children.front()->token.data,
+                                                   get_llvm_type(root->children.front()->type_scheme, sizes));
+            values[root->children.front()->token.data] = alloc;
+        }
+    }
+    else
+    {
+        llvm::Value *rhs = compile_expr(root->children.back());
+
+        if (!values[root->children.front()->token.data])
+        {
+            llvm::Function *f = builder->GetInsertBlock()->getParent();
+            llvm::AllocaInst *alloc;
+
+            if (root->children.back()->type_scheme.arr_dim && root->children.back()->type == Node::NODE_LIT)
+            {
+                alloc = allocate_var(f, root->children.front()->token.data, get_llvm_type_array_literal(root->children.back()));
+            }
+            else if (root->children.back()->type_scheme.arr_dim)
+            {
+                alloc = allocate_var(f, root->children.front()->token.data, values[root->children.back()->token.data]->getType());
+            }
+            else
+            {
+                alloc = allocate_var(f, root->children.front()->token.data, get_llvm_type(root->children.back()->type_scheme));
+            }
+
+            values[root->children.front()->token.data] = alloc;
+        }
+
+        builder->CreateStore(rhs, values[root->children.front()->token.data]);
+    }
 
     return nullptr;
 }

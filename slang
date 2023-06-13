@@ -4,4 +4,4 @@ if [ ! -f slangc ]; then
     make
 fi
 
-./slangc $1 | clang -x ir -
+./slangc $1 | clang -O0 -x ir -
